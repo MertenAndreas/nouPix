@@ -316,7 +316,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; height:
 input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid var(--line2); border-radius: var(--r); background: var(--bg2); cursor: pointer; }
 .slider { display: grid; grid-template-columns: minmax(0,1fr) 46px; gap: 8px; align-items: center; }
 .slider .mono { text-align: right; color: var(--text2); }
-.slider:has(.rev) { grid-template-columns: minmax(0,1fr) 34px auto; }
 .checkrow { display: flex; align-items: center; gap: 8px; min-height: 22px; color: var(--text2); cursor: pointer; }
 .swatches { display: flex; gap: 5px; flex-wrap: wrap; }
 .swatches button { width: 18px; height: 18px; border-radius: 3px; border: 2px solid transparent; cursor: pointer; padding: 0; }
@@ -3281,8 +3280,7 @@ function renderContentTab(body) {
           dir = -dir; rev.classList.toggle('on', dir < 0); rev.setAttribute('aria-pressed', String(dir < 0)); set(dir * sp.pct / 100 * M); commit();
         } }, 'Reverse');
         const r = sliderRow('Speed', sp, 'pct', { min: 0, max: 100, step: 0.5, fmt: v => Math.round(v) + '%', onInput: v => set(dir * v / 100 * M), onCommit: commit });
-        r.querySelector('.slider').append(rev);
-        ctl.push(r);
+        ctl.push(r, h('div', { class: 'row' }, h('span', { class: 'lbl' }), h('div', null, rev)));   // Reverse under the slider
       } else if (inp.TYPE === 'float' || inp.TYPE === 'int') {
         const min = inp.MIN ?? 0, max = inp.MAX ?? 1;
         ctl.push(sliderRow(label, holder, 'v', { min, max, step: inp.TYPE === 'int' ? 1 : (max - min) / 500, fmt: v => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)), onInput: set, onCommit: commit }));

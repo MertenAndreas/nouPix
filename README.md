@@ -1,4 +1,4 @@
-# openLedMapper 0.5.1
+# openLedMapper 0.5.2
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 

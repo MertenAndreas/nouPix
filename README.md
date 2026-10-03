@@ -1,4 +1,4 @@
-# openLedMapper 0.3.2
+# openLedMapper 0.4.0
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -35,6 +35,19 @@ On Windows, allow Python through the firewall on private networks when asked, ot
 **Arrange** in the Inspector lines fixtures up. With several selected: align their left edges, centres or right edges, or their tops, middles or bottoms, to the box around all of them; distribute 3 or more so their centres are evenly spaced (the outermost two stay where they are); or centre them together on the canvas. With one selected, the same buttons align it to the canvas. Locked fixtures stay put but still count for the box, so the others can line up with a locked one. **Ctrl Z** undoes.
 
 Drag fixtures in the list to change their order: the last one is drawn on top, and **Auto-patch** fills the outputs in this order. Fixtures already patched keep their addresses; their order on an output is set in the Patch panel.
+
+## Groups
+
+A group keeps fixtures together, for example the strips of one sign or the rings of one piece. The demo layout has two, Strips and Rings.
+
+- Select fixtures and press **Group** in the Inspector (`Ctrl G`). The group goes where the first of them is in the list. Rename it and change its colour in the Inspector; the arrow next to its name in the list folds it.
+- Click a group's name in the list, or any of its fixtures on the stage, to select the whole group: it moves as one and gets a frame with its name. Double-click a fixture on the stage, or click it in the list, to select just that one.
+- Drag in the list to change groups. Dropped between the fixtures of a group, a fixture joins that group there; dropped on a group's name, it joins it at the end; dropped above or below a group, or under the list, it is in no group. The drop line starts at the indent when the fixture lands inside a group.
+- Drag a group by its name to move all of it, or onto an output in the Patch panel to patch all its fixtures there, in list order.
+- **Ungroup** in the Inspector (`Ctrl Shift G`) keeps the fixtures where they are. With one fixture selected, the Inspector's **Group** menu moves it into a group or out of one.
+- **Ctrl D** on a group makes a new group of copies. **Delete** deletes its fixtures, and **Ctrl Z** brings them back. A group with no fixtures left disappears.
+- **Arrange** with one group selected lines up its fixtures with each other. With several groups (and fixtures) selected, each group moves as one block, and a group with a locked fixture stays put.
+- Grouping organises the list and the selection; on its own it doesn't change the patch or the output. There is one level: a fixture is in one group at most, and groups don't go inside other groups. Groups are saved in the project.
 
 ## Zones
 

@@ -107,6 +107,26 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .badge.err { color: var(--danger); border-color: rgba(255,90,95,.35); background: var(--danger-soft); }
 .badge.ok { color: var(--live); border-color: rgba(70,224,140,.35); background: var(--live-soft); }
 .list .srcrow { grid-template-columns: 16px minmax(0,1fr) auto auto; }
+/* groups in the fixture list: a header row, then its fixtures indented along a line in the group's colour */
+.list li.grp .chev { display: flex; align-items: center; justify-content: center; width: 14px; height: 20px; margin-left: -4px; padding: 0; border: 0; background: none; color: var(--text2); border-radius: 3px; cursor: pointer; }
+.list li.grp .chev:hover { background: var(--bg3); color: var(--text); }
+.list li.grp .chev svg { width: 10px; height: 10px; transition: transform .12s; }
+.list li.grp.shut .chev svg { transform: rotate(-90deg); }
+.list li.grp .ty { color: var(--gtag); }
+.list li.grp .nm { font-weight: 600; }
+.list li.grp .cnt { margin-left: 6px; color: var(--muted); font-family: var(--mono); font-size: 10.5px; font-weight: 400; }
+.list li.in { position: relative; padding-left: 28px; }
+.list li.in::before { content: ''; position: absolute; left: 17px; top: 0; bottom: 0; width: 1px; background: var(--gtag); opacity: .5; }
+.list li.in.end::before { bottom: 6px; }
+.list li.insel { background: rgba(60, 200, 255, .06); }
+/* where a dragged fixture lands: a line across the list, a line from the indent (inside a group), a group's
+   header outlined (into that group), or a line under the last row (the end of the list) */
+.list li.drop-before-in::after, .list li.drop-after-in::after { content: ''; position: absolute; left: 26px; right: 6px; height: 2px; border-radius: 1px; background: var(--accent); }
+.list li.drop-before-in::after { top: -1px; }
+.list li.drop-after-in::after { bottom: -1px; }
+.list li.grp.drop-into { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+#fxList { padding-bottom: 28px; }   /* room under the last row to drop a fixture at the end, out of any group */
+.list.drop-end::after { content: ''; display: block; height: 2px; margin: 0 6px; border-radius: 1px; background: var(--accent); }
 .list li.live { background: var(--live-soft); border-left-color: var(--live); }
 .list li.live .nm { color: var(--text); font-weight: 600; }
 .phead .meta { flex: 1; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
@@ -265,6 +285,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .sec { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 7px; }
 .sec h3 { margin: 0 0 2px; font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .sec h3 .fill { flex: 1; }
+.sec h3 .btn { color: var(--text); }
 .row { display: grid; grid-template-columns: 78px minmax(0,1fr); align-items: center; gap: 8px; min-height: 26px; }
 .row > label, .row > .lbl { color: var(--text2); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row > label.scrub { cursor: ew-resize; }
@@ -560,6 +581,8 @@ const ICONS = {
   distH: '<svg viewBox="0 0 16 16"><path d="M1.5 2v12M14.5 2v12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".55"/><g fill="currentColor"><rect x="3.6" y="4" width="2.2" height="8" rx=".5"/><rect x="6.9" y="4" width="2.2" height="8" rx=".5"/><rect x="10.2" y="4" width="2.2" height="8" rx=".5"/></g></svg>',
   distV: '<svg viewBox="0 0 16 16"><path d="M2 1.5h12M2 14.5h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".55"/><g fill="currentColor"><rect x="4" y="3.6" width="8" height="2.2" rx=".5"/><rect x="4" y="6.9" width="8" height="2.2" rx=".5"/><rect x="4" y="10.2" width="8" height="2.2" rx=".5"/></g></svg>',
   centre: '<svg viewBox="0 0 16 16"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="5.5" y="5.5" width="5" height="5" rx=".6" fill="currentColor"/></svg>',
+  group: '<svg viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 011-1h3.2l1.5 1.5h5.8a1 1 0 011 1v6.5a1 1 0 01-1 1H2.75a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg>',
+  chev: '<svg viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 const icon = name => svgEl(ICONS[name]);
 
@@ -591,7 +614,7 @@ const ui = {
   outputOn: false, blackout: false, outputMode: 'content', zone: null, layer: null, hoverSrc: null,
   showContent: true, contentOp: 0.35, showGuide: true, guideOp: 0.5, showGrid: true, snap: true, showLabels: true, showWiring: false, showZones: true,
   dockTab: 'patch', rightTab: 'inspector', selCtrl: null, monitorKey: null, dockH: 250, dockCollapsed: false,
-  hoverFx: null, hoverPx: null, cursor: null,
+  hoverFx: null, hoverGroup: null, hoverPx: null, cursor: null,
 };
 const UI_PREFS = ['contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed'];
 
@@ -603,9 +626,53 @@ function blankProject(name = 'Untitled') {
   const settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   return {
     format: 'openledmapper-project', version: 3, name, settings,
-    fixtures: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
+    fixtures: [], groups: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
   };
 }
+// A group is a named set of fixtures. Its fixtures stay next to each other in the list (and so in drawing and
+// Auto-patch order), where its first one is. One level only: no groups inside groups.
+const groupById = id => project.groups.find(g => g.id === id);
+const membersOf = (g, p = project) => p.fixtures.filter(f => f.group === g.id);
+function normalizeGroups(p = project) {
+  const known = new Set(p.groups.map(g => g.id)), placed = new Set(), out = [];
+  for (const f of p.fixtures) if (f.group != null && !known.has(f.group)) delete f.group;
+  for (const f of p.fixtures) {
+    if (f.group == null) { out.push(f); continue; }
+    if (placed.has(f.group)) continue;
+    placed.add(f.group);
+    for (const x of p.fixtures) if (x.group === f.group) out.push(x);
+  }
+  p.fixtures = out;
+  p.groups = p.groups.filter(g => placed.has(g.id));   // a group with no fixtures left is gone
+}
+const groupName = g => g.name.trim() || 'Group';
+function nextGroupName() { let n = 1; while (project.groups.some(g => g.name === 'Group ' + n)) n++; return 'Group ' + n; }
+// Selected groups whose fixtures are all selected count as one unit; the other selected fixtures one each
+function selUnits(sel = selected()) {
+  const units = [], seen = new Set(), inSel = new Set(sel.map(f => f.id)), groups = new Map(project.groups.map(g => [g.id, g])), members = new Map();
+  for (const f of project.fixtures) if (f.group != null) { const m = members.get(f.group); if (m) m.push(f); else members.set(f.group, [f]); }
+  for (const f of sel) {
+    const g = f.group != null && groups.get(f.group);
+    if (g) {
+      if (seen.has(g.id)) continue;
+      const m = members.get(g.id);
+      if (m.every(x => inSel.has(x.id))) { seen.add(g.id); units.push({ g, list: m }); continue; }
+    }
+    units.push({ g: null, list: [f] });
+  }
+  return units;
+}
+// Clicking a fixture on the stage selects its whole group, unless the selection is already inside that group
+// (after a double-click on one of its fixtures): then just the fixture clicked
+function stagePick(f) {
+  const g = f.group != null ? groupById(f.group) : null;
+  if (!g) return [f.id];
+  const ids = membersOf(g).map(x => x.id), mine = new Set(ids), n = ids.filter(id => ui.sel.has(id)).length;
+  const inside = n > 0 && n < ids.length && [...ui.sel].every(id => mine.has(id));
+  return inside ? [f.id] : ids;
+}
+// The group, when the selection is exactly one whole group of two or more fixtures
+function wholeGroup(sel = selected()) { const u = selUnits(sel); return u.length === 1 && u[0].g && u[0].list.length > 1 ? u[0].g : null; }
 function builtinSources() {
   return BUILTINS.map(b => ({ id: 'b-' + b.id, kind: 'isf', builtin: b.id, name: b.name }));
 }
@@ -708,7 +775,7 @@ function fixFixture(f, i, ids) {
     if (P.length % 2) P.pop();
     f.pts = P.length >= 2 ? P : [0, 0, 100, 0];
   }
-  f.id = uniqueId(f.id, ids);
+  f.id = uniqueId(isId(f.id) ? String(f.id) : null, ids);   // ids are text, as the list and patch panel hold them
   if (typeof f.name !== 'string') f.name = f.name != null ? String(f.name) : TYPE_LABEL[f.type] + ' ' + (i + 1);
   if (typeof f.tag !== 'string') f.tag = TAGS[i % TAGS.length];
   if (!ORDERS.includes(f.order)) { const o = String(f.order || '').toUpperCase(); f.order = ORDERS.includes(o) ? o : 'RGB'; }
@@ -724,7 +791,7 @@ function fixController(c, i, ids) {
   if (typeof c.ip !== 'string') c.ip = c.ip != null ? String(c.ip) : '';
   if (!('enabled' in c)) c.enabled = true;
   if (!('split' in c)) c.split = false;
-  if (Array.isArray(c.chains)) c.chains = c.chains.map(ch => (Array.isArray(ch) ? ch.filter(isId) : []));
+  if (Array.isArray(c.chains)) c.chains = c.chains.map(ch => (Array.isArray(ch) ? ch.filter(isId).map(String) : []));
   ensureChains(c);
   return c;
 }
@@ -739,6 +806,12 @@ function hydrate(p) {
   const fxIds = new Set(), ctrlIds = new Set();
   out.fixtures = (Array.isArray(p.fixtures) ? p.fixtures : []).filter(f => isObj(f) && TYPE_LABEL[f.type]).map((f, i) => fixFixture(f, i, fxIds));
   out.controllers = (Array.isArray(p.controllers) ? p.controllers : []).filter(isObj).map((c, i) => fixController(c, i, ctrlIds));
+  const grpIds = new Set();
+  for (const f of out.fixtures) { if (isId(f.group)) f.group = String(f.group); else delete f.group; }
+  out.groups = (Array.isArray(p.groups) ? p.groups : []).filter(isObj).map((g, i) => ({
+    id: uniqueId(isId(g.id) ? String(g.id) : null, grpIds), name: typeof g.name === 'string' ? g.name : 'Group ' + (i + 1),
+    tag: typeof g.tag === 'string' ? g.tag : TAGS[(i + 2) % TAGS.length], open: g.open !== false }));
+  normalizeGroups(out);
   const builtins = builtinSources(), srcIds = new Set(builtins.map(s => s.id));
   const custom = (Array.isArray(p.sources) ? p.sources : []).filter(s => isObj(s) && !s.builtin && isId(s.id) && !srcIds.has(s.id) && srcIds.add(s.id));
   for (const s of custom) {
@@ -975,6 +1048,8 @@ function computePatch() {
   patchDirty = false;
   patchVersion++;
 }
+// The patch is worked out again when something changed it; the list and panels then show the new addresses
+function ensurePatch() { if (patchDirty) { computePatch(); onPatchChanged(); } }
 const addrOf = (base, lin) => ({ u: base + (lin >> 9), ch: (lin & 511) + 1 });
 function addrText(p) {
   if (!p || p.first < 0) return '';
@@ -1594,7 +1669,7 @@ function tick() {
   lastTick = now; clockT += clockDT; frameIndex++;
   if (!project) return;
   if (geomDirty) rebuildGeometry();
-  if (patchDirty) { computePatch(); onPatchChanged(); }
+  ensurePatch();
   sizeContent();
   if (ui.outputMode === 'content' || ui.showContent) try { renderContent(); } catch (e) { report('content', e); }
   if (ui.outputMode !== 'content') testPattern(ui.outputMode);
@@ -1829,6 +1904,7 @@ function drawView() {
       ctx.globalAlpha = 1;
     }
   }
+  drawGroups();
   const sel = selected();
   if (sel.length === 1 && !sel[0].locked && ui.tool === 'select') {
     const f = sel[0];
@@ -1841,6 +1917,44 @@ function drawView() {
     }
   }
   drawOverlays();
+}
+// A selected group gets a frame around its fixtures with its name under it. A group with only some of its
+// fixtures selected, or with one under the pointer, gets a fainter dashed frame.
+function drawGroups() {
+  if (!project.groups.length || ui.tool !== 'select') return;
+  const hov = ui.hoverFx != null ? fxById(ui.hoverFx) : null, hovG = ui.hoverGroup != null ? ui.hoverGroup : hov && hov.group;
+  if (!ui.sel.size && hovG == null) return;
+  const info = new Map();   // group id → its box and how many of its fixtures are selected
+  for (const f of project.fixtures) {
+    if (f.group == null) continue;
+    let a = info.get(f.group);
+    if (!a) info.set(f.group, a = { n: 0, sel: 0, x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+    a.n++;
+    if (ui.sel.has(f.id)) a.sel++;
+    const b = fixtureBounds(f);
+    a.x0 = Math.min(a.x0, b.x0); a.y0 = Math.min(a.y0, b.y0); a.x1 = Math.max(a.x1, b.x1); a.y1 = Math.max(a.y1, b.y1);
+  }
+  for (const g of project.groups) {
+    const a = info.get(g.id);
+    if (!a || (!a.sel && g.id !== hovG)) continue;
+    const whole = a.sel === a.n;
+    const [ax, ay] = toS(a.x0, a.y0), [bx, by] = toS(a.x1, a.y1), pad = 10;
+    const rx = Math.round(ax - pad) + 0.5, ry = Math.round(ay - pad) + 0.5, rw = Math.round(bx - ax + 2 * pad), rh = Math.round(by - ay + 2 * pad);
+    ctx.save();
+    ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1;
+    ctx.globalAlpha = whole ? 0.9 : 0.5; ctx.setLineDash(whole ? [] : [4, 3]);
+    ctx.strokeRect(rx, ry, rw, rh);
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.font = '600 11px ' + FONT_UI;
+    const t = groupName(g), lw = Math.round(ctx.measureText(t).width + 30), lx = Math.round(rx + rw / 2 - lw / 2), ly = Math.round(ry + rh + 5);
+    ctx.beginPath(); ctx.roundRect(lx, ly, lw, 18, 4);
+    if (whole) { ctx.fillStyle = '#3cc8ff'; ctx.fill(); } else { ctx.fillStyle = 'rgba(10,11,14,.85)'; ctx.fill(); ctx.strokeStyle = 'rgba(60,200,255,.6)'; ctx.stroke(); }
+    // a small folder, as in the list
+    ctx.beginPath(); ctx.moveTo(lx + 7, ly + 5.5); ctx.lineTo(lx + 10.5, ly + 5.5); ctx.lineTo(lx + 12, ly + 7); ctx.lineTo(lx + 18, ly + 7); ctx.lineTo(lx + 18, ly + 13.5); ctx.lineTo(lx + 7, ly + 13.5); ctx.closePath();
+    ctx.strokeStyle = whole ? '#04141c' : '#3cc8ff'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = whole ? '#04141c' : '#3cc8ff'; ctx.fillText(t, lx + 23, ly + 13);
+    ctx.restore();
+  }
 }
 function drawOverlays() {
   if (ui.tool === 'zone') drawZoneEdit();
@@ -2095,10 +2209,11 @@ cv.addEventListener('pointerdown', e => {
   if (hd) { const f = selected()[0]; drag = { kind: 'handle', f, hd, o: snapshotGeom(f), changed: false }; return; }
   const f = hitFixture(x, y);
   if (f) {
+    const pick = stagePick(f);   // the whole group, or inside a group just this fixture
     if (e.shiftKey || e.metaKey || e.ctrlKey) {
-      if (ui.sel.has(f.id)) { ui.sel.delete(f.id); onSelection(); return; }
-      ui.sel.add(f.id);
-    } else if (!ui.sel.has(f.id)) ui.sel = new Set([f.id]);
+      if (ui.sel.has(f.id)) { pick.forEach(id => ui.sel.delete(id)); onSelection(); return; }
+      pick.forEach(id => ui.sel.add(id));
+    } else if (!ui.sel.has(f.id)) ui.sel = new Set(pick);
     onSelection();
     const origs = new Map(selected().filter(g => !g.locked).map(g => [g.id, snapshotGeom(g)]));
     drag = { kind: 'move', x0: x, y0: y, origs, changed: false };
@@ -2149,8 +2264,13 @@ cv.addEventListener('pointermove', e => {
   if (drag.kind === 'marquee') {
     marquee.x1 = x; marquee.y1 = y;
     const r = { x0: Math.min(marquee.x0, x), y0: Math.min(marquee.y0, y), x1: Math.max(marquee.x0, x), y1: Math.max(marquee.y0, y) };
-    const s = new Set(drag.base);
-    for (const f of project.fixtures) { if (f.locked) continue; const b = fixtureBounds(f); if (b.x1 >= r.x0 && b.x0 <= r.x1 && b.y1 >= r.y0 && b.y0 <= r.y1) s.add(f.id); }
+    const s = new Set(drag.base), groups = new Set();
+    for (const f of project.fixtures) {
+      if (f.locked) continue;
+      const b = fixtureBounds(f);
+      if (b.x1 >= r.x0 && b.x0 <= r.x1 && b.y1 >= r.y0 && b.y0 <= r.y1) { s.add(f.id); if (f.group != null) groups.add(f.group); }
+    }
+    if (groups.size) for (const f of project.fixtures) if (groups.has(f.group)) s.add(f.id);   // groups are taken whole
     ui.sel = s;
   }
 });
@@ -2190,7 +2310,9 @@ cv.addEventListener('dblclick', e => {
   if (ui.tool !== 'select') return;
   const [x, y] = toC(...evPos(e));
   const f = hitFixture(x, y);
-  if (f) { ui.rightTab = 'inspector'; renderRight(); const inp = $('#fxName'); if (inp) { inp.focus(); inp.select(); } }
+  if (!f) return;
+  if (f.group != null && !(ui.sel.size === 1 && ui.sel.has(f.id))) { ui.sel = new Set([f.id]); onSelection(); }   // into its group: just this one
+  ui.rightTab = 'inspector'; renderRight(); const inp = $('#fxName'); if (inp) { inp.focus(); inp.select(); }
 });
 cv.addEventListener('wheel', e => {
   e.preventDefault();
@@ -2336,15 +2458,6 @@ function reorderable(handle, target, kind, ids, onDrop) {
     onDrop(d.split(','), after(e));
   });
 }
-// Fixtures are drawn in list order, the last on top
-function moveFixturesTo(ids, target, after) {
-  const moving = project.fixtures.filter(f => ids.includes(f.id));
-  if (!moving.length || moving.includes(target)) return;
-  const rest = project.fixtures.filter(f => !moving.includes(f));
-  rest.splice(rest.indexOf(target) + (after ? 1 : 0), 0, ...moving);
-  project.fixtures = rest;
-  markGeom(); commit();
-}
 // Zones are listed top first: dropping a zone above another puts it over that one
 function moveZoneTo(id, target, after) {
   const z = zoneById(id);
@@ -2364,38 +2477,184 @@ function patchBadge(f) {
   if (p.overflow) return h('span', { class: 'badge err', title: title + ` · ${p.overflow} pixels do not fit` }, lbl + '!');
   return h('span', { class: 'badge', title }, 'OUT ' + lbl);
 }
+// The outputs a group's fixtures are patched to, in one badge
+function groupBadge(m) {
+  const lbl = p => (project.controllers.length > 1 ? ctrlLetter(p.ctrl) : '') + (p.out + 1);
+  const outs = [...new Set(m.filter(f => f._patch).map(f => lbl(f._patch)))];
+  const un = m.filter(f => !f._patch).length, ovf = m.some(f => f._patch && f._patch.overflow);
+  if (!outs.length) return h('span', { class: 'badge warn', title: 'Not patched to a controller output' }, '—');
+  const title = `OUT ${outs.join(', ')}` + (un ? ` · ${un} not patched` : '') + (ovf ? ' · some pixels do not fit' : '');
+  return h('span', { class: 'badge' + (ovf ? ' err' : un ? ' warn' : ''), title }, 'OUT ' + (outs.length > 2 ? outs[0] + '…' + outs[outs.length - 1] : outs.join('+')));
+}
+function groupRow(g, m, whole) {
+  const px = m.reduce((a, f) => a + pixelCount(f), 0);
+  const chev = h('button', { class: 'chev', type: 'button', title: g.open ? 'Fold' : 'Unfold', 'aria-label': (g.open ? 'Fold ' : 'Unfold ') + groupName(g), 'aria-expanded': String(g.open), onclick: e => { e.stopPropagation(); g.open = !g.open; renderFxList(); saveSoon(); } }, icon('chev'));
+  const li = h('li', { class: 'grp' + (whole ? ' sel' : '') + (g.open ? '' : ' shut'), draggable: true, 'data-group': g.id,
+    title: `${groupName(g)} · group of ${m.length} · ${fmtN(px)} px\nClick to select all of it. Drag it to move it, or onto a patch output. Drop fixtures on it to add them.` },
+    chev, h('span', { class: 'ty' }, icon('group')),
+    h('span', { class: 'nm' }, groupName(g), h('span', { class: 'cnt' }, m.length)),
+    h('span', { class: 'meta' }, fmtN(px) + 'px'), groupBadge(m));
+  li.style.setProperty('--gtag', g.tag);
+  li.addEventListener('click', e => {
+    const ids = m.map(f => f.id);
+    if (e.metaKey || e.ctrlKey || e.shiftKey) { if (whole) ids.forEach(id => ui.sel.delete(id)); else ids.forEach(id => ui.sel.add(id)); }
+    else ui.sel = new Set(ids);
+    onSelection();
+  });
+  li.addEventListener('dblclick', e => { if (e.target.closest('.chev')) return; ui.rightTab = 'inspector'; renderRight(); const i = $('#grpName'); if (i) { i.focus(); i.select(); } });
+  li.addEventListener('mouseenter', () => { ui.hoverGroup = g.id; });
+  li.addEventListener('mouseleave', () => { if (ui.hoverGroup === g.id) ui.hoverGroup = null; });
+  listDraggable(li, () => membersOf(g).map(f => f.id), g.id);
+  return li;
+}
 function renderFxList() {
   const ul = $('#fxList');
   if (!project.fixtures.length) {
     ul.replaceChildren(h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, 'No fixtures yet. Pick a tool on the stage (L, M, C, P) and drag, or import an SVG.'));
     return;
   }
-  ul.replaceChildren(...project.fixtures.map(f => {
-    const li = h('li', { class: (ui.sel.has(f.id) ? 'sel ' : '') + (f.enabled ? '' : 'off'), draggable: true, 'data-id': f.id, title: `${f.name} · ${TYPE_LABEL[f.type]} · ${pixelCount(f)} px · ${f.order}\nDrag to change the order, or onto a patch output` },
-      h('span', { class: 'tag', style: { background: f.tag } }),
-      h('span', { class: 'ty' }, icon(f.type)),
-      h('span', { class: 'nm' }, f.name, f.locked ? h('span', { class: 'muted', style: { marginLeft: '6px' } }, icon('lock')) : null),
-      h('span', { class: 'meta' }, pixelCount(f) + 'px'),
-      patchBadge(f));
-    const lk = li.querySelector('.nm svg'); if (lk) { lk.style.width = '10px'; lk.style.height = '10px'; }
-    li.addEventListener('click', e => {
-      if (e.shiftKey && ui.lastClicked) {
-        const ids = project.fixtures.map(x => x.id), a = ids.indexOf(ui.lastClicked), b = ids.indexOf(f.id);
-        if (a >= 0) { ui.sel = new Set(ids.slice(Math.min(a, b), Math.max(a, b) + 1)); onSelection(); return; }
-      }
-      if (e.metaKey || e.ctrlKey) { ui.sel.has(f.id) ? ui.sel.delete(f.id) : ui.sel.add(f.id); }
-      else ui.sel = new Set([f.id]);
-      ui.lastClicked = f.id;
-      onSelection();
-    });
-    li.addEventListener('dblclick', () => { ui.rightTab = 'inspector'; renderRight(); const i = $('#fxName'); if (i) { i.focus(); i.select(); } });
-    li.addEventListener('mouseenter', () => { ui.hoverFx = f.id; });
-    li.addEventListener('mouseleave', () => { if (ui.hoverFx === f.id) ui.hoverFx = null; });
-    const dragged = () => (ui.sel.has(f.id) && ui.sel.size > 1 ? project.fixtures.filter(x => ui.sel.has(x.id)).map(x => x.id) : [f.id]);
-    li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'fx:' + dragged().join(',')); }); // onto a patch output
-    reorderable(li, li, 'fixtures', dragged, (ids, after) => moveFixturesTo(ids, f, after));
-    return li;
-  }));
+  const groups = new Map(project.groups.map(g => [g.id, { g, m: [], whole: false }]));
+  for (const f of project.fixtures) { const x = f.group != null && groups.get(f.group); if (x) x.m.push(f); }
+  for (const x of groups.values()) x.whole = x.m.length > 0 && x.m.every(f => ui.sel.has(f.id));
+  const rows = [], F = project.fixtures;
+  F.forEach((f, i) => {
+    const x = f.group != null ? groups.get(f.group) : null;
+    if (x && (i === 0 || F[i - 1].group !== f.group)) rows.push(groupRow(x.g, x.m, x.whole));
+    if (x && !x.g.open) return;
+    const li = fixtureRow(f);
+    if (x) {
+      li.classList.add('in'); li.style.setProperty('--gtag', x.g.tag);
+      if (!F[i + 1] || F[i + 1].group !== f.group) li.classList.add('end');
+      if (x.whole) { li.classList.remove('sel'); li.classList.add('insel'); }   // the group is selected: its header shows it
+    }
+    rows.push(li);
+  });
+  ul.replaceChildren(...rows);
+}
+function fixtureRow(f) {
+  const li = h('li', { class: (ui.sel.has(f.id) ? 'sel ' : '') + (f.enabled ? '' : 'off'), draggable: true, 'data-id': f.id, title: `${f.name} · ${TYPE_LABEL[f.type]} · ${pixelCount(f)} px · ${f.order}\nDrag to change the order, into or out of a group, or onto a patch output` },
+    h('span', { class: 'tag', style: { background: f.tag } }),
+    h('span', { class: 'ty' }, icon(f.type)),
+    h('span', { class: 'nm' }, f.name, f.locked ? h('span', { class: 'muted', style: { marginLeft: '6px' } }, icon('lock')) : null),
+    h('span', { class: 'meta' }, pixelCount(f) + 'px'),
+    patchBadge(f));
+  const lk = li.querySelector('.nm svg'); if (lk) { lk.style.width = '10px'; lk.style.height = '10px'; }
+  li.addEventListener('click', e => {
+    if (e.shiftKey && ui.lastClicked) {
+      const ids = project.fixtures.map(x => x.id), a = ids.indexOf(ui.lastClicked), b = ids.indexOf(f.id);
+      if (a >= 0) { ui.sel = new Set(ids.slice(Math.min(a, b), Math.max(a, b) + 1)); onSelection(); return; }
+    }
+    if (e.metaKey || e.ctrlKey) { ui.sel.has(f.id) ? ui.sel.delete(f.id) : ui.sel.add(f.id); }
+    else ui.sel = new Set([f.id]);
+    ui.lastClicked = f.id;
+    onSelection();
+  });
+  li.addEventListener('dblclick', () => { ui.rightTab = 'inspector'; renderRight(); const i = $('#fxName'); if (i) { i.focus(); i.select(); } });
+  li.addEventListener('mouseenter', () => { ui.hoverFx = f.id; });
+  li.addEventListener('mouseleave', () => { if (ui.hoverFx === f.id) ui.hoverFx = null; });
+  // the selection moves together; but with its whole group selected, a fixture's row takes just that fixture (out of the group)
+  listDraggable(li, () => {
+    if (!ui.sel.has(f.id) || ui.sel.size < 2) return [f.id];
+    const g = wholeGroup();
+    if (g && f.group === g.id) return [f.id];
+    return project.fixtures.filter(x => ui.sel.has(x.id)).map(x => x.id);
+  }, null);
+  return li;
+}
+
+/* ---------- dragging in the fixture list ---------- */
+// A fixture dropped between the fixtures of a group joins that group there; dropped on a group's name, it joins it
+// at the end; dropped anywhere else, or below the list, it is in no group. A group dragged by its name moves as a
+// whole, before or after what it is dropped on, never into another group.
+let listDrag = null, dropShown = [];   // what is being dragged ({ ids, gid }), and the rows showing where it lands
+function listDraggable(li, ids, gid) {
+  li.addEventListener('pointerdown', e => { li.draggable = !e.target.closest('input, button, select, .chev'); });
+  li.addEventListener('dragstart', e => {
+    const list = ids();
+    listDrag = { ids: list, gid };
+    e.dataTransfer.setData('text/plain', 'fx:' + list.join(','));   // onto a patch output
+    e.dataTransfer.setData(dragType('fixtures'), list.join(','));
+    e.dataTransfer.effectAllowed = 'move';
+    li.classList.add('dragging');
+  });
+  li.addEventListener('dragend', () => { listDrag = null; li.classList.remove('dragging'); showListDrop(null); });
+}
+function listDropAt(e) {
+  const li = e.target.closest('#fxList > li');
+  if (!li || li.classList.contains('empty')) return { where: 'end' };
+  const r = li.getBoundingClientRect(), low = e.clientY > r.top + r.height / 2;
+  if (li.dataset.group) {
+    const g = groupById(li.dataset.group);
+    if (!g) return null;
+    if (listDrag.gid) return listDrag.gid === g.id ? null : { where: low ? 'afterGroup' : 'beforeGroup', g };
+    return { where: low ? 'into' : 'beforeGroup', g };
+  }
+  const f = fxById(li.dataset.id);
+  if (!f || listDrag.ids.includes(f.id)) return null;
+  const g = f.group != null ? groupById(f.group) : null;
+  if (listDrag.gid && g) return g.id === listDrag.gid ? null : { where: 'afterGroup', g };
+  return { where: low ? 'after' : 'before', f };
+}
+function showListDrop(t) {
+  for (const [el, c] of dropShown) el.classList.remove(c);
+  dropShown = [];
+  if (!t) return;
+  const ul = $('#fxList'), mark = (el, c) => { if (el) { el.classList.add(c); dropShown.push([el, c]); } };
+  const head = g => ul.querySelector(`li[data-group="${CSS.escape(g.id)}"]`);
+  if (t.where === 'end') mark(ul, 'drop-end');
+  else if (t.where === 'into') mark(head(t.g), 'drop-into');
+  else if (t.where === 'beforeGroup') mark(head(t.g), 'drop-before');
+  else if (t.where === 'afterGroup') { let last = head(t.g); while (last && last.nextElementSibling && last.nextElementSibling.classList.contains('in')) last = last.nextElementSibling; mark(last, 'drop-after'); }
+  else mark(ul.querySelector(`li[data-id="${CSS.escape(t.f.id)}"]`), (t.where === 'before' ? 'drop-before' : 'drop-after') + (t.f.group != null ? '-in' : ''));
+}
+function initFxListDrop() {
+  const area = $('#fxList').parentElement;   // the list and the empty space under it
+  area.addEventListener('dragover', e => {
+    if (!listDrag || !e.dataTransfer.types.includes(dragType('fixtures'))) return;
+    const t = listDropAt(e);
+    showListDrop(t);
+    if (t) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+  });
+  area.addEventListener('dragleave', e => { if (!area.contains(e.relatedTarget)) showListDrop(null); });
+  area.addEventListener('drop', e => {
+    const d = listDrag, t = d && listDropAt(e);
+    showListDrop(null);
+    if (!t) return;
+    e.preventDefault();
+    if (d.gid) moveGroupTo(d.gid, t); else moveFixturesTo(d.ids, t);
+  });
+}
+// Where a drop lands in the list without the fixtures being moved (rest)
+function dropIndex(rest, t, moving) {
+  const was = i => project.fixtures.slice(0, i).filter(f => !moving.has(f.id)).length;   // for a group that is all moving
+  const first = g => { const i = rest.findIndex(f => f.group === g.id); return i >= 0 ? i : was(project.fixtures.findIndex(f => f.group === g.id)); };
+  const after = g => { const i = rest.map(f => f.group).lastIndexOf(g.id); return i >= 0 ? i + 1 : first(g); };
+  if (t.where === 'before') return rest.indexOf(t.f);
+  if (t.where === 'after') return rest.indexOf(t.f) + 1;
+  if (t.where === 'beforeGroup') return first(t.g);
+  if (t.where === 'into' || t.where === 'afterGroup') return after(t.g);
+  return rest.length;
+}
+// Fixtures are drawn in list order, the last on top; the group of the drop place becomes theirs
+function moveFixturesTo(ids, t) {
+  const moving = new Set(ids), list = project.fixtures.filter(f => moving.has(f.id));
+  if (!list.length) return;
+  const rest = project.fixtures.filter(f => !moving.has(f.id));
+  const gid = t.where === 'into' ? t.g.id : t.where === 'before' || t.where === 'after' ? t.f.group : null;
+  rest.splice(dropIndex(rest, t, moving), 0, ...list);
+  for (const f of list) { if (gid != null) f.group = gid; else delete f.group; }
+  project.fixtures = rest;
+  ui.sel = new Set(ids);   // what was dragged is selected
+  normalizeGroups(); markGeom(); commit(); onSelection();
+}
+function moveGroupTo(gid, t) {
+  const moving = new Set(project.fixtures.filter(f => f.group === gid).map(f => f.id));
+  if (!moving.size) return;
+  const list = project.fixtures.filter(f => moving.has(f.id)), rest = project.fixtures.filter(f => !moving.has(f.id));
+  rest.splice(dropIndex(rest, t, moving), 0, ...list);
+  project.fixtures = rest;
+  ui.sel = new Set(moving);
+  normalizeGroups(); markGeom(); commit(); onSelection();
 }
 
 /* ============================================================ source list */
@@ -2463,17 +2722,20 @@ function renderInspector(body) {
         '<code>Space</code>-drag or right-drag to pan · wheel to zoom · <code>F</code> fit<br>' +
         '<code>Alt</code> while dragging turns snapping off · <code>Shift</code> constrains<br>' +
         '<code>Ctrl D</code> duplicate · <code>Del</code> delete · arrows nudge (<code>Shift</code> ×10)<br>' +
+        '<code>Ctrl G</code> group · <code>Ctrl Shift G</code> ungroup · double-click a fixture of a group to select just it<br>' +
         '<code>Ctrl Z</code> undo · <code>Ctrl S</code> save · <code>B</code> blackout · <code>I</code> identify<br>' +
         '<code>Z</code> zones · <code>1</code>–<code>9</code> scenes of the selected zone (<code>Shift</code> cuts)' })));
     return;
   }
   if (sel.length > 1) return renderMulti(body, sel);
-  const f = sel[0];
+  const f = sel[0], alone = f.group != null && groupById(f.group);
+  if (alone && project.fixtures.filter(x => x.group === f.group).length === 1) body.append(groupSection(alone, [f]));   // a group of one
   const nameIn = textInput(f, 'name', { id: 'fxName', aria: 'Fixture name', onInput: () => renderFxList(), onCommit: commit });
   const sw = h('div', { class: 'swatches' }, TAGS.map(c => h('button', { type: 'button', class: f.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Tag colour ' + c, onclick: () => { f.tag = c; commit(); renderRight(); } })));
   body.append(sec(null,
     h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon(f.type)), TYPE_LABEL[f.type], h('span', { class: 'fill' }), h('span', { class: 'mono muted', style: { letterSpacing: 0, textTransform: 'none' } }, pixelCount(f) + ' px')),
     row('Name', nameIn), row('Tag', sw),
+    project.groups.length ? row('Group', selectEl([['', 'None'], ...project.groups.map(g => [g.id, groupName(g)])], f.group ?? '', v => setFixtureGroup(f, v), { aria: 'Group' })) : null,
     h('div', { style: { display: 'flex', gap: '16px' } }, checkRow('Enabled', f, 'enabled', () => { commit(); }), checkRow('Locked', f, 'locked', () => { commit(); renderRight(); }))));
   body.append(arrangeSection([f]));
 
@@ -2521,7 +2783,8 @@ function renderInspector(body) {
 }
 function outputSection(list) {
   const f = list[0];
-  const cur = list.length === 1 && f._patch ? f._patch : null;
+  // one fixture, or several all on the same output: show where they are
+  const cur = f._patch && list.every(x => x._patch && x._patch.ctrl === f._patch.ctrl && x._patch.out === f._patch.out) ? f._patch : null;
   const ctrlOpts = [['', 'Not patched'], ...project.controllers.map(c => [c.id, `${ctrlLetter(c)} · ${c.name}`])];
   let ctrlId = cur ? cur.ctrl.id : (list.length > 1 && project.controllers[0] ? '' : '');
   const outSel = h('select', { 'aria-label': 'Output' });
@@ -2561,13 +2824,28 @@ function outputSection(list) {
   }
   return sec('Output', kids);
 }
-function renderMulti(body, sel) {
+function groupSection(g, sel) {
   const px = sel.reduce((a, f) => a + pixelCount(f), 0);
+  const nameIn = textInput(g, 'name', { id: 'grpName', aria: 'Group name', onInput: () => renderFxList(), onCommit: commit });
+  const sw = h('div', { class: 'swatches' }, TAGS.map(c => h('button', { type: 'button', class: g.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Group colour ' + c, onclick: () => { g.tag = c; commit(); renderRight(); } })));
+  return sec(null,
+    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: g.tag } }, icon('group')), 'Group', h('span', { class: 'fill' }),
+      h('button', { class: 'btn sm', type: 'button', title: 'Keep the fixtures, remove the group (Ctrl Shift G)', onclick: ungroupSel }, 'Ungroup')),
+    row('Name', nameIn), row('Colour', sw),
+    h('p', { class: 'note' }, sel.length === 1 ? `1 fixture · ${fmtN(px)} pixels. Drop fixtures on the group's name in the list to add them.`
+      : `${sel.length} fixtures · ${fmtN(px)} pixels. To edit just one of them, double-click it on the stage or click it in the list.`));
+}
+function renderMulti(body, sel) {
+  const px = sel.reduce((a, f) => a + pixelCount(f), 0), g = wholeGroup(sel);
   const tmp = { pixels: sel.find(f => f.type !== 'matrix') ? sel.find(f => f.type !== 'matrix').pixels : 0, order: sel[0].order };
   const pxIn = numInput(tmp, 'pixels', { int: true, min: 1, max: 20000, aria: 'Pixels for all', onCommit: () => { sel.forEach(f => { if (f.type !== 'matrix') f.pixels = tmp.pixels; }); markGeom(); commit(); renderRight(); } });
-  body.append(
-    sec(`${sel.length} fixtures selected`,
-      h('p', { class: 'note' }, `${fmtN(px)} pixels in total. Changes below apply to all of them.`),
+  body.append(...[
+    g ? groupSection(g, sel) : null,
+    sec(null,
+      g ? h('h3', null, `All ${sel.length} fixtures`)
+        : h('h3', null, `${sel.length} fixtures selected`, h('span', { class: 'fill' }),
+          h('button', { class: 'btn sm', type: 'button', title: 'Put them in a group (Ctrl G)', onclick: groupSel }, icon('group'), 'Group')),
+      h('p', { class: 'note' }, g ? 'Changes here apply to each of them.' : `${fmtN(px)} pixels in total. Changes below apply to all of them.`),
       sel.some(f => f.type !== 'matrix') ? row('Pixels each', pxIn) : null,
       row('Color order', selectEl([['', 'Mixed / keep'], ...ORDERS.map(o => [o, o])], sel.every(f => f.order === sel[0].order) ? sel[0].order : '', v => { if (!v) return; sel.forEach(f => { f.order = v; }); markPatch(); commit(); renderRight(); }, { aria: 'Color order for all' })),
       h('div', { class: 'actions' },
@@ -2579,7 +2857,7 @@ function renderMulti(body, sel) {
     sec(null, h('div', { class: 'actions' },
       h('button', { class: 'btn', type: 'button', onclick: toggleIdentify }, ui.outputMode === 'identify' ? 'Stop identify' : 'Identify'),
       h('button', { class: 'btn', type: 'button', onclick: duplicateSel }, 'Duplicate'),
-      h('button', { class: 'btn danger-t', type: 'button', onclick: deleteSel }, 'Delete'))));
+      h('button', { class: 'btn danger-t', type: 'button', onclick: deleteSel }, 'Delete')))].filter(Boolean));
 }
 
 /* ---------- zones ---------- */
@@ -2887,32 +3165,87 @@ function renderSettings(body) {
 
 /* ---------- selection + actions ---------- */
 function onSelection() {
+  unfoldForSelection();
   renderFxList();
   if (ui.sel.size && ui.rightTab !== 'inspector') ui.rightTab = 'inspector';
   renderRight();
   if (ui.dockTab === 'patch') renderDock();
 }
+// A fixture selected on its own inside a folded group: unfold the group, so that its row shows
+function unfoldForSelection() {
+  if (!ui.sel.size || project.groups.every(g => g.open)) return;
+  const c = new Map();
+  for (const f of project.fixtures) if (f.group != null) { const a = c.get(f.group) || [0, 0]; a[1]++; if (ui.sel.has(f.id)) a[0]++; c.set(f.group, a); }
+  for (const g of project.groups) { const a = c.get(g.id); if (!g.open && a && a[0] && a[0] < a[1]) g.open = true; }
+}
 function deleteSel() {
   const ids = new Set(ui.sel);
   if (!ids.size) return;
   project.fixtures = project.fixtures.filter(f => !ids.has(f.id) || f.locked);
+  normalizeGroups();   // a group with nothing left goes too
   for (const id of ids) if (!fxById(id)) unassign(id);
   ui.sel.clear();
   markGeom(); markPatch(); computeBB();
   commit(); renderRight();
 }
+// A whole group is copied as a new group. A fixture of a group copied on its own joins that group.
 function duplicateSel() {
   const out = [];
   const off = Math.max(project.settings.grid, 10) * 2;
-  for (const f of selected()) {
-    const g = JSON.parse(JSON.stringify(snapshotGeom(f)));
-    g.id = uid(); g.name = f.name + ' copy'; g.locked = false;
-    moveFixture(g, JSON.parse(JSON.stringify(g)), off, off);
-    project.fixtures.push(g); out.push(g.id);
+  for (const u of selUnits()) {
+    const ng = u.g && { id: uid(), name: u.g.name + ' copy', tag: u.g.tag, open: true };
+    if (ng) project.groups.push(ng);
+    for (const f of u.list) {
+      const g = JSON.parse(JSON.stringify(snapshotGeom(f)));
+      g.id = uid(); g.name = f.name + ' copy'; g.locked = false;
+      if (ng) g.group = ng.id;
+      moveFixture(g, JSON.parse(JSON.stringify(g)), off, off);
+      project.fixtures.push(g); out.push(g.id);
+    }
   }
   if (!out.length) return;
   ui.sel = new Set(out);
-  markGeom(); commit(); renderRight();
+  normalizeGroups(); markGeom(); commit(); renderRight();
+}
+// The selected fixtures go into a new group, where the first of them is in the list
+function groupSel() {
+  const sel = selected(), same = wholeGroup(sel);
+  if (sel.length < 2) { toast('Select two or more fixtures to group them.'); return; }
+  if (same) { toast(`${groupName(same)} is a group already.`); return; }
+  const g = { id: uid(), name: nextGroupName(), tag: TAGS[(project.groups.length + 2) % TAGS.length], open: true };
+  const before = project.fixtures.slice(0, project.fixtures.indexOf(sel[0])).filter(f => !ui.sel.has(f.id)).length;
+  const rest = project.fixtures.filter(f => !ui.sel.has(f.id));
+  rest.splice(before, 0, ...sel);
+  sel.forEach(f => { f.group = g.id; });
+  project.fixtures = rest; project.groups.push(g);
+  normalizeGroups(); markGeom(); commit(); renderRight();
+  toast(`${g.name}: ${sel.length} fixtures. Rename it in the Inspector.`);
+}
+// The selected fixtures leave their groups; they stay where they are in the list, after what is left of the group
+function ungroupSel() {
+  const leaving = new Set(selected().filter(f => f.group != null).map(f => f.id));
+  if (!leaving.size) return;
+  const out = [], done = new Set();
+  for (const f of project.fixtures) {
+    if (f.group == null) { out.push(f); continue; }
+    if (done.has(f.group)) continue;
+    done.add(f.group);
+    const m = project.fixtures.filter(x => x.group === f.group);
+    out.push(...m.filter(x => !leaving.has(x.id)), ...m.filter(x => leaving.has(x.id)));
+  }
+  for (const f of out) if (leaving.has(f.id)) delete f.group;
+  project.fixtures = out;
+  normalizeGroups(); markGeom(); commit(); renderRight();
+}
+// Into a group (after its last fixture), or out of one (right after it)
+function setFixtureGroup(f, gid) {
+  if ((f.group ?? '') === gid) return;
+  const old = f.group, rest = project.fixtures.filter(x => x !== f);
+  if (gid) f.group = gid; else delete f.group;
+  const last = rest.map(x => x.group).lastIndexOf(gid || old);
+  rest.splice(last >= 0 ? last + 1 : rest.length, 0, f);
+  project.fixtures = rest;
+  normalizeGroups(); markGeom(); commit(); renderRight();
 }
 function toggleIdentify() {
   ui.outputMode = ui.outputMode === 'identify' ? 'content' : 'identify';
@@ -2929,6 +3262,8 @@ function nudge(dx, dy) {
 /* ---------- align and distribute ---------- */
 // Several fixtures align to the box around all of them, a single one to the canvas. Locked fixtures stay put,
 // but still count for the box, so the others can be lined up with one that is locked.
+// With one whole group selected, its fixtures are lined up with each other. Otherwise each whole group in the
+// selection moves as one block (a block holding a locked fixture stays put), and the other fixtures one by one.
 const r3 = v => Math.round(v * 1000) / 1000;
 function shiftFixture(f, dx, dy) {
   if (!dx && !dy) return;
@@ -2936,57 +3271,68 @@ function shiftFixture(f, dx, dy) {
   for (const k of ['x1', 'y1', 'x2', 'y2', 'cx', 'cy']) if (typeof f[k] === 'number') f[k] = r3(f[k]);
   if (f.type === 'path') f.pts = f.pts.map(r3);
 }
-function boxOf(list) {
-  const bs = list.map(fixtureBounds);
-  return { x0: Math.min(...bs.map(b => b.x0)), y0: Math.min(...bs.map(b => b.y0)), x1: Math.max(...bs.map(b => b.x1)), y1: Math.max(...bs.map(b => b.y1)) };
+function boxAround(bs) {
+  const o = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  for (const b of bs) { o.x0 = Math.min(o.x0, b.x0); o.y0 = Math.min(o.y0, b.y0); o.x1 = Math.max(o.x1, b.x1); o.y1 = Math.max(o.y1, b.y1); }
+  return o;
 }
+const boxOf = list => boxAround(list.map(fixtureBounds));
+function arrangeUnits(sel = selected()) {
+  const lists = wholeGroup(sel) ? sel.map(f => [f]) : selUnits(sel).map(u => u.list);
+  return lists.map(list => ({ list, locked: list.some(f => f.locked), b: boxOf(list) }));
+}
+const shiftUnit = (u, dx, dy) => u.list.forEach(f => shiftFixture(f, dx, dy));
 const arranged = () => { markGeom(); commit(); syncInspector(); };
 function alignSel(edge) { // l, cx, r: left edges, centres, right edges; t, cy, b likewise vertically
-  const sel = selected(), list = sel.filter(f => !f.locked);
-  if (!list.length) return;
-  const box = sel.length > 1 ? boxOf(sel) : { x0: 0, y0: 0, x1: project.settings.compW, y1: project.settings.compH };
-  for (const f of list) {
-    const b = fixtureBounds(f);
+  const units = arrangeUnits(), free = units.filter(u => !u.locked);
+  if (!free.length) return;
+  const box = units.length > 1 ? boxAround(units.map(u => u.b)) : { x0: 0, y0: 0, x1: project.settings.compW, y1: project.settings.compH };
+  for (const u of free) {
+    const b = u.b;
     const dx = { l: box.x0 - b.x0, cx: (box.x0 + box.x1 - b.x0 - b.x1) / 2, r: box.x1 - b.x1 }[edge] || 0;
     const dy = { t: box.y0 - b.y0, cy: (box.y0 + box.y1 - b.y0 - b.y1) / 2, b: box.y1 - b.y1 }[edge] || 0;
-    shiftFixture(f, dx, dy);
+    shiftUnit(u, dx, dy);
   }
   arranged();
 }
-// The first and last fixture stay; the ones between get the same spacing between centres
+// The first and last stay; the ones between get the same spacing between centres
 function distributeSel(axis) {
-  const list = selected().filter(f => !f.locked);
-  if (list.length < 3) return;
+  const free = arrangeUnits().filter(u => !u.locked);
+  if (free.length < 3) return;
   const mid = b => (axis === 'x' ? b.x0 + b.x1 : b.y0 + b.y1) / 2;
-  const items = list.map(f => ({ f, c: mid(fixtureBounds(f)) })).sort((a, b) => a.c - b.c);
+  const items = free.map(u => ({ u, c: mid(u.b) })).sort((a, b) => a.c - b.c);
   const first = items[0].c, step = (items[items.length - 1].c - first) / (items.length - 1);
-  items.forEach((it, i) => { const d = first + i * step - it.c; shiftFixture(it.f, axis === 'x' ? d : 0, axis === 'y' ? d : 0); });
+  items.forEach((it, i) => { const d = first + i * step - it.c; shiftUnit(it.u, axis === 'x' ? d : 0, axis === 'y' ? d : 0); });
   arranged();
 }
 // Move the selection as a group, so that together they sit in the middle of the canvas
 function centreSel() {
-  const list = selected().filter(f => !f.locked);
-  if (!list.length) return;
-  const b = boxOf(list), dx = project.settings.compW / 2 - (b.x0 + b.x1) / 2, dy = project.settings.compH / 2 - (b.y0 + b.y1) / 2;
-  list.forEach(f => shiftFixture(f, dx, dy));
+  const free = arrangeUnits().filter(u => !u.locked);
+  if (!free.length) return;
+  const b = boxAround(free.map(u => u.b)), dx = project.settings.compW / 2 - (b.x0 + b.x1) / 2, dy = project.settings.compH / 2 - (b.y0 + b.y1) / 2;
+  free.forEach(u => shiftUnit(u, dx, dy));
   arranged();
 }
 function arrangeSection(sel) {
-  const free = sel.filter(f => !f.locked).length, many = sel.length > 1;
+  const units = arrangeUnits(sel), free = units.filter(u => !u.locked).length, many = units.length > 1;
+  const g = wholeGroup(sel), blocks = !g && units.some(u => u.list.length > 1);
   const b = (ic, title, fn, off) => h('button', { class: 'btn icon', type: 'button', title, 'aria-label': title, disabled: !free || !!off, onclick: fn }, icon(ic));
   const align = [
     h('div', { class: 'grp' }, b('alignL', 'Align left', () => alignSel('l')), b('alignCX', 'Align centres horizontally', () => alignSel('cx')), b('alignR', 'Align right', () => alignSel('r'))),
     h('div', { class: 'grp' }, b('alignT', 'Align top', () => alignSel('t')), b('alignCY', 'Align centres vertically', () => alignSel('cy')), b('alignB', 'Align bottom', () => alignSel('b')))];
   const centre = h('div', { class: 'grp' }, b('centre', many ? 'Centre them together on the canvas' : 'Centre on the canvas', centreSel));
+  const note = !free ? (many ? 'These are all locked. Unlock them to move them.' : 'Locked. Unlock it to move it.')
+    : (g ? `Lines up the fixtures of ${groupName(g)} with each other. Centre moves the whole group to the middle of the canvas.`
+      : many ? `Aligns to the edges of the selection${blocks ? ', each group as one block' : ''}. Distribute (3 or more) keeps the outermost two and spaces the centres evenly between them.`
+      : 'Aligns to the edges of the canvas.') +
+      (free < units.length ? (blocks ? ' Locked fixtures, and the groups they are in, stay where they are.' : ' Locked fixtures stay where they are.') : '');
   return sec('Arrange',
     many ? [h('div', { class: 'arrange' }, align),   // aligning on the first row, spacing and centring on the second
       h('div', { class: 'arrange' }, h('div', { class: 'grp' },
         b('distH', 'Distribute horizontally: the same spacing between centres', () => distributeSel('x'), free < 3),
         b('distV', 'Distribute vertically: the same spacing between centres', () => distributeSel('y'), free < 3)), centre)]
       : h('div', { class: 'arrange' }, align, centre),
-    h('p', { class: 'note' }, !free ? (many ? 'These are all locked. Unlock them to move them.' : 'Locked. Unlock it to move it.')
-      : (many ? 'Aligns to the edges of the selection. Distribute (3 or more) keeps the outermost two and spaces the centres evenly between them.' : 'Aligns to the edges of the canvas.') +
-        (free < sel.length ? ' Locked fixtures stay where they are.' : '')));
+    h('p', { class: 'note' }, note));
 }
 
 /* ============================================================ bottom dock */
@@ -3163,7 +3509,7 @@ function ctrlSummary(c) {
   return { used, px, ovf, cap: c.outputs * c.upo };
 }
 function renderPatch(body) {
-  if (patchDirty) computePatch();
+  ensurePatch();
   if (!ui.selCtrl || !ctrlById(ui.selCtrl)) ui.selCtrl = project.controllers[0] ? project.controllers[0].id : null;
   const items = h('div', { class: 'items' });
   for (const c of project.controllers) {
@@ -3319,7 +3665,7 @@ function addNodeAsController(n) {
 /* ---------- DMX monitor ---------- */
 let monCanvas = null, monMap = null, monMapKey = '';
 function renderMonitor(body) {
-  if (patchDirty) computePatch();
+  ensurePatch();
   if (!universes.find(u => u.key === ui.monitorKey)) ui.monitorKey = universes[0] ? universes[0].key : null;
   const ul = h('div', { class: 'ulist' }, universes.length ? universes.map(u => h('div', { class: u.key === ui.monitorKey ? 'sel' : '', onclick: () => { ui.monitorKey = u.key; renderDock(); } },
     h('span', null, `${u.ip} · U ${u.uni}`), h('span', { class: 'muted' }, u.used + ' ch'))) : h('div', { class: 'empty', style: { fontFamily: 'var(--ui)', cursor: 'default' } }, 'No universes yet. Patch fixtures to a controller.'));
@@ -3404,6 +3750,8 @@ function restore(s) {
   // zones that fade and that the undo does not change carry on fading
   const fading = new Map(project.zones.filter(z => z._fade).map(z => [z.id, z]));
   for (const z of p.zones) { const o = fading.get(z.id); if (o && JSON.stringify(o.layers) === JSON.stringify(z.layers)) z._fade = o._fade; }
+  // folding a group in the list is not an edit: undo leaves groups folded or unfolded as they are
+  for (const g of p.groups) { const o = project.groups.find(x => x.id === g.id); if (o) g.open = o.open; }
   project = p;
   ui.sel = new Set([...ui.sel].filter(id => fxById(id)));
   markGeom(); markPatch(); rebuildGeometry();
@@ -3465,7 +3813,7 @@ async function openProjectFile(file) {
   } catch (e) { toast('Could not open that file: ' + e.message, 'err'); }
 }
 function exportCSV() {
-  if (patchDirty) computePatch();
+  ensurePatch();
   const rows = [['Fixture', 'Type', 'Pixels', 'Color order', 'Controller', 'IP', 'Output', 'Position', 'Start universe', 'Start channel', 'End universe', 'End channel', 'Overflow pixels']];
   const order = [];
   for (const c of project.controllers) c.chains.forEach(ch => ch.forEach(id => { const f = fxById(id); if (f) order.push(f); }));
@@ -3732,6 +4080,9 @@ function demoProject() {
   const pts = [];
   for (let i = 0; i <= 24; i++) { const x = 60 + i * 12; pts.push(x, 470 + Math.sin(i / 24 * Math.PI * 2) * 70); }
   const wave = F('path', { name: 'Wave', pts, pixels: 48, tag: TAGS[3] });
+  const gStrips = { id: uid(), name: 'Strips', tag: TAGS[1], open: true }, gRings = { id: uid(), name: 'Rings', tag: TAGS[2], open: true };
+  strips.forEach(s => { s.group = gStrips.id; }); rings.forEach(r => { r.group = gRings.id; });
+  project.groups.push(gStrips, gRings);
   const c = newController({ name: 'Pixel controller A', ip: '10.0.0.50', outputs: 4, upo: 4, startUniverse: 0 });
   c.chains = [[panel.id], strips.map(s => s.id), rings.map(r => r.id), [wave.id]];
   project.controllers.push(c);
@@ -3837,6 +4188,7 @@ function initUI() {
   $('#btnUndo').addEventListener('click', undo);
   $('#btnRedo').addEventListener('click', redo);
   $('#btnAddFx').addEventListener('click', e => addFixtureMenu(e.currentTarget));
+  initFxListDrop();
   $('#btnImportSvg').addEventListener('click', () => $('#fileSvg').click());
   $('#btnAddSrc').addEventListener('click', e => addSourceMenu(e.currentTarget));
   $('#btnOutput').addEventListener('click', () => setOutput(!ui.outputOn));
@@ -3904,6 +4256,7 @@ function onKey(e) {
   if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && k === 'y') { e.preventDefault(); redo(); return; }
   if (mod && k === 'd') { e.preventDefault(); duplicateSel(); return; }
+  if (mod && k === 'g') { e.preventDefault(); e.shiftKey ? ungroupSel() : groupSel(); return; }
   if (mod && k === 'a') { e.preventDefault(); ui.sel = new Set(project.fixtures.filter(f => !f.locked).map(f => f.id)); onSelection(); return; }
   if (mod) return;
   const digit = /^Digit([1-9])$/.exec(e.code);

@@ -494,6 +494,7 @@ function parseIP(s) {
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); return true; } catch (e) { return false; } },
+  remove(k) { try { localStorage.removeItem(k); } catch (e) { /* storage off */ } },
 };
 function toast(msg, kind = '') {
   const t = h('div', { class: 'toast ' + kind, role: 'status' }, msg);
@@ -501,6 +502,14 @@ function toast(msg, kind = '') {
   setTimeout(() => t.remove(), kind === 'err' ? 6000 : 3200);
 }
 function debounce(fn, ms) { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; }
+// An error in one part of a frame (a shader, the stage) must not stop the output or the stage: it is logged once
+const reported = new Set();
+function report(where, e) {
+  const key = where + ': ' + ((e && e.message) || e);
+  if (reported.has(key)) return;
+  reported.add(key);
+  console.error('Weft, ' + key, e);
+}
 function download(name, text, type = 'application/json') {
   const a = h('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
   document.body.append(a); a.click(); a.remove();
@@ -587,15 +596,19 @@ function fitZonesToCanvas(oldW, oldH) {
     clampZone(z);
   }
 }
+// The fields of each fixture type and their defaults
+const FIXTURE_FIELDS = {
+  line: { x1: 0, y1: 0, x2: 200, y2: 0, pixels: 20 },
+  circle: { cx: 0, cy: 0, r: 60, pixels: 36, start: 0, sweep: 360, ccw: false },
+  matrix: { cx: 0, cy: 0, w: 160, h: 160, rot: 0, cols: 16, rows: 16, start: 'TL', dir: 'H', snake: true },
+  path: { pts: [0, 0, 100, 0], closed: false, pixels: 20 },
+};
 function newFixture(type, props = {}) {
   const f = {
     id: uid(), type, name: nextName(type), enabled: true, locked: false,
     tag: TAGS[project.fixtures.length % TAGS.length], order: 'RGB', reverse: false, dimmer: 1,
   };
-  if (type === 'line') Object.assign(f, { x1: 0, y1: 0, x2: 200, y2: 0, pixels: 20 });
-  if (type === 'circle') Object.assign(f, { cx: 0, cy: 0, r: 60, pixels: 36, start: 0, sweep: 360, ccw: false });
-  if (type === 'matrix') Object.assign(f, { cx: 0, cy: 0, w: 160, h: 160, rot: 0, cols: 16, rows: 16, start: 'TL', dir: 'H', snake: true });
-  if (type === 'path') Object.assign(f, { pts: [0, 0, 100, 0], closed: false, pixels: 20 });
+  if (FIXTURE_FIELDS[type]) Object.assign(f, JSON.parse(JSON.stringify(FIXTURE_FIELDS[type])));
   return Object.assign(f, props);
 }
 function nextName(type) {
@@ -626,20 +639,89 @@ const srcById = id => project.sources.find(s => s.id === id);
 const selected = () => project.fixtures.filter(f => ui.sel.has(f.id));
 const ctrlLetter = c => String.fromCharCode(65 + (project.controllers.indexOf(c) % 26));
 
+/* ---------- opening project files ---------- */
+// Project files can be older, partial or edited by hand. Missing or unreadable values get their defaults,
+// so the file opens instead of stopping the app; complete files come through unchanged.
+const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const isId = v => (typeof v === 'string' && v !== '') || (typeof v === 'number' && isFinite(v));
+// a finite number, or a string holding one; anything else gets the default
+const numOr = (v, d) => (typeof v === 'number' ? (isFinite(v) ? v : d) : typeof v === 'string' && v.trim() !== '' && isFinite(+v) ? +v : d);
+const uniqueId = (v, seen) => { const id = isId(v) && !seen.has(v) ? v : uid(); seen.add(id); return id; };
+function fixSettings(given) {
+  const s = Object.assign(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), isObj(given) ? given : {});
+  for (const [k, d] of Object.entries(DEFAULT_SETTINGS)) {
+    if (typeof d === 'number') s[k] = numOr(s[k], d);
+    else if (typeof d === 'string' && typeof s[k] !== 'string') s[k] = d;
+  }
+  s.compW = clamp(Math.round(s.compW), 16, 8192); s.compH = clamp(Math.round(s.compH), 16, 8192);
+  s.fps = clamp(s.fps, 1, 60);
+  if (!['off', 'sub', 'add'].includes(s.whiteMode)) s.whiteMode = 'off';
+  if (!Array.isArray(s.trim) || s.trim.length !== 3) s.trim = [1, 1, 1];
+  else if (!s.trim.every(v => typeof v === 'number' && isFinite(v))) s.trim = s.trim.map(v => numOr(v, 1));
+  return s;
+}
+function fixFixture(f, i, ids) {
+  const fields = FIXTURE_FIELDS[f.type];
+  for (const [k, d] of Object.entries(fields)) {
+    if (typeof d === 'number') f[k] = numOr(f[k], d);
+    else if (typeof d === 'string') { if (typeof f[k] !== 'string') f[k] = d; }
+    else if (!(k in f)) f[k] = JSON.parse(JSON.stringify(d));
+  }
+  // at most a million pixels per fixture: a typo like 1e9 would not fit in memory
+  if (f.type === 'matrix') {
+    f.cols = Math.min(f.cols, 4096); f.rows = Math.min(f.rows, Math.floor(1e6 / Math.max(1, f.cols | 0)));
+    if (!['TL', 'TR', 'BL', 'BR'].includes(f.start)) f.start = 'TL';
+    if (f.dir !== 'H' && f.dir !== 'V') f.dir = 'H';
+  } else f.pixels = Math.min(f.pixels, 1e6);
+  if (f.type === 'path') {
+    const P = Array.isArray(f.pts) && f.pts.every(v => typeof v === 'number' && isFinite(v)) ? f.pts : (Array.isArray(f.pts) ? f.pts : []).map(v => numOr(v, NaN)).filter(isFinite);
+    if (P.length % 2) P.pop();
+    f.pts = P.length >= 2 ? P : [0, 0, 100, 0];
+  }
+  f.id = uniqueId(f.id, ids);
+  if (typeof f.name !== 'string') f.name = f.name != null ? String(f.name) : TYPE_LABEL[f.type] + ' ' + (i + 1);
+  if (typeof f.tag !== 'string') f.tag = TAGS[i % TAGS.length];
+  if (!ORDERS.includes(f.order)) { const o = String(f.order || '').toUpperCase(); f.order = ORDERS.includes(o) ? o : 'RGB'; }
+  f.dimmer = numOr(f.dimmer, 1);
+  if (!('enabled' in f)) f.enabled = true;
+  if (!('locked' in f)) f.locked = false;
+  if (!('reverse' in f)) f.reverse = false;
+  return f;
+}
+function fixController(c, i, ids) {
+  c.id = uniqueId(c.id, ids);
+  if (typeof c.name !== 'string') c.name = c.name != null ? String(c.name) : 'Controller ' + String.fromCharCode(65 + (i % 26));
+  if (typeof c.ip !== 'string') c.ip = c.ip != null ? String(c.ip) : '';
+  if (!('enabled' in c)) c.enabled = true;
+  if (!('split' in c)) c.split = false;
+  if (Array.isArray(c.chains)) c.chains = c.chains.map(ch => (Array.isArray(ch) ? ch.filter(isId) : []));
+  ensureChains(c);
+  return c;
+}
 function hydrate(p) {
-  const base = blankProject(p.name || 'Untitled');
+  if (!isObj(p)) p = {};
+  const base = blankProject(typeof p.name === 'string' && p.name ? p.name : 'Untitled');
   const out = Object.assign(base, p);
-  out.settings = Object.assign(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), p.settings || {});
-  if (!Array.isArray(out.settings.trim) || out.settings.trim.length !== 3) out.settings.trim = [1, 1, 1];
-  out.fixtures = (p.fixtures || []).filter(f => TYPE_LABEL[f.type]);
-  out.controllers = p.controllers || [];
-  out.controllers.forEach(ensureChains);
-  out.sources = builtinSources().concat((p.sources || []).filter(s => !s.builtin));
+  if (typeof out.name !== 'string') out.name = base.name;
+  if (out.guide != null && !isObj(out.guide)) out.guide = null;
+  out.settings = fixSettings(p.settings);
+  const fxIds = new Set(), ctrlIds = new Set();
+  out.fixtures = (Array.isArray(p.fixtures) ? p.fixtures : []).filter(f => isObj(f) && TYPE_LABEL[f.type]).map((f, i) => fixFixture(f, i, fxIds));
+  out.controllers = (Array.isArray(p.controllers) ? p.controllers : []).filter(isObj).map((c, i) => fixController(c, i, ctrlIds));
+  const builtins = builtinSources(), srcIds = new Set(builtins.map(s => s.id));
+  const custom = (Array.isArray(p.sources) ? p.sources : []).filter(s => isObj(s) && !s.builtin && isId(s.id) && !srcIds.has(s.id) && srcIds.add(s.id));
+  for (const s of custom) {
+    if (!['isf', 'image', 'video', 'screen'].includes(s.kind)) s.kind = 'image';
+    if (typeof s.name !== 'string') s.name = s.name != null ? String(s.name) : 'Source';
+    if (s.kind === 'isf' && typeof s.code !== 'string') s.code = '';
+    if ('rate' in s) s.rate = numOr(s.rate, 1);
+  }
+  out.sources = builtins.concat(custom);
   if (!Array.isArray(p.zones)) { // Weft 0.2 and older: one set of layers and scenes for the whole canvas
     let layers = p.layers;
     if (!Array.isArray(layers)) { // Weft 0.1: one live source, parameters stored on the sources
       const L = newLayer(p.activeSource || 'b-rainbow');
-      for (const s of p.sources || []) if (s.params && Object.keys(s.params).length) L.params[s.id] = s.params;
+      for (const s of Array.isArray(p.sources) ? p.sources : []) if (isObj(s) && isObj(s.params) && Object.keys(s.params).length) L.params[s.id] = s.params;
       layers = [L];
     }
     out.zones = [newZone({ w: out.settings.compW, h: out.settings.compH, layers, scenes: p.scenes || [] })];
@@ -649,6 +731,7 @@ function hydrate(p) {
   const known = new Set(out.sources.map(s => s.id));
   const fixLayer = l => {
     const L = Object.assign(newLayer(), l);
+    if (!isId(L.id)) L.id = uid();
     if (!known.has(L.src)) L.src = null;
     if (!BLENDS.some(b => b[0] === L.blend)) L.blend = 'alpha';
     L.opacity = isFinite(L.opacity) ? clamp(+L.opacity, 0, 1) : 1;
@@ -656,9 +739,13 @@ function hydrate(p) {
     L.on = L.on !== false;
     return L;
   };
-  const fixScenes = list => (Array.isArray(list) ? list : []).map((sc, i) => Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2, tag: TAGS[i % TAGS.length] }, sc, { layers: (sc.layers || []).map(fixLayer) }));
+  const fixScenes = list => (Array.isArray(list) ? list : []).filter(isObj).map((sc, i) => Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2, tag: TAGS[i % TAGS.length] }, sc, { layers: (Array.isArray(sc.layers) ? sc.layers : []).map(fixLayer) }));
+  const zoneIds = new Set();
   out.zones = out.zones.map((zn, i) => {
     const z = Object.assign(newZone({ name: 'Zone ' + (i + 1) }), zn);
+    z.id = uniqueId(z.id, zoneIds);
+    if (typeof z.name !== 'string') z.name = 'Zone ' + (i + 1);
+    if (typeof z.tag !== 'string') z.tag = TAGS[1];
     z.layers = (Array.isArray(z.layers) ? z.layers : []).map(fixLayer);
     z.scenes = fixScenes(z.scenes);
     z.opacity = isFinite(z.opacity) ? clamp(+z.opacity, 0, 1) : 1;
@@ -789,6 +876,7 @@ function rebuildGeometry() {
     if (!f._col || f._col.length !== n * 3) { f._col = new Uint8ClampedArray(n * 3); f._disp = new Uint8ClampedArray(n * 3); }
   }
   geomDirty = false;
+  computeBB();
 }
 
 /* ============================================================ patch / addressing */
@@ -852,6 +940,7 @@ function computePatch() {
     });
   }
   universes.sort((a, b) => a.ip === b.ip ? a.uni - b.uni : a.ip.localeCompare(b.ip, undefined, { numeric: true }));
+  layoutFrame();
   patchDirty = false;
   patchVersion++;
 }
@@ -890,6 +979,9 @@ const glCanvas = document.createElement('canvas');
 glCanvas.width = 16; glCanvas.height = 16;
 let gl = null;
 try { gl = glCanvas.getContext('webgl', { preserveDrawingBuffer: true, premultipliedAlpha: false, antialias: false }); } catch (e) { gl = null; }
+// After a GPU reset the browser restores the context without the shaders: compile them again as they are used
+glCanvas.addEventListener('webglcontextlost', e => e.preventDefault());
+glCanvas.addEventListener('webglcontextrestored', () => { runtimes.clear(); for (const c of thumbs.values()) c._stale = true; });
 const mediaCanvas = document.createElement('canvas');
 const mctx = mediaCanvas.getContext('2d');
 const runtimes = new Map();   // source id -> { R, hdr, error }
@@ -912,10 +1004,10 @@ function sizeContent() {
 function runtimeOf(src) {
   let rt = runtimes.get(src.id);
   if (rt) return rt;
-  rt = { hdr: null, R: null, error: null };
+  const code = src.kind === 'isf' ? sourceCode(src) : null;
+  rt = { hdr: null, R: null, error: null, code };
   runtimes.set(src.id, rt);
   if (src.kind !== 'isf') return rt;
-  const code = sourceCode(src);
   rt.hdr = parseISFHeader(code);
   if (!rt.hdr) { rt.error = 'The JSON header between /* and */ could not be read. Check for trailing commas or missing quotes.'; return rt; }
   if (!gl) { rt.error = 'WebGL is turned off in this browser, so shaders cannot run.'; return rt; }
@@ -925,6 +1017,37 @@ function runtimeOf(src) {
   R.setDateUniforms = function () { this.setValue('TIME', isfTime ?? clockT); this.setValue('TIMEDELTA', clockDT); this.setValue('FRAMEINDEX', frameIndex); };
   rt.R = R;
   return rt;
+}
+// Free a source's compiled shader: its GPU programs, and the textures of its passes. Not its vertex buffers:
+// the ISF renderers share one context and all draw with the vertex buffer set up last, which may be this one.
+function dropRuntime(id) {
+  const rt = runtimes.get(id);
+  if (!rt) return;
+  runtimes.delete(id);
+  const c = thumbs.get(id);
+  if (c) c._stale = true;
+  if (!rt.R || gl.isContextLost()) return;
+  try {
+    rt.R.cleanup();
+    for (const p of [rt.R.program, rt.R.paintProgram]) if (p) { gl.deleteShader(p.vShader); gl.deleteShader(p.fShader); gl.deleteProgram(p.program); }
+  } catch (e) { /* already gone */ }
+}
+// After a project is opened: keep the compiled shaders of sources that are unchanged, free the others
+function pruneRuntimes() {
+  const code = new Map(project.sources.map(s => [s.id, s.kind === 'isf' ? sourceCode(s) : null]));
+  for (const [id, rt] of [...runtimes]) if (!code.has(id) || code.get(id) !== rt.code) dropRuntime(id);
+  for (const id of [...thumbs.keys()]) if (!code.has(id)) thumbs.delete(id);
+}
+// Stop a source's media and let the browser free it: a video that is only dropped keeps playing in the
+// background, and a screen capture keeps capturing
+function releaseMedia(id) {
+  const el = mediaEls.get(id);
+  if (!el) return;
+  mediaEls.delete(id);
+  if (el.srcObject) { el.srcObject.getTracks().forEach(t => t.stop()); el.srcObject = null; }
+  const url = el.src;
+  if (el instanceof HTMLVideoElement) { el.pause(); el.removeAttribute('src'); el.load(); }
+  if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
 }
 const PARAM_TYPES = ['float', 'long', 'bool', 'color', 'point2D', 'event', 'int'];
 function isfInputs(src) { const rt = runtimeOf(src); return (rt.hdr && rt.hdr.INPUTS || []).filter(i => PARAM_TYPES.includes(i.TYPE)); }
@@ -1017,22 +1140,19 @@ void main() {
   gl_FragColor = vec4(mix(b.rgb, clamp(blend(b.rgb, t.rgb), 0.0, 1.0), t.a * opacity), 1.0);
 }`;
   const MIX = 'precision mediump float; varying vec2 uv; uniform sampler2D a, b; uniform vec2 sa, sb; uniform float t;\nvoid main() { gl_FragColor = vec4(mix(texture2D(a, uv * sa).rgb, texture2D(b, uv * sb).rgb, t), 1.0); }';
-  const program = fs => {
+  // Sampling: every fixture pixel is one point of a small target that reads the output at the pixel's position,
+  // so only the pixels come back from the GPU, not the whole area the fixtures cover
+  const SAMPLE_VS = 'attribute vec4 p; uniform vec2 dsz; varying highp vec2 uv;\nvoid main() { uv = p.zw; gl_Position = vec4((p.xy + 0.5) / dsz * 2.0 - 1.0, 0.0, 1.0); gl_PointSize = 1.0; }';
+  const SAMPLE_FS = 'precision highp float; varying highp vec2 uv; uniform sampler2D frame;\nvoid main() { gl_FragColor = texture2D(frame, uv); }';
+  const program = (vs, fs) => {
     const p = g.createProgram();
-    for (const [type, code] of [[g.VERTEX_SHADER, VS], [g.FRAGMENT_SHADER, fs]]) { const s = g.createShader(type); g.shaderSource(s, code); g.compileShader(s); g.attachShader(p, s); }
+    for (const [type, code] of [[g.VERTEX_SHADER, vs], [g.FRAGMENT_SHADER, fs]]) { const s = g.createShader(type); g.shaderSource(s, code); g.compileShader(s); g.attachShader(p, s); }
     g.bindAttribLocation(p, 0, 'p');
     g.linkProgram(p);
     const u = {};
-    for (const n of ['base', 'top', 'scale', 'opacity', 'mode', 'a', 'b', 'sa', 'sb', 't']) u[n] = g.getUniformLocation(p, n);
-    return { p, u };
+    for (const n of ['base', 'top', 'scale', 'opacity', 'mode', 'a', 'b', 'sa', 'sb', 't', 'dsz', 'frame']) u[n] = g.getUniformLocation(p, n);
+    return { p, u, ok: !!g.getProgramParameter(p, g.LINK_STATUS) };
   };
-  const blendP = program(BLEND), mixP = program(MIX);
-  g.bindBuffer(g.ARRAY_BUFFER, g.createBuffer());
-  g.bufferData(g.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), g.STATIC_DRAW);
-  g.enableVertexAttribArray(0);
-  g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
-  g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL, true); // textures upright in GL terms, like the canvas that is read back
-  g.pixelStorei(g.UNPACK_COLORSPACE_CONVERSION_WEBGL, g.NONE);
   const texture = () => {
     const t = g.createTexture();
     g.bindTexture(g.TEXTURE_2D, t);
@@ -1049,16 +1169,39 @@ void main() {
     g.bindFramebuffer(g.FRAMEBUFFER, t.fb);
     g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, t.tex, 0);
   };
-  const slots = [[target(), target()], [target(), target()]]; // ping-pong pairs: 0 = a zone's current look, 1 = the look it fades from
-  const cur = [0, 0], area = [[1, 1], [1, 1]];                // area = the zone size accumulated in each slot
-  const upload = texture();
-  const zones = new Map();                                     // zone id -> { out: its picture, frozen: a copy to fade from }
-  let TW = 1, TH = 1, CW = 0, CH = 0;
+  // GPU resources. They are made again when the browser restores the context after losing it (a GPU reset).
+  let blendP, mixP, quad, slots, cur, area, upload, zones, TW, TH, CW, CH, smp;
+  function init() {
+    blendP = program(VS, BLEND); mixP = program(VS, MIX);
+    quad = g.createBuffer();
+    g.bindBuffer(g.ARRAY_BUFFER, quad);
+    g.bufferData(g.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), g.STATIC_DRAW);
+    g.enableVertexAttribArray(0);
+    g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+    g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL, true); // textures upright in GL terms, like the canvas that is read back
+    g.pixelStorei(g.UNPACK_COLORSPACE_CONVERSION_WEBGL, g.NONE);
+    slots = [[target(), target()], [target(), target()]]; // ping-pong pairs: 0 = a zone's current look, 1 = the look it fades from
+    cur = [0, 0]; area = [[1, 1], [1, 1]];                 // area = the zone size accumulated in each slot
+    upload = texture();
+    zones = new Map();                                      // zone id -> { out: its picture, frozen: a copy to fade from }
+    TW = 1; TH = 1; CW = 0; CH = 0;
+    // Exact sampling needs full float precision in fragment shaders; without it the area is read back instead.
+    smp = null;
+    const hp = g.getShaderPrecisionFormat(g.FRAGMENT_SHADER, g.HIGH_FLOAT);
+    if (hp && hp.precision >= 23) {
+      const prog = program(SAMPLE_VS, SAMPLE_FS), maxT = g.getParameter(g.MAX_TEXTURE_SIZE), maxV = g.getParameter(g.MAX_VIEWPORT_DIMS);
+      if (prog.ok) smp = { prog, buf: g.createBuffer(), frame: texture(), fw: 0, fh: 0, dst: target(), W: Math.min(1024, maxT, maxV[0]), maxRows: Math.min(maxT, maxV[1]), rows: 0, count: 0, n: -1, version: -1, out: null };
+    }
+  }
+  init();
+  canvas.addEventListener('webglcontextlost', e => e.preventDefault()); // so the browser restores it
+  canvas.addEventListener('webglcontextrestored', init);
   const bindTex = (unit, t, loc) => { g.activeTexture(g.TEXTURE0 + unit); g.bindTexture(g.TEXTURE_2D, t); g.uniform1i(loc, unit); };
   const pass = (fb, x, y, w, h, prog, set) => { g.bindFramebuffer(g.FRAMEBUFFER, fb); g.viewport(x, y, w, h); g.useProgram(prog.p); set(prog.u); g.drawArrays(g.TRIANGLES, 0, 6); };
-  const scaleOf = slot => [area[slot][0] / TW, area[slot][1] / TH];
   return {
     ok: true, canvas,
+    lost: () => g.isContextLost(),
+    sampling: () => !!smp,
     // textures match the source canvases (tw × th); the output canvas is the composition (cw × ch)
     resize(tw, th, cw, ch) {
       if (tw !== TW || th !== TH) { TW = tw; TH = th; for (const pair of slots) for (const t of pair) size(t, tw, th); }
@@ -1074,7 +1217,7 @@ void main() {
       g.activeTexture(g.TEXTURE1); g.bindTexture(g.TEXTURE_2D, upload);
       g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, image);
       const from = slots[slot][cur[slot]], to = slots[slot][1 - cur[slot]], [w, h] = area[slot];
-      pass(to.fb, 0, 0, w, h, blendP, u => { bindTex(0, from.tex, u.base); bindTex(1, upload, u.top); g.uniform2fv(u.scale, scaleOf(slot)); g.uniform1f(u.opacity, opacity); g.uniform1i(u.mode, mode); });
+      pass(to.fb, 0, 0, w, h, blendP, u => { bindTex(0, from.tex, u.base); bindTex(1, upload, u.top); g.uniform2f(u.scale, w / TW, h / TH); g.uniform1f(u.opacity, opacity); g.uniform1i(u.mode, mode); });
       cur[slot] = 1 - cur[slot];
     },
     // The zone's picture: its current look, crossfaded by t from slot 1 or from its frozen frame (from = null: no fade)
@@ -1082,9 +1225,9 @@ void main() {
       let Z = zones.get(z.id);
       if (!Z) zones.set(z.id, Z = { out: target(), frozen: null });
       size(Z.out, z.w, z.h);
-      const b = slots[0][cur[0]].tex, sb = scaleOf(0);
-      const [a, sa] = from === 1 ? [slots[1][cur[1]].tex, scaleOf(1)] : from === 'frozen' && Z.frozen ? [Z.frozen, [1, 1]] : [b, sb];
-      pass(Z.out.fb, 0, 0, z.w, z.h, mixP, u => { bindTex(0, a, u.a); bindTex(1, b, u.b); g.uniform2fv(u.sa, sa); g.uniform2fv(u.sb, sb); g.uniform1f(u.t, from == null ? 1 : t); });
+      const b = slots[0][cur[0]].tex, bw = area[0][0] / TW, bh = area[0][1] / TH;
+      const [a, aw, ah] = from === 1 ? [slots[1][cur[1]].tex, area[1][0] / TW, area[1][1] / TH] : from === 'frozen' && Z.frozen ? [Z.frozen, 1, 1] : [b, bw, bh];
+      pass(Z.out.fb, 0, 0, z.w, z.h, mixP, u => { bindTex(0, a, u.a); bindTex(1, b, u.b); g.uniform2f(u.sa, aw, ah); g.uniform2f(u.sb, bw, bh); g.uniform1f(u.t, from == null ? 1 : t); });
     },
     // Keep a copy of the zone's picture, to fade from when a fade is interrupted by another
     freeze(z) {
@@ -1100,7 +1243,7 @@ void main() {
     composite(z, opacity) {
       const Z = zones.get(z.id);
       g.enable(g.BLEND); g.blendColor(0, 0, 0, opacity); g.blendFunc(g.CONSTANT_ALPHA, g.ONE_MINUS_CONSTANT_ALPHA);
-      pass(null, z.x, CH - z.y - z.h, z.w, z.h, mixP, u => { bindTex(0, Z.out.tex, u.a); bindTex(1, Z.out.tex, u.b); g.uniform2fv(u.sa, [1, 1]); g.uniform2fv(u.sb, [1, 1]); g.uniform1f(u.t, 1); });
+      pass(null, z.x, CH - z.y - z.h, z.w, z.h, mixP, u => { bindTex(0, Z.out.tex, u.a); bindTex(1, Z.out.tex, u.b); g.uniform2f(u.sa, 1, 1); g.uniform2f(u.sb, 1, 1); g.uniform1f(u.t, 1); });
       g.disable(g.BLEND);
     },
     prune(ids) {
@@ -1109,6 +1252,52 @@ void main() {
         g.deleteTexture(Z.out.tex); g.deleteFramebuffer(Z.out.fb); if (Z.frozen) g.deleteTexture(Z.frozen);
         zones.delete(id);
       }
+    },
+    // The output's colour at every fixture pixel: 4 bytes per pixel, in fixture order, 0 for pixels outside the
+    // area bb (in composition pixels, y down). The layout of points is rebuilt when the geometry version changes.
+    // Returns null if this GPU can't sample exactly; the caller then reads the area back with read().
+    sample(bb, list, version) {
+      const S = smp;
+      if (!S) return null;
+      let n = 0;
+      for (const f of list) n += f._n;
+      const rw = bb.x1 - bb.x0 + 1, rh = bb.y1 - bb.y0 + 1;
+      if (S.version !== version || S.n !== n) {
+        const rows = Math.max(1, Math.ceil(n / S.W));
+        if (rows > S.maxRows) return null;
+        const pts = new Float32Array(n * 4);
+        let q = 0, c = 0;
+        for (const f of list) {
+          const P = f._pts;
+          for (let i = 0; i < f._n; i++, q++) {
+            const x = Math.floor(P[2 * i]), y = Math.floor(P[2 * i + 1]);
+            if (!(x >= bb.x0 && x <= bb.x1 && y >= bb.y0 && y <= bb.y1)) continue;
+            pts[c++] = q % S.W; pts[c++] = Math.floor(q / S.W); pts[c++] = (x - bb.x0 + 0.5) / rw; pts[c++] = (bb.y1 - y + 0.5) / rh;
+          }
+        }
+        g.bindBuffer(g.ARRAY_BUFFER, S.buf);
+        g.bufferData(g.ARRAY_BUFFER, pts.subarray(0, c), g.STATIC_DRAW);
+        g.bindBuffer(g.ARRAY_BUFFER, quad);
+        Object.assign(S, { count: c / 4, rows, n, version, out: new Uint8Array(S.W * rows * 4) });
+        size(S.dst, S.W, rows);
+      }
+      // copy the area out of the output canvas, then read it at each pixel
+      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, S.frame);
+      if (S.fw !== rw || S.fh !== rh) { S.fw = rw; S.fh = rh; g.texImage2D(g.TEXTURE_2D, 0, g.RGB, rw, rh, 0, g.RGB, g.UNSIGNED_BYTE, null); }
+      g.bindFramebuffer(g.FRAMEBUFFER, null);
+      g.copyTexSubImage2D(g.TEXTURE_2D, 0, 0, 0, bb.x0, CH - 1 - bb.y1, rw, rh);
+      g.bindFramebuffer(g.FRAMEBUFFER, S.dst.fb);
+      g.viewport(0, 0, S.W, S.rows);
+      g.clearColor(0, 0, 0, 0); g.clear(g.COLOR_BUFFER_BIT);
+      if (S.count) {
+        g.useProgram(S.prog.p);
+        g.uniform1i(S.prog.u.frame, 0); g.uniform2f(S.prog.u.dsz, S.W, S.rows);
+        g.bindBuffer(g.ARRAY_BUFFER, S.buf); g.vertexAttribPointer(0, 4, g.FLOAT, false, 0, 0);
+        g.drawArrays(g.POINTS, 0, S.count);
+        g.bindBuffer(g.ARRAY_BUFFER, quad); g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+      }
+      g.readPixels(0, 0, S.W, S.rows, g.RGBA, g.UNSIGNED_BYTE, S.out);
+      return S.out;
     },
     read(x, y, w, h, buf) { g.bindFramebuffer(g.FRAMEBUFFER, null); g.readPixels(x, y, w, h, g.RGBA, g.UNSIGNED_BYTE, buf); },
   };
@@ -1162,14 +1351,17 @@ function drawPreview(c, z) {
 }
 function renderContent() {
   if (!mixer.ok) { for (const f of project.fixtures) f._col.fill(0); return; }
-  const s = project.settings, sel = selZone();
+  if (mixer.lost() || (gl && gl.isContextLost())) return; // GPU reset: hold the last colours until the browser restores it
+  const s = project.settings, sel = selZone(), pv = !!preview && preview.canvas.isConnected && !document.hidden;
   mixer.resize(glCanvas.width, glCanvas.height, s.compW, s.compH);
   mixer.clear();
   project.zones.forEach((z, i) => {
     let t = 1;
     if (z._fade) { t = (clockT - z._fade.start) / z._fade.dur; if (t >= 1) { z._fade = null; syncMedia(); } }
     const show = !hiddenZone(i);
-    if (!show && z !== sel) return; // the selected zone still renders, for its layer preview
+    // Hidden zones are not drawn. The selected one still is while its layer preview is on screen, and while it
+    // fades, so a fade interrupted by another scene continues from its current picture.
+    if (!show && !(z === sel && (pv || z._fade))) return;
     const f = z._fade;
     renderLook(z.layers, 0, z);
     if (f && f.from) renderLook(f.from, 1, z);
@@ -1208,7 +1400,7 @@ function drawThumb(src, still) {
   x.drawImage(img, 0, img.height - THUMB, THUMB, THUMB, 0, 0, THUMB, THUMB);
 }
 function updateThumbs() {
-  if (!gl) return;
+  if (!gl || gl.isContextLost()) return;
   const hov = ui.hoverSrc && srcById(ui.hoverSrc);
   if (hov && thumbs.has(hov.id)) drawThumb(hov, false);
   let n = 0;
@@ -1219,8 +1411,9 @@ function updateThumbs() {
 }
 function markThumb(src) { const c = thumbs.get(src.id); if (c) c._stale = true; }
 
-let fixtureBB = null;
+let fixtureBB = null, geomVersion = 0; // the version changes whenever pixel positions or the canvas change
 function computeBB() {
+  geomVersion++;
   const W = project.settings.compW, H = project.settings.compH;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const f of project.fixtures) {
@@ -1234,10 +1427,29 @@ function computeBB() {
   x1 = Math.min(W - 1, Math.floor(x1)); y1 = Math.min(H - 1, Math.floor(y1));
   fixtureBB = x1 >= x0 && y1 >= y0 ? { x0, y0, x1, y1 } : null;
 }
-// Read the mixed frame back (only the area the fixtures cover) and store each pixel's colour in f._col
+// Read the mixed frame at every fixture pixel and store the pixel's colour in f._col.
+// There are two ways, with the same result: draw each pixel as a point into a small target and read that
+// back (little data to transfer), or read back the whole area the fixtures cover. Which is faster depends
+// on the GPU (software rendering draws points slowly), so they are timed against each other after the
+// layout changes, at most every few seconds.
+const samplePick = { gpu: true, version: -1, at: -1e9 };
 function sampleMix() {
   const bb = fixtureBB;
   if (!bb) { for (const f of project.fixtures) f._col.fill(0); return; }
+  if (mixer.sampling() && samplePick.version !== geomVersion && performance.now() - samplePick.at > 3000) pickSampling(bb);
+  if (!(samplePick.gpu && sampleGpu(bb))) sampleArea(bb);
+}
+function sampleGpu(bb) {
+  const got = mixer.sample(bb, project.fixtures, geomVersion);
+  if (!got) return false;
+  let k = 0;
+  for (const f of project.fixtures) {
+    const out = f._col, n = f._n;
+    for (let i = 0, j = 0; i < n; i++, j += 3, k += 4) { out[j] = got[k]; out[j + 1] = got[k + 1]; out[j + 2] = got[k + 2]; }
+  }
+  return true;
+}
+function sampleArea(bb) {
   const H = project.settings.compH;
   const rw = bb.x1 - bb.x0 + 1, rh = bb.y1 - bb.y0 + 1;
   if (readBuf.length < rw * rh * 4) readBuf = new Uint8Array(rw * rh * 4);
@@ -1252,6 +1464,13 @@ function sampleMix() {
       out[j] = readBuf[k]; out[j + 1] = readBuf[k + 1]; out[j + 2] = readBuf[k + 2];
     }
   }
+}
+function pickSampling(bb) {
+  samplePick.version = geomVersion; samplePick.at = performance.now();
+  if (!sampleGpu(bb)) { samplePick.gpu = false; return; } // lays out the points; not timed
+  const time = fn => { mixer.read(0, 0, 1, 1, readBuf); const t = performance.now(); fn(bb); return performance.now() - t; }; // after the frame's own work
+  const gpu = Math.min(time(sampleGpu), time(sampleGpu)), area = Math.min(time(sampleArea), time(sampleArea));
+  samplePick.gpu = gpu < area;
 }
 function testPattern(mode) {
   const phase = Math.floor(clockT) % 4;
@@ -1288,44 +1507,47 @@ function buildOutput() {
     const dim = f.enabled ? m * f.dimmer : 0;
     const kr = dim * tr[0], kg = dim * tr[1], kb = dim * tr[2];
     const o = f._out;
-    for (let i = 0; i < n; i++) {
-      const j = 3 * i;
-      const r = col[j] * kr, g = col[j + 1] * kg, b = col[j + 2] * kb;
-      disp[j] = r; disp[j + 1] = g; disp[j + 2] = b;
-      if (!o) continue;
-      const lin = o.lin[i];
+    if (!o) { for (let j = 0; j < 3 * n; j += 3) { disp[j] = col[j] * kr; disp[j + 1] = col[j + 1] * kg; disp[j + 2] = col[j + 2] * kb; } continue; }
+    const lins = o.lin, oi = o.oi, nc = oi.length, unis = o.unis;
+    const white = nc === 4 && wm !== 'off', sub = wm === 'sub';
+    for (let i = 0, j = 0; i < n; i++, j += 3) {
+      disp[j] = col[j] * kr; disp[j + 1] = col[j + 1] * kg; disp[j + 2] = col[j + 2] * kb;
+      const lin = lins[i];
       if (lin < 0) continue;
       let R = gammaLUT[disp[j]], G = gammaLUT[disp[j + 1]], B = gammaLUT[disp[j + 2]], W = 0;
-      if (o.oi.length === 4 && wm !== 'off') { W = Math.min(R, G, B); if (wm === 'sub') { R -= W; G -= W; B -= W; } }
-      const oi = o.oi;
-      for (let k = 0; k < oi.length; k++) {
-        const v = oi[k] === 0 ? R : oi[k] === 1 ? G : oi[k] === 2 ? B : oi[k] === 3 ? W : Math.round(0.2126 * R + 0.7152 * G + 0.0722 * B);
-        const L = lin + k;
-        o.unis[L >> 9].data[L & 511] = v;
+      if (white) { W = Math.min(R, G, B); if (sub) { R -= W; G -= W; B -= W; } }
+      for (let k = 0; k < nc; k++) {
+        const c = oi[k], L = lin + k;
+        unis[L >> 9].data[L & 511] = c === 0 ? R : c === 1 ? G : c === 2 ? B : c === 3 ? W : Math.round(0.2126 * R + 0.7152 * G + 0.0722 * B);
       }
     }
   }
 }
-function frameBuffer(black) {
+// The frame sent to the bridge: [u8 type=1][u8 flags][u16 count], then per universe [4 ip][u16 universe][u16 512][512 channels].
+// It is laid out once per patch, and the channels of each universe that is sent live in it, so a frame is sent as is.
+let outFrame = null;
+function layoutFrame() {
   const list = universes.filter(u => u.enabled);
-  const buf = new ArrayBuffer(4 + list.length * 520);
-  const dv = new DataView(buf), u8 = new Uint8Array(buf);
-  dv.setUint8(0, 1); dv.setUint8(1, project.settings.artSync ? 1 : 0); dv.setUint16(2, list.length, true);
+  const buf = new ArrayBuffer(4 + list.length * 520), u8 = new Uint8Array(buf), dv = new DataView(buf);
+  u8[0] = 1; dv.setUint16(2, list.length, true);
   let off = 4;
   for (const U of list) {
     u8.set(U.ipb, off); dv.setUint16(off + 4, U.uni, true); dv.setUint16(off + 6, 512, true);
-    if (!black) u8.set(U.data, off + 8);
+    const data = new Uint8Array(buf, off + 8, 512);
+    data.set(U.data); U.data = data;
     off += 520;
   }
-  return { buf, count: list.length };
+  outFrame = { buf, u8, count: list.length };
 }
 const outStats = { frames: 0, fps: 0, lastT: performance.now(), lastFrames: 0, dropped: 0, universes: 0 };
 function sendFrame(black = false) {
-  if (!bridge.connected) return;
+  if (!bridge.connected || !outFrame) return;
   if (bridge.ws.bufferedAmount > 2e6) { outStats.dropped++; return; }
-  const { buf, count } = frameBuffer(black);
-  outStats.universes = count;
-  try { bridge.ws.send(buf); outStats.frames++; } catch (e) { /* socket closing */ }
+  outFrame.u8[1] = project.settings.artSync ? 1 : 0;
+  let buf = outFrame.buf;
+  if (black) { const b = outFrame.u8.slice(); for (let off = 4; off < b.length; off += 520) b.fill(0, off + 8, off + 520); buf = b.buffer; }
+  outStats.universes = outFrame.count;
+  try { bridge.ws.send(buf); outStats.frames++; } catch (e) { /* socket closing */ } // send copies the frame
 }
 
 /* ============================================================ clock */
@@ -1340,12 +1562,12 @@ function tick() {
   clockDT = Math.min(0.25, (now - lastTick) / 1000);
   lastTick = now; clockT += clockDT; frameIndex++;
   if (!project) return;
-  if (geomDirty) { rebuildGeometry(); computeBB(); }
+  if (geomDirty) rebuildGeometry();
   if (patchDirty) { computePatch(); onPatchChanged(); }
   sizeContent();
-  if (ui.outputMode === 'content' || ui.showContent) renderContent();
+  if (ui.outputMode === 'content' || ui.showContent) try { renderContent(); } catch (e) { report('content', e); }
   if (ui.outputMode !== 'content') testPattern(ui.outputMode);
-  updateThumbs();
+  try { updateThumbs(); } catch (e) { report('thumbnails', e); }
   if (now - mediaChecked > 1000) { mediaChecked = now; syncMedia(); }
   buildOutput();
   if (ui.outputOn) sendFrame();
@@ -1463,18 +1685,20 @@ function outlinePath(f, c) {
   }
 }
 function drawDots(f, dispOverride) {
-  const P = f._pts, n = f._n, D = dispOverride || f._disp, z = ui.view.zoom;
-  const r = clamp(f._pitch * z * 0.36, 1.1, 10);
-  const small = r < 2.2;
-  for (let i = 0; i < n; i++) {
-    const sx = P[2 * i] * z + ui.view.x, sy = P[2 * i + 1] * z + ui.view.y;
-    if (sx < -10 || sy < -10 || sx > VW + 10 || sy > VH + 10) continue;
-    const R = D ? D[3 * i] : 0, G = D ? D[3 * i + 1] : 0, B = D ? D[3 * i + 2] : 0;
-    const lit = R + G + B > 6;
-    if (small) { ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : '#1d2129'; ctx.fillRect(sx - r, sy - r, r * 2, r * 2); continue; }
-    ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.2832);
-    if (lit) { ctx.fillStyle = `rgb(${R},${G},${B})`; ctx.fill(); }
-    else { ctx.fillStyle = '#12151b'; ctx.fill(); ctx.strokeStyle = '#343a46'; ctx.lineWidth = 1; ctx.stroke(); }
+  const P = f._pts, n = f._n, D = dispOverride || f._disp, z = ui.view.zoom, ox = ui.view.x, oy = ui.view.y;
+  const r = clamp(f._pitch * z * 0.36, 1.1, 10), d = r * 2;
+  const small = r < 2.2, xmax = VW + 10, ymax = VH + 10;
+  // Big projects draw tens of thousands of dots: the colour is only set when it changes from the previous dot
+  let key = -2, stroke = false;
+  for (let i = 0, j = 0; i < n; i++, j += 3) {
+    const sx = P[2 * i] * z + ox, sy = P[2 * i + 1] * z + oy;
+    if (sx < -10 || sy < -10 || sx > xmax || sy > ymax) continue;
+    const R = D ? D[j] : 0, G = D ? D[j + 1] : 0, B = D ? D[j + 2] : 0;
+    const lit = R + G + B > 6, k = lit ? (R << 16) | (G << 8) | B : -1;
+    if (k !== key) { key = k; ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : small ? '#1d2129' : '#12151b'; }
+    if (small) { ctx.fillRect(sx - r, sy - r, d, d); continue; }
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.2832); ctx.fill();
+    if (!lit) { if (!stroke) { ctx.strokeStyle = '#343a46'; ctx.lineWidth = 1; stroke = true; } ctx.stroke(); }
   }
   return r;
 }
@@ -1739,10 +1963,10 @@ function hitHandle(sx, sy) {
 }
 function hoverPixel(x, y) {
   const tol = 8 / ui.view.zoom;
-  let best = null, bd = tol;
+  let best = null, bd = tol * tol; // squared distances: this runs over every pixel on each pointer move
   for (const f of project.fixtures) {
     const P = f._pts; if (!P) continue;
-    for (let i = 0; i < f._n; i++) { const d = Math.hypot(P[2 * i] - x, P[2 * i + 1] - y); if (d < bd) { bd = d; best = { f, i }; } }
+    for (let i = 0; i < f._n; i++) { const dx = P[2 * i] - x, dy = P[2 * i + 1] - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = { f, i }; } }
   }
   return best;
 }
@@ -1800,7 +2024,7 @@ function addFixture(f, { select = true } = {}) {
   project.fixtures.push(f);
   markGeom();
   if (select) ui.sel = new Set([f.id]);
-  rebuildGeometry(); computeBB();
+  rebuildGeometry();
   commit();
   renderRight();
 }
@@ -2120,9 +2344,7 @@ function renderSrcList() {
   }));
 }
 function removeSource(s) {
-  const el = mediaEls.get(s.id);
-  if (el && el.srcObject) el.srcObject.getTracks().forEach(t => t.stop());
-  mediaEls.delete(s.id); runtimes.delete(s.id); thumbs.delete(s.id);
+  releaseMedia(s.id); dropRuntime(s.id); thumbs.delete(s.id);
   project.sources = project.sources.filter(x => x !== s);
   for (const z of project.zones) for (const L of z.layers.concat(...z.scenes.map(sc => sc.layers))) if (L.src === s.id) L.src = null;
   renderSrcList(); renderRight(); commit();
@@ -3011,18 +3233,30 @@ function restore(s) {
   const guide = project.guide;
   const p = hydrate(JSON.parse(s));
   if (p.guide && !p.guide.src && guide) p.guide.src = guide.src;
+  // zones that fade and that the undo does not change carry on fading
+  const fading = new Map(project.zones.filter(z => z._fade).map(z => [z.id, z]));
+  for (const z of p.zones) { const o = fading.get(z.id); if (o && JSON.stringify(o.layers) === JSON.stringify(z.layers)) z._fade = o._fade; }
   project = p;
   ui.sel = new Set([...ui.sel].filter(id => fxById(id)));
-  markGeom(); markPatch(); rebuildGeometry(); computeBB();
+  markGeom(); markPatch(); rebuildGeometry();
   renderAll(); saveSoon();
 }
 function undo() { if (hist.idx > 0) { hist.idx--; restore(hist.stack[hist.idx]); updateUndoButtons(); } }
 function redo() { if (hist.idx < hist.stack.length - 1) { hist.idx++; restore(hist.stack[hist.idx]); updateUndoButtons(); } }
 function updateUndoButtons() { $('#btnUndo').disabled = hist.idx <= 0; $('#btnRedo').disabled = hist.idx >= hist.stack.length - 1; }
-let saveWarned = false;
+// The project is saved in the browser after every change. The guide image can be megabytes, so it is kept
+// under its own key and written only when it changes, not with every edit or scene change.
+let saveWarned = false, guideKept;
 const saveSoon = debounce(() => {
-  if (store.set('weft.project', serialize(true))) return;
-  if (store.set('weft.project', serialize(false))) { if (!saveWarned) { toast('The guide image is too large to keep between sessions; everything else is saved.', 'warn'); saveWarned = true; } }
+  const g = project.guide && project.guide.src ? project.guide : null;
+  if ((g && g.src) !== guideKept) {
+    guideKept = g && g.src;
+    if (g && !store.set('weft.guide', { name: g.name, src: g.src })) {
+      store.remove('weft.guide');
+      if (!saveWarned) { toast('The guide image is too large to keep between sessions; everything else is saved.', 'warn'); saveWarned = true; }
+    } else if (!g) store.remove('weft.guide');
+  }
+  store.set('weft.project', serialize(false));
 }, 400);
 function commit() {
   pushHistory();
@@ -3034,11 +3268,11 @@ const commitSoft = debounce(() => { pushHistory(); saveSoon(); renderFxList(); }
 function savePrefs() { const o = {}; for (const k of UI_PREFS) o[k] = ui[k]; store.set('weft.ui', o); }
 function loadProject(p, { resetView = true } = {}) {
   project = hydrate(p);
-  runtimes.clear();
+  pruneRuntimes();
   ui.sel.clear(); ui.selCtrl = null; ui.zone = null; ui.layer = null;
   if (mixer.ok) mixer.prune(new Set(project.zones.map(z => z.id)));
   loadGuide();
-  markGeom(); markPatch(); rebuildGeometry(); computeBB(); computePatch();
+  markGeom(); markPatch(); rebuildGeometry(); computePatch();
   if (resetView) ui.fitted = false;
   hist.stack = []; hist.idx = -1; pushHistory();
   renderAll(); saveSoon(); startClock();
@@ -3090,9 +3324,8 @@ async function addIsfFile(file) {
 let mediaTarget = null;
 function pickMedia(src) { mediaTarget = src || null; $('#fileMedia').click(); }
 function attachMedia(src, file) {
+  releaseMedia(src.id); // the file it replaces
   const url = URL.createObjectURL(file);
-  const old = mediaEls.get(src.id);
-  if (old && old.src && old.src.startsWith('blob:')) URL.revokeObjectURL(old.src);
   let el;
   if (file.type.startsWith('video/')) {
     el = document.createElement('video');
@@ -3123,7 +3356,8 @@ async function startCapture(src) {
     Object.assign(el, { muted: true, playsInline: true, autoplay: true });
     el.srcObject = stream;
     await el.play().catch(() => {});
-    stream.getVideoTracks()[0].addEventListener('ended', () => { mediaEls.delete(src.id); renderSrcList(); if (ui.rightTab === 'content') renderRight(); });
+    stream.getVideoTracks()[0].addEventListener('ended', () => { if (mediaEls.get(src.id) === el) releaseMedia(src.id); renderSrcList(); if (ui.rightTab === 'content') renderRight(); });
+    releaseMedia(src.id); // a capture started twice
     mediaEls.set(src.id, el);
     markThumb(src);
     renderSrcList(); renderRight();
@@ -3132,9 +3366,7 @@ async function startCapture(src) {
   }
 }
 function stopCapture(src) {
-  const el = mediaEls.get(src.id);
-  if (el && el.srcObject) el.srcObject.getTracks().forEach(t => t.stop());
-  mediaEls.delete(src.id);
+  releaseMedia(src.id);
   markThumb(src);
   renderSrcList(); renderRight();
 }
@@ -3212,7 +3444,7 @@ async function importSvg(file, opt) {
   } finally { host.remove(); }
   if (!made.length) { toast('No usable shapes found in that SVG.', 'warn'); commit(); return; }
   ui.sel = new Set(made.map(f => f.id));
-  markGeom(); rebuildGeometry(); computeBB(); commit(); renderRight();
+  markGeom(); rebuildGeometry(); commit(); renderRight();
   toast(`Imported ${made.length} fixtures: ${counts.circle} circles/arcs, ${counts.line} lines, ${counts.path} paths` + (counts.dup ? `. Skipped ${counts.dup} duplicate shape${counts.dup > 1 ? 's' : ''} drawn on top of another.` : ''));
 }
 function sameShape(a, b) {
@@ -3416,8 +3648,10 @@ function updateStatus() {
     const d = f._disp;
     hov = `<span class="hov">${esc(f.name)} · px ${hp.i + 1}/${f._n}${a} · rgb ${d[3 * hp.i]},${d[3 * hp.i + 1]},${d[3 * hp.i + 2]}</span>`;
   }
-  $('#status').innerHTML = parts.join('<span class="muted">  │  </span>') + '<span class="fill"></span>' + hov;
-  $('#zoomLbl').textContent = Math.round(ui.view.zoom * 100) + '%';
+  const html = parts.join('<span class="muted">  │  </span>') + '<span class="fill"></span>' + hov;
+  if (html !== updateStatus.last) { updateStatus.last = html; $('#status').innerHTML = html; }
+  const zl = Math.round(ui.view.zoom * 100) + '%';
+  if ($('#zoomLbl').textContent !== zl) $('#zoomLbl').textContent = zl;
 }
 function renderAll() {
   $('#projName').value = project.name;
@@ -3526,27 +3760,53 @@ function onKey(e) {
 }
 
 /* ============================================================ boot */
+// The stage is drawn when something may have changed: after each new frame of content, and on any input.
+// When drawing it after every frame would leave too little time to render the output (very large projects
+// or a slow GPU), it is drawn after every few frames instead, so the Art-Net frame rate holds.
+let stageDirty = true, drawnFrame = -1, drawCost = 0;
 function frameLoop(now) {
-  if (project) {
-    if (geomDirty) { rebuildGeometry(); computeBB(); }
-    drawView();
+  requestAnimationFrame(frameLoop);
+  if (!project) return;
+  try {
+    if (geomDirty) rebuildGeometry();
+    const spare = tickPeriod * 0.85 - tickCost;
+    const every = spare <= 0 ? 4 : clamp(Math.ceil(drawCost / spare), 1, 4);
+    if (stageDirty || frameIndex - drawnFrame >= every) {
+      stageDirty = false; drawnFrame = frameIndex;
+      const t0 = performance.now();
+      drawView();
+      drawCost = drawCost * 0.8 + (performance.now() - t0) * 0.2;
+    }
+  } catch (e) { report('stage', e); }
+  try {
     if (ui.dockTab === 'monitor' && !ui.dockCollapsed) drawMonitor(now);
     if (ui.dockTab === 'scenes' && !ui.dockCollapsed) drawSceneProgress();
     if (now - (frameLoop.last || 0) > 200) { frameLoop.last = now; updateStatus(); }
-  }
-  requestAnimationFrame(frameLoop);
+  } catch (e) { report('panels', e); }
 }
+const redrawStage = () => { stageDirty = true; };
 function boot() {
   initUI();
   const saved = store.get('weft.project', null);
   let p = null;
   if (saved && Array.isArray(saved.fixtures)) p = saved;
-  loadProject(p || demoProject());
+  if (p && p.guide && !p.guide.src) { // the guide image is saved on its own (see saveSoon)
+    const g = store.get('weft.guide', null);
+    if (g && g.name === p.guide.name && typeof g.src === 'string') { p.guide.src = g.src; guideKept = g.src; }
+  }
+  try { loadProject(p || demoProject()); }
+  catch (e) { // keep a copy of what could not be opened, and start from the demo instead of not starting at all
+    report('opening the saved project', e);
+    store.set('weft.project.unopened', saved);
+    loadProject(demoProject());
+    toast('The project kept in this browser could not be opened, so the demo layout is loaded.', 'err');
+  }
   setTool('select');
   connectBridge();
-  new ResizeObserver(() => resizeView()).observe(stageEl);
+  new ResizeObserver(() => { resizeView(); redrawStage(); }).observe(stageEl);
+  for (const t of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click', 'drop']) window.addEventListener(t, redrawStage, { capture: true, passive: true });
   requestAnimationFrame(frameLoop);
-  window.weft = { get project() { return project; }, get tickCost() { return tickCost; }, get fade() { return fade; }, get clockT() { return clockT; }, loadProject, ui, universes: () => universes, computePatch, setOutput, bridge, tick, mixer, goScene, storeScene, loadSource, selectZone, addZone, setTool, mediaEl: id => mediaEls.get(id) };
+  window.weft = { get project() { return project; }, get tickCost() { return tickCost; }, get drawCost() { return drawCost; }, get frameIndex() { return frameIndex; }, get clockT() { return clockT; }, glCanvas, samplePick, loadProject, ui, universes: () => universes, computePatch, setOutput, bridge, tick, mixer, goScene, storeScene, loadSource, selectZone, addZone, setTool, mediaEl: id => mediaEls.get(id) };
 }
 boot();
 

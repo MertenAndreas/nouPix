@@ -1,4 +1,4 @@
-# Weft LED Mapper 0.3
+# Weft LED Mapper 0.3.1
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -72,6 +72,8 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 - The Weft window keeps rendering when minimised or covered (see Start). While Art-Net is on, the page also holds a browser lock that stops Chrome from freezing it, and videos the browser pauses in the background are restarted.
 - If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal prints when that starts and when frames come back.
 - Only one Weft window sends at a time. Switching Art-Net on in a second window switches it off in the first.
+- If the graphics driver resets (after a driver update, or when a laptop switches graphics chips), the output holds its last colours until the browser restores the GPU, then Weft carries on by itself.
+- On very large projects, or with a slow GPU, the stage preview is redrawn less often than the output is sent, so the Art-Net frame rate holds. The status bar shows the output frame rate.
 
 ## How addressing works
 
@@ -96,7 +98,7 @@ Circles, arcs, lines and paths become fixtures, fitted into the composition. Cir
 ## Files
 
 - The current project is kept in the browser automatically.
-- **Project → Save project file** writes a `.weft.json` you can open again later or on another computer.
+- **Project → Save project file** writes a `.weft.json` you can open again later or on another computer. Files from older versions, or edited by hand, open with defaults for anything missing or unreadable.
 - **Project → Export patch list** writes a CSV with every fixture's controller, output and start/end universe and channel, for the install crew.
 - Image and video files are not stored in projects. Browsers don't keep file access between sessions, so re-link them from the Content tab.
 

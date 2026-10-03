@@ -34,7 +34,7 @@ import time
 import urllib.parse
 import webbrowser
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARTNET_PORT = 6454
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -73,6 +73,8 @@ class ArtNet:
         self.discovery_note = "" if self.discovery else (
             self.bind_error or "listening on UDP %d instead of %d (--bind-port)" % (self.bind_port, ARTNET_PORT))
         self.seq = {}
+        # Frames come from the page's connection, and from the hold loop when the page stalls: one at a time
+        self.send_lock = threading.Lock()
         self.packets = 0
         self.frames = 0
         self.last_frame = 0.0
@@ -110,18 +112,19 @@ class ArtNet:
             return
         flags, count = p[1], struct.unpack_from("<H", p, 2)[0]
         off, ips = 4, []
-        for _ in range(count):
-            if off + 8 > len(p):
-                break
-            ip = socket.inet_ntoa(p[off:off + 4])
-            uni, n = struct.unpack_from("<HH", p, off + 4)
-            off += 8
-            self.send_dmx(ip, uni, p[off:off + n])
-            off += n
-            if ip not in ips:
-                ips.append(ip)
-        if flags & 1:
-            self.send_sync(ips)
+        with self.send_lock:
+            for _ in range(count):
+                if off + 8 > len(p):
+                    break
+                ip = socket.inet_ntoa(p[off:off + 4])
+                uni, n = struct.unpack_from("<HH", p, off + 4)
+                off += 8
+                self.send_dmx(ip, uni, p[off:off + min(n, 512)])  # ArtDmx carries at most 512 channels
+                off += n
+                if ip not in ips:
+                    ips.append(ip)
+            if flags & 1:
+                self.send_sync(ips)
 
     def _hold_loop(self):
         # If the page stops sending (window minimised, asleep, busy) keep repeating its last frame,
@@ -408,6 +411,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             msg = json.loads(payload.decode("utf-8"))
         except ValueError:
             return
+        if not isinstance(msg, dict):
+            return
         if msg.get("t") == "output":
             art.set_output(ws, bool(msg.get("on")))
         elif msg.get("t") == "poll":
@@ -421,7 +426,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 class Server(http.server.ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = True
+    # Lets Weft restart on the same port right after it stops. Not on Windows, where it would let a second
+    # copy of Weft open the same port instead of moving to the next one.
+    allow_reuse_address = os.name != "nt"
 
 
 # --------------------------------------------------------------------------- Weft window

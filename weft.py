@@ -4,6 +4,7 @@ Weft LED Mapper - local server and Art-Net bridge.
 
 Browsers cannot send UDP, so this script does the network side:
   * serves the mapper interface (index.html) on http://127.0.0.1:<port>/
+  * opens it in its own Chrome/Edge window, which keeps running when hidden
   * receives pixel frames from the interface over a WebSocket
   * sends them to your controllers as Art-Net ArtDmx packets (UDP 6454)
   * runs ArtPoll discovery and reports the nodes it finds
@@ -13,7 +14,7 @@ Python 3.8+ and the standard library only. No installs needed.
     python3 weft.py                 # start and open Weft in its own browser window
     python3 weft.py --port 9000     # different web port
     python3 weft.py --bind-ip 2.0.0.10   # send Art-Net from a specific network card
-    python3 weft.py --browser default    # use your normal browser instead of a Weft window
+    python3 weft.py --default-browser    # use your normal browser instead of a Weft window
     python3 weft.py --no-browser
 """
 
@@ -43,6 +44,10 @@ HOLD_AFTER = 1.0   # seconds without frames from the page before the bridge star
 HOLD_EVERY = 0.5   # how often the held frame is repeated, so controllers don't time out
 
 
+def log(msg):
+    print("  %s  %s" % (time.strftime("%H:%M:%S"), msg), flush=True)
+
+
 # --------------------------------------------------------------------------- Art-Net
 
 class ArtNet:
@@ -65,15 +70,75 @@ class ArtNet:
         self.bind_ip, self.bind_port = self.sock.getsockname()
         # Replies to ArtPoll arrive on 6454, so discovery only works when we own that port.
         self.discovery = self.bind_port == ARTNET_PORT
+        self.discovery_note = "" if self.discovery else (
+            self.bind_error or "listening on UDP %d instead of %d (--bind-port)" % (self.bind_port, ARTNET_PORT))
         self.seq = {}
-        self.lock = threading.Lock()
         self.packets = 0
         self.frames = 0
+        self.last_frame = 0.0
         self.errors = 0
         self.last_error = ""
         self.nodes = {}
         self.listeners = set()
+        self.owner = None  # the Weft window allowed to send: the last one that switched Art-Net on
+        self.held = None   # last frame from the owner, repeated if the window stalls
+        self.holding = False
         threading.Thread(target=self._recv_loop, daemon=True).start()
+        threading.Thread(target=self._hold_loop, daemon=True).start()
+
+    def set_output(self, ws, on):
+        if on:
+            if self.owner is not None and self.owner is not ws:
+                self.owner.send_json({"t": "takeover"})  # two windows must not fight over the same universes
+            self.owner, self.held, self.last_frame = ws, None, time.time()
+        elif self.owner is ws:
+            self.owner = None
+
+    def frame_from(self, ws, payload):
+        if ws is not self.owner:
+            return
+        self.send_frame(payload)
+        self.frames += 1
+        self.held, self.last_frame = payload, time.time()
+        if self.holding:
+            self.holding = False
+            log("Frames from the Weft window resumed.")
+
+    def send_frame(self, p):
+        # [u8 type=1][u8 flags][u16 count] then count x ([4 ip][u16 universe][u16 length][data])
+        if len(p) < 4 or p[0] != 1:
+            return
+        flags, count = p[1], struct.unpack_from("<H", p, 2)[0]
+        off, ips = 4, []
+        for _ in range(count):
+            if off + 8 > len(p):
+                break
+            ip = socket.inet_ntoa(p[off:off + 4])
+            uni, n = struct.unpack_from("<HH", p, off + 4)
+            off += 8
+            self.send_dmx(ip, uni, p[off:off + n])
+            off += n
+            if ip not in ips:
+                ips.append(ip)
+        if flags & 1:
+            self.send_sync(ips)
+
+    def _hold_loop(self):
+        # If the page stops sending (window minimised, asleep, busy) keep repeating its last frame,
+        # so controllers that blank on signal loss keep showing the last look.
+        last = 0.0
+        while True:
+            time.sleep(0.1)
+            now = time.time()
+            if self.owner is None or self.held is None or now - self.last_frame < HOLD_AFTER:
+                continue
+            if not self.holding:
+                self.holding = True
+                log("No frames from the Weft window for %.0f s: repeating the last frame. "
+                    "Is the window minimised, or the computer asleep?" % HOLD_AFTER)
+            if now - last >= HOLD_EVERY:
+                last = now
+                self.send_frame(self.held)
 
     def send_dmx(self, ip, universe, data):
         key = (ip, universe)
@@ -306,7 +371,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         art.listeners.add(on_node)
         ws.send_json({
             "t": "hello", "version": VERSION, "bindIp": art.bind_ip, "bindPort": art.bind_port,
-            "discovery": art.discovery, "bindError": art.bind_error, "interfaces": local_ips(),
+            "discovery": art.discovery, "discoveryNote": art.discovery_note, "interfaces": local_ips(),
             "nodes": list(art.nodes.values()),
         })
 
@@ -325,7 +390,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             while True:
                 op, payload = ws.recv()
                 if op == 2:
-                    self.handle_frame(art, payload)
+                    art.frame_from(ws, payload)
                 elif op == 1:
                     self.handle_message(art, ws, payload)
         except (ConnectionError, OSError, ValueError):
@@ -333,27 +398,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         finally:
             ws.alive = False
             art.listeners.discard(on_node)
-
-    @staticmethod
-    def handle_frame(art, p):
-        # [u8 type=1][u8 flags][u16 count] then count x ([4 ip][u16 universe][u16 length][data])
-        if len(p) < 4 or p[0] != 1:
-            return
-        flags, count = p[1], struct.unpack_from("<H", p, 2)[0]
-        off, ips = 4, []
-        for _ in range(count):
-            if off + 8 > len(p):
-                break
-            ip = socket.inet_ntoa(p[off:off + 4])
-            uni, n = struct.unpack_from("<HH", p, off + 4)
-            off += 8
-            art.send_dmx(ip, uni, p[off:off + n])
-            off += n
-            if ip not in ips:
-                ips.append(ip)
-        if flags & 1:
-            art.send_sync(ips)
-        art.frames += 1
+            if art.owner is ws:
+                art.owner = None
+                log("The Weft window closed or disconnected while Art-Net was on.")
 
     @staticmethod
     def handle_message(art, ws, payload):
@@ -361,9 +408,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             msg = json.loads(payload.decode("utf-8"))
         except ValueError:
             return
-        if msg.get("t") == "poll":
+        if msg.get("t") == "output":
+            art.set_output(ws, bool(msg.get("on")))
+        elif msg.get("t") == "poll":
             if not art.discovery:
-                ws.send_json({"t": "error", "msg": "Discovery unavailable: " + (art.bind_error or "not bound to port 6454")})
+                ws.send_json({"t": "error", "msg": "Discovery unavailable: " + art.discovery_note})
                 return
             err = art.poll(str(msg.get("broadcast") or "255.255.255.255"))
             if err:
@@ -375,13 +424,53 @@ class Server(http.server.ThreadingHTTPServer):
     allow_reuse_address = True
 
 
+# --------------------------------------------------------------------------- Weft window
+
+# Chromium switches that stop the browser from slowing down or pausing a window that is
+# minimised, covered by other windows or in the background. They only apply to a browser
+# started with its own profile, which is why Weft gets a separate window and profile.
+KEEP_RUNNING = ["--disable-background-timer-throttling", "--disable-renderer-backgrounding",
+                "--disable-backgrounding-occluded-windows"]
+PROFILE = os.path.join(os.path.expanduser("~"), ".weft", "browser-profile")
+
+
+def find_browser():
+    """Chrome, Edge, Chromium or Brave, in that order of preference."""
+    if sys.platform == "win32":
+        roots = [os.environ.get(k) for k in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA")]
+        rel = [r"Google\Chrome\Application\chrome.exe", r"Microsoft\Edge\Application\msedge.exe",
+               r"BraveSoftware\Brave-Browser\Application\brave.exe"]
+        found = [os.path.join(r, p) for p in rel for r in roots if r]
+    elif sys.platform == "darwin":
+        apps = ["Google Chrome", "Microsoft Edge", "Chromium", "Brave Browser"]
+        found = [os.path.join(d, a + ".app", "Contents", "MacOS", a)
+                 for a in apps for d in ("/Applications", os.path.expanduser("~/Applications"))]
+    else:
+        found = [shutil.which(n) for n in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
+                                             "microsoft-edge", "brave-browser")]
+    return next((p for p in found if p and os.path.isfile(p)), None)
+
+
+def open_window(exe, url):
+    os.makedirs(PROFILE, exist_ok=True)
+    args = [exe, "--app=" + url, "--user-data-dir=" + PROFILE, "--no-first-run", "--no-default-browser-check"] + KEEP_RUNNING
+    kw = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+    if os.name == "nt":  # keep the browser open when this console window closes or gets Ctrl+C
+        kw["creationflags"] = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    else:
+        kw["start_new_session"] = True
+    subprocess.Popen(args, **kw)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Weft LED Mapper - local server and Art-Net bridge")
     ap.add_argument("--port", type=int, default=8080, help="web interface port (default 8080)")
     ap.add_argument("--host", default="127.0.0.1", help="web interface address (use 0.0.0.0 to reach it from other devices)")
     ap.add_argument("--bind-ip", default="0.0.0.0", help="network card to send Art-Net from (default: all)")
     ap.add_argument("--bind-port", type=int, default=ARTNET_PORT, help="local UDP port (default 6454; 0 = any, disables discovery)")
-    ap.add_argument("--no-browser", action="store_true", help="don't open the browser")
+    ap.add_argument("--default-browser", action="store_true", help="open the interface in your default browser instead of a Weft window")
+    ap.add_argument("--browser-path", help="Chrome, Edge or Chromium executable for the Weft window (found automatically)")
+    ap.add_argument("--no-browser", action="store_true", help="don't open any window")
     args = ap.parse_args()
 
     art = ArtNet(args.bind_ip, args.bind_port)
@@ -398,19 +487,33 @@ def main():
     shown = "127.0.0.1" if args.host in ("0.0.0.0", "") else args.host
     url = "http://%s:%d/" % (shown, server.server_address[1])
 
+    exe = None if args.no_browser or args.default_browser else (args.browser_path or find_browser())
     print("")
     print("  Weft LED Mapper %s" % VERSION)
     print("  Interface   %s" % url)
+    if exe:
+        print("  Window      own window (%s), keeps running when hidden" % os.path.basename(exe))
+    elif not args.no_browser:
+        print("  Window      default browser: output can slow down when that window is hidden%s"
+              % ("" if args.default_browser else " (no Chrome or Edge found)"))
     print("  Art-Net     sending from %s:%d" % (art.bind_ip, art.bind_port))
-    if art.bind_error:
-        print("  Discovery   off - %s" % art.bind_error)
-    else:
+    if art.discovery:
         print("  Discovery   on (listening on UDP %d)" % ARTNET_PORT)
+    else:
+        print("  Discovery   off - %s" % art.discovery_note)
     print("  This PC     %s" % ", ".join(local_ips()))
     print("  Press Ctrl+C to stop.")
     print("")
+
+    def open_ui():
+        if exe:
+            try:
+                return open_window(exe, url)
+            except OSError as e:
+                log("Could not start %s (%s). Opening the default browser instead." % (exe, e.strerror or e))
+        webbrowser.open(url)
     if not args.no_browser:
-        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.6, open_ui).start()
     try:
         server.serve_forever(poll_interval=0.25)
     except KeyboardInterrupt:

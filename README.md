@@ -1,20 +1,20 @@
-# Weft LED Mapper 0.3.1
+# openLedMapper 0.3.1
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 
-The interface runs in your browser. `weft.py` is a small local server that sends the Art-Net packets, because browsers cannot send UDP.
+The interface runs in your browser. `openledmapper.py` is a small local server that sends the Art-Net packets, because browsers cannot send UDP.
 
 ## Start
 
 You need Python 3.8 or newer. Nothing else to install.
 
-- **Windows:** double-click `start-weft.bat`
-- **macOS:** double-click `start-weft.command` (the first time, right-click → Open)
-- **Any system:** `python3 weft.py`
+- **Windows:** double-click `start-openledmapper.bat`
+- **macOS:** double-click `start-openledmapper.command` (the first time, right-click → Open)
+- **Any system:** `python3 openledmapper.py`
 
-Weft opens in its own window at `http://127.0.0.1:8080/`, using Chrome or Edge (or Chromium or Brave) started with the switches that stop the browser from slowing down or pausing a hidden window. You can minimise it or cover it with other windows and the output keeps running. Keep the terminal window open: closing it stops the Art-Net output. Closing the Weft window stops it too, which is why Weft asks before it closes while Art-Net is on.
+openLedMapper opens in its own window at `http://127.0.0.1:8080/`, using Chrome or Edge (or Chromium or Brave) started with the switches that stop the browser from slowing down or pausing a hidden window. You can minimise it or cover it with other windows and the output keeps running. Keep the terminal window open: closing it stops the Art-Net output. Closing the openLedMapper window stops it too, which is why it asks before it closes while Art-Net is on.
 
-The Weft window has its own browser profile (in `~/.weft/browser-profile`), so it doesn't share settings or storage with your normal browser. If you have a project from an earlier version open in your normal browser, save it there with **Project → Save project file** and open that file in the Weft window.
+The openLedMapper window has its own browser profile (in `~/.openledmapper/browser-profile`), so it doesn't share settings or storage with your normal browser. The project kept by Weft, as this app was called before, carries over: the first time, its profile folder `~/.weft` is renamed to `~/.openledmapper`. If you have a project from an earlier version open in your normal browser, save it there with **Project → Save project file** and open that file in the openLedMapper window.
 
 - `--default-browser` opens your normal browser instead (output can then slow down when that window is hidden).
 - `--browser-path PATH` picks the browser if it isn't found automatically.
@@ -69,10 +69,10 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 
 ## Keeping the output running
 
-- The Weft window keeps rendering when minimised or covered (see Start). While Art-Net is on, the page also holds a browser lock that stops Chrome from freezing it, and videos the browser pauses in the background are restarted.
+- The openLedMapper window keeps rendering when minimised or covered (see Start). While Art-Net is on, the page also holds a browser lock that stops Chrome from freezing it, and videos the browser pauses in the background are restarted.
 - If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal prints when that starts and when frames come back.
-- Only one Weft window sends at a time. Switching Art-Net on in a second window switches it off in the first.
-- If the graphics driver resets (after a driver update, or when a laptop switches graphics chips), the output holds its last colours until the browser restores the GPU, then Weft carries on by itself.
+- Only one openLedMapper window sends at a time. Switching Art-Net on in a second window switches it off in the first.
+- If the graphics driver resets (after a driver update, or when a laptop switches graphics chips), the output holds its last colours until the browser restores the GPU, then openLedMapper carries on by itself.
 - On very large projects, or with a slow GPU, the stage preview is redrawn less often than the output is sent, so the Art-Net frame rate holds. The status bar shows the output frame rate.
 
 ## How addressing works
@@ -90,21 +90,21 @@ Circles, arcs, lines and paths become fixtures, fitted into the composition. Cir
 
 ## Network notes
 
-- To send from a specific network card (for example a 2.x.x.x Art-Net network), use `python3 weft.py --bind-ip 2.0.0.10`.
-- Discovery listens on UDP 6454. If another Art-Net program is running, Weft still sends, but discovery is off. The Nodes tab says so.
-- To reach the interface from a tablet on the same network: `python3 weft.py --host 0.0.0.0`.
+- To send from a specific network card (for example a 2.x.x.x Art-Net network), use `python3 openledmapper.py --bind-ip 2.0.0.10`.
+- Discovery listens on UDP 6454. If another Art-Net program is running, openLedMapper still sends, but discovery is off. The Nodes tab says so.
+- To reach the interface from a tablet on the same network: `python3 openledmapper.py --host 0.0.0.0`.
 - Other options: `--port 9000` (web port), `--no-browser`, `--bind-port 0`.
 
 ## Files
 
 - The current project is kept in the browser automatically.
-- **Project → Save project file** writes a `.weft.json` you can open again later or on another computer. Files from older versions, or edited by hand, open with defaults for anything missing or unreadable.
+- **Project → Save project file** writes a `.openledmapper.json` you can open again later or on another computer. Files from older versions (`.weft.json` files from Weft too), or edited by hand, open with defaults for anything missing or unreadable.
 - **Project → Export patch list** writes a CSV with every fixture's controller, output and start/end universe and channel, for the install crew.
 - Image and video files are not stored in projects. Browsers don't keep file access between sessions, so re-link them from the Content tab.
 
 ## Limits of this version
 
-Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture instead. Rendering lives in the Weft window, so closing it stops the output. It's been tested in Chromium; Firefox and Safari should work but are less tested and don't get the keep-running switches.
+Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture instead. Rendering lives in the openLedMapper window, so closing it stops the output. It's been tested in Chromium; Firefox and Safari should work but are less tested and don't get the keep-running switches.
 
 ## Credits
 

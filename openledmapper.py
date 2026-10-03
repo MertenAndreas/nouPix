@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Weft LED Mapper - local server and Art-Net bridge.
+openLedMapper - local server and Art-Net bridge.
 
 Browsers cannot send UDP, so this script does the network side:
   * serves the mapper interface (index.html) on http://127.0.0.1:<port>/
@@ -11,11 +11,11 @@ Browsers cannot send UDP, so this script does the network side:
 
 Python 3.8+ and the standard library only. No installs needed.
 
-    python3 weft.py                 # start and open Weft in its own browser window
-    python3 weft.py --port 9000     # different web port
-    python3 weft.py --bind-ip 2.0.0.10   # send Art-Net from a specific network card
-    python3 weft.py --default-browser    # use your normal browser instead of a Weft window
-    python3 weft.py --no-browser
+    python3 openledmapper.py                    # start and open it in its own browser window
+    python3 openledmapper.py --port 9000        # different web port
+    python3 openledmapper.py --bind-ip 2.0.0.10 # send Art-Net from a specific network card
+    python3 openledmapper.py --default-browser  # use your normal browser instead of its own window
+    python3 openledmapper.py --no-browser
 """
 
 import argparse
@@ -54,7 +54,7 @@ class ArtNet:
     def __init__(self, bind_ip="0.0.0.0", bind_port=ARTNET_PORT):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # No SO_REUSEADDR: on Windows it lets two programs share UDP 6454, and then neither reliably
-        # receives. Without it, a busy port is detected and Weft falls back to sending without discovery.
+        # receives. Without it, a busy port is detected and openLedMapper falls back to sending without discovery.
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         if hasattr(socket, "SIO_UDP_CONNRESET"):  # Windows: ignore ICMP port-unreachable resets
             try:
@@ -82,7 +82,7 @@ class ArtNet:
         self.last_error = ""
         self.nodes = {}
         self.listeners = set()
-        self.owner = None  # the Weft window allowed to send: the last one that switched Art-Net on
+        self.owner = None  # the window allowed to send: the last one that switched Art-Net on
         self.held = None   # last frame from the owner, repeated if the window stalls
         self.holding = False
         threading.Thread(target=self._recv_loop, daemon=True).start()
@@ -104,7 +104,7 @@ class ArtNet:
         self.held, self.last_frame = payload, time.time()
         if self.holding:
             self.holding = False
-            log("Frames from the Weft window resumed.")
+            log("Frames from the openLedMapper window resumed.")
 
     def send_frame(self, p):
         # [u8 type=1][u8 flags][u16 count] then count x ([4 ip][u16 universe][u16 length][data])
@@ -137,7 +137,7 @@ class ArtNet:
                 continue
             if not self.holding:
                 self.holding = True
-                log("No frames from the Weft window for %.0f s: repeating the last frame. "
+                log("No frames from the openLedMapper window for %.0f s: repeating the last frame. "
                     "Is the window minimised, or the computer asleep?" % HOLD_AFTER)
             if now - last >= HOLD_EVERY:
                 last = now
@@ -317,7 +317,7 @@ def local_ips():
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
-    server_version = "Weft/" + VERSION
+    server_version = "openLedMapper/" + VERSION
     protocol_version = "HTTP/1.1"
 
     def log_message(self, *args):
@@ -341,7 +341,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with open(fn, "rb") as f:
                 body = f.read()
         except OSError:
-            return self.send_error(404, "index.html not found next to weft.py")
+            return self.send_error(404, "index.html not found next to openledmapper.py")
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
@@ -403,7 +403,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             art.listeners.discard(on_node)
             if art.owner is ws:
                 art.owner = None
-                log("The Weft window closed or disconnected while Art-Net was on.")
+                log("The openLedMapper window closed or disconnected while Art-Net was on.")
 
     @staticmethod
     def handle_message(art, ws, payload):
@@ -426,19 +426,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 class Server(http.server.ThreadingHTTPServer):
     daemon_threads = True
-    # Lets Weft restart on the same port right after it stops. Not on Windows, where it would let a second
-    # copy of Weft open the same port instead of moving to the next one.
+    # Lets it restart on the same port right after it stops. Not on Windows, where it would let a second
+    # copy open the same port instead of moving to the next one.
     allow_reuse_address = os.name != "nt"
 
 
-# --------------------------------------------------------------------------- Weft window
+# --------------------------------------------------------------------------- app window
 
 # Chromium switches that stop the browser from slowing down or pausing a window that is
 # minimised, covered by other windows or in the background. They only apply to a browser
-# started with its own profile, which is why Weft gets a separate window and profile.
+# started with its own profile, which is why openLedMapper gets a separate window and profile.
 KEEP_RUNNING = ["--disable-background-timer-throttling", "--disable-renderer-backgrounding",
                 "--disable-backgrounding-occluded-windows"]
-PROFILE = os.path.join(os.path.expanduser("~"), ".weft", "browser-profile")
+PROFILE = os.path.join(os.path.expanduser("~"), ".openledmapper", "browser-profile")
+OLD_HOME = os.path.join(os.path.expanduser("~"), ".weft")  # this app was called Weft before
 
 
 def find_browser():
@@ -458,9 +459,27 @@ def find_browser():
     return next((p for p in found if p and os.path.isfile(p)), None)
 
 
+def profile_dir():
+    """The window's own browser profile. The first time, the one Weft used is moved here, with the project
+    kept in it; if that window is still open, its profile is used where it is."""
+    new_home = os.path.dirname(PROFILE)
+    old = os.path.join(OLD_HOME, "browser-profile")
+    if os.path.exists(new_home) or not os.path.isdir(OLD_HOME):
+        return PROFILE
+    if os.path.lexists(os.path.join(old, "SingletonLock")):  # the old window is open (macOS, Linux)
+        return old
+    try:
+        os.rename(OLD_HOME, new_home)
+        log("Moved the window profile from %s to %s (the app was called Weft before)." % (OLD_HOME, new_home))
+        return PROFILE
+    except OSError:  # in use (Windows)
+        return old
+
+
 def open_window(exe, url):
-    os.makedirs(PROFILE, exist_ok=True)
-    args = [exe, "--app=" + url, "--user-data-dir=" + PROFILE, "--no-first-run", "--no-default-browser-check"] + KEEP_RUNNING
+    profile = profile_dir()
+    os.makedirs(profile, exist_ok=True)
+    args = [exe, "--app=" + url, "--user-data-dir=" + profile, "--no-first-run", "--no-default-browser-check"] + KEEP_RUNNING
     kw = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
     if os.name == "nt":  # keep the browser open when this console window closes or gets Ctrl+C
         kw["creationflags"] = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
@@ -470,13 +489,13 @@ def open_window(exe, url):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Weft LED Mapper - local server and Art-Net bridge")
+    ap = argparse.ArgumentParser(description="openLedMapper - local server and Art-Net bridge")
     ap.add_argument("--port", type=int, default=8080, help="web interface port (default 8080)")
     ap.add_argument("--host", default="127.0.0.1", help="web interface address (use 0.0.0.0 to reach it from other devices)")
     ap.add_argument("--bind-ip", default="0.0.0.0", help="network card to send Art-Net from (default: all)")
     ap.add_argument("--bind-port", type=int, default=ARTNET_PORT, help="local UDP port (default 6454; 0 = any, disables discovery)")
-    ap.add_argument("--default-browser", action="store_true", help="open the interface in your default browser instead of a Weft window")
-    ap.add_argument("--browser-path", help="Chrome, Edge or Chromium executable for the Weft window (found automatically)")
+    ap.add_argument("--default-browser", action="store_true", help="open the interface in your default browser instead of its own window")
+    ap.add_argument("--browser-path", help="Chrome, Edge or Chromium executable for its window (found automatically)")
     ap.add_argument("--no-browser", action="store_true", help="don't open any window")
     args = ap.parse_args()
 
@@ -496,7 +515,7 @@ def main():
 
     exe = None if args.no_browser or args.default_browser else (args.browser_path or find_browser())
     print("")
-    print("  Weft LED Mapper %s" % VERSION)
+    print("  openLedMapper %s" % VERSION)
     print("  Interface   %s" % url)
     if exe:
         print("  Window      own window (%s), keeps running when hidden" % os.path.basename(exe))

@@ -241,6 +241,13 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .scene .s .fill { flex: 1; }
 .scene .prog { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--live); }
 .scene.dragging { opacity: .4; }
+.dragging { opacity: .45; }
+.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+.scenerow.drop-in { outline: 1px dashed var(--accent); outline-offset: -1px; }
+.arrange { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.arrange .grp { display: flex; gap: 3px; }
+.arrange + .arrange { margin-top: 6px; }
 .scene.drop { outline: 1px dashed var(--accent); outline-offset: 2px; }
 .nodes .scroll { overflow: auto; flex: 1; }
 .monitor .mbody { display: grid; grid-template-columns: 210px minmax(0,1fr); flex: 1; min-height: 0; }
@@ -544,6 +551,15 @@ const ICONS = {
   lock: '<svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
   zone: '<svg viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.5 1.8"/><rect x="1" y="2" width="3" height="3" fill="currentColor"/><rect x="12" y="11" width="3" height="3" fill="currentColor"/></svg>',
   x: '<svg viewBox="0 0 12 12" width="11" height="11"><path d="M3 3l6 6M9 3L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  alignL: '<svg viewBox="0 0 16 16"><path d="M2.5 1.5v13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><g fill="currentColor"><rect x="4.5" y="4" width="9" height="3" rx=".6"/><rect x="4.5" y="9" width="5.5" height="3" rx=".6"/></g></svg>',
+  alignCX: '<svg viewBox="0 0 16 16"><path d="M8 1.5v13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><g fill="currentColor"><rect x="3" y="4" width="10" height="3" rx=".6"/><rect x="5" y="9" width="6" height="3" rx=".6"/></g></svg>',
+  alignR: '<svg viewBox="0 0 16 16"><path d="M13.5 1.5v13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><g fill="currentColor"><rect x="2.5" y="4" width="9" height="3" rx=".6"/><rect x="6" y="9" width="5.5" height="3" rx=".6"/></g></svg>',
+  alignT: '<svg viewBox="0 0 16 16"><path d="M1.5 2.5h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><g fill="currentColor"><rect x="4" y="4.5" width="3" height="9" rx=".6"/><rect x="9" y="4.5" width="3" height="5.5" rx=".6"/></g></svg>',
+  alignCY: '<svg viewBox="0 0 16 16"><path d="M1.5 8h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><g fill="currentColor"><rect x="4" y="3" width="3" height="10" rx=".6"/><rect x="9" y="5" width="3" height="6" rx=".6"/></g></svg>',
+  alignB: '<svg viewBox="0 0 16 16"><path d="M1.5 13.5h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><g fill="currentColor"><rect x="4" y="2.5" width="3" height="9" rx=".6"/><rect x="9" y="6" width="3" height="5.5" rx=".6"/></g></svg>',
+  distH: '<svg viewBox="0 0 16 16"><path d="M1.5 2v12M14.5 2v12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".55"/><g fill="currentColor"><rect x="3.6" y="4" width="2.2" height="8" rx=".5"/><rect x="6.9" y="4" width="2.2" height="8" rx=".5"/><rect x="10.2" y="4" width="2.2" height="8" rx=".5"/></g></svg>',
+  distV: '<svg viewBox="0 0 16 16"><path d="M2 1.5h12M2 14.5h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".55"/><g fill="currentColor"><rect x="4" y="3.6" width="8" height="2.2" rx=".5"/><rect x="4" y="6.9" width="8" height="2.2" rx=".5"/><rect x="4" y="10.2" width="8" height="2.2" rx=".5"/></g></svg>',
+  centre: '<svg viewBox="0 0 16 16"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="5.5" y="5.5" width="5" height="5" rx=".6" fill="currentColor"/></svg>',
 };
 const icon = name => svgEl(ICONS[name]);
 
@@ -2288,6 +2304,57 @@ function seg(options, value, onChange) {
   return el;
 }
 
+/* ---------- drag to reorder ---------- */
+// Items of a list are dragged to put them in another order: the dragged item goes above or below the one it
+// is dropped on, by which half of that item the pointer is over. Sliders and buttons inside an item keep
+// working. The drag can start on one element (a zone's header) and be dropped on a bigger one (its row).
+const dragType = kind => 'application/x-openledmapper-' + kind;
+function reorderable(handle, target, kind, ids, onDrop) {
+  handle.draggable = true;
+  handle.addEventListener('pointerdown', e => { handle.draggable = !e.target.closest('input, button, select'); });
+  handle.addEventListener('dragstart', e => {
+    if (e.target !== handle) return;
+    e.dataTransfer.setData(dragType(kind), ids().join(','));
+    e.dataTransfer.effectAllowed = 'move';
+    handle.classList.add('dragging');
+  });
+  handle.addEventListener('dragend', () => handle.classList.remove('dragging'));
+  const after = e => { const r = target.getBoundingClientRect(); return e.clientY > r.top + r.height / 2; };
+  const clear = () => target.classList.remove('drop-before', 'drop-after');
+  target.addEventListener('dragover', e => {
+    if (!e.dataTransfer.types.includes(dragType(kind))) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    const a = after(e);
+    target.classList.toggle('drop-before', !a); target.classList.toggle('drop-after', a);
+  });
+  target.addEventListener('dragleave', e => { if (!target.contains(e.relatedTarget)) clear(); });
+  target.addEventListener('drop', e => {
+    const d = e.dataTransfer.getData(dragType(kind));
+    clear();
+    if (!d) return;
+    e.preventDefault();
+    onDrop(d.split(','), after(e));
+  });
+}
+// Fixtures are drawn in list order, the last on top
+function moveFixturesTo(ids, target, after) {
+  const moving = project.fixtures.filter(f => ids.includes(f.id));
+  if (!moving.length || moving.includes(target)) return;
+  const rest = project.fixtures.filter(f => !moving.includes(f));
+  rest.splice(rest.indexOf(target) + (after ? 1 : 0), 0, ...moving);
+  project.fixtures = rest;
+  markGeom(); commit();
+}
+// Zones are listed top first: dropping a zone above another puts it over that one
+function moveZoneTo(id, target, after) {
+  const z = zoneById(id);
+  if (!z || z === target) return;
+  const shown = project.zones.slice().reverse().filter(x => x !== z);
+  shown.splice(shown.indexOf(target) + (after ? 1 : 0), 0, z);
+  project.zones = shown.reverse();
+  commit(); renderRight();
+}
+
 /* ============================================================ fixture list */
 function patchBadge(f) {
   const p = f._patch;
@@ -2304,7 +2371,7 @@ function renderFxList() {
     return;
   }
   ul.replaceChildren(...project.fixtures.map(f => {
-    const li = h('li', { class: (ui.sel.has(f.id) ? 'sel ' : '') + (f.enabled ? '' : 'off'), draggable: true, 'data-id': f.id, title: `${f.name} · ${TYPE_LABEL[f.type]} · ${pixelCount(f)} px · ${f.order}` },
+    const li = h('li', { class: (ui.sel.has(f.id) ? 'sel ' : '') + (f.enabled ? '' : 'off'), draggable: true, 'data-id': f.id, title: `${f.name} · ${TYPE_LABEL[f.type]} · ${pixelCount(f)} px · ${f.order}\nDrag to change the order, or onto a patch output` },
       h('span', { class: 'tag', style: { background: f.tag } }),
       h('span', { class: 'ty' }, icon(f.type)),
       h('span', { class: 'nm' }, f.name, f.locked ? h('span', { class: 'muted', style: { marginLeft: '6px' } }, icon('lock')) : null),
@@ -2324,7 +2391,9 @@ function renderFxList() {
     li.addEventListener('dblclick', () => { ui.rightTab = 'inspector'; renderRight(); const i = $('#fxName'); if (i) { i.focus(); i.select(); } });
     li.addEventListener('mouseenter', () => { ui.hoverFx = f.id; });
     li.addEventListener('mouseleave', () => { if (ui.hoverFx === f.id) ui.hoverFx = null; });
-    li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'fx:' + (ui.sel.has(f.id) && ui.sel.size > 1 ? [...ui.sel].join(',') : f.id)); e.dataTransfer.effectAllowed = 'move'; });
+    const dragged = () => (ui.sel.has(f.id) && ui.sel.size > 1 ? project.fixtures.filter(x => ui.sel.has(x.id)).map(x => x.id) : [f.id]);
+    li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'fx:' + dragged().join(',')); }); // onto a patch output
+    reorderable(li, li, 'fixtures', dragged, (ids, after) => moveFixturesTo(ids, f, after));
     return li;
   }));
 }
@@ -2406,6 +2475,7 @@ function renderInspector(body) {
     h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon(f.type)), TYPE_LABEL[f.type], h('span', { class: 'fill' }), h('span', { class: 'mono muted', style: { letterSpacing: 0, textTransform: 'none' } }, pixelCount(f) + ' px')),
     row('Name', nameIn), row('Tag', sw),
     h('div', { style: { display: 'flex', gap: '16px' } }, checkRow('Enabled', f, 'enabled', () => { commit(); }), checkRow('Locked', f, 'locked', () => { commit(); renderRight(); }))));
+  body.append(arrangeSection([f]));
 
   const G = [];
   if (f.type === 'line') {
@@ -2504,6 +2574,7 @@ function renderMulti(body, sel) {
         h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { f.enabled = true; }); commit(); } }, 'Enable all'),
         h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { f.enabled = false; }); commit(); } }, 'Disable all'),
         h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { if (f.type !== 'matrix') f.reverse = !f.reverse; }); markGeom(); commit(); } }, 'Flip direction'))),
+    arrangeSection(sel),
     outputSection(sel),
     sec(null, h('div', { class: 'actions' },
       h('button', { class: 'btn', type: 'button', onclick: toggleIdentify }, ui.outputMode === 'identify' ? 'Stop identify' : 'Identify'),
@@ -2637,9 +2708,11 @@ function zonesSection() {
   const list = h('ul', { class: 'list zones' });
   for (const z of project.zones.slice().reverse()) {
     const names = z.layers.filter(L => L.on && L.src && srcById(L.src)).map(L => srcById(L.src).name);
-    list.append(h('li', { class: z === cur ? 'sel' : '', title: `${z.name} · ${z.w} × ${z.h} at ${z.x}, ${z.y}`, onclick: () => selectZone(z) },
+    const li = h('li', { class: z === cur ? 'sel' : '', title: `${z.name} · ${z.w} × ${z.h} at ${z.x}, ${z.y}\nDrag to change the order: zones higher in the list cover the ones below`, onclick: () => selectZone(z) },
       zoneTag(z), h('span', { class: 'zn' }, h('span', { class: 'nm' }, z.name), h('span', { class: 'sub' }, names.join(' · ') || 'Empty')),
-      zoneOpacityInput(z, 64)));
+      zoneOpacityInput(z, 64));
+    reorderable(li, li, 'zone', () => [z.id], ([id], after) => moveZoneTo(id, z, after));
+    list.append(li);
   }
   if (!project.zones.length) list.append(h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, 'No zones, so the output is black. Add one to play content.'));
   return sec(null, h('h3', null, 'Zones', h('span', { class: 'fill' }),
@@ -2853,6 +2926,69 @@ function nudge(dx, dy) {
   markGeom(); syncInspector(); commitSoft();
 }
 
+/* ---------- align and distribute ---------- */
+// Several fixtures align to the box around all of them, a single one to the canvas. Locked fixtures stay put,
+// but still count for the box, so the others can be lined up with one that is locked.
+const r3 = v => Math.round(v * 1000) / 1000;
+function shiftFixture(f, dx, dy) {
+  if (!dx && !dy) return;
+  moveFixture(f, snapshotGeom(f), dx, dy);
+  for (const k of ['x1', 'y1', 'x2', 'y2', 'cx', 'cy']) if (typeof f[k] === 'number') f[k] = r3(f[k]);
+  if (f.type === 'path') f.pts = f.pts.map(r3);
+}
+function boxOf(list) {
+  const bs = list.map(fixtureBounds);
+  return { x0: Math.min(...bs.map(b => b.x0)), y0: Math.min(...bs.map(b => b.y0)), x1: Math.max(...bs.map(b => b.x1)), y1: Math.max(...bs.map(b => b.y1)) };
+}
+const arranged = () => { markGeom(); commit(); syncInspector(); };
+function alignSel(edge) { // l, cx, r: left edges, centres, right edges; t, cy, b likewise vertically
+  const sel = selected(), list = sel.filter(f => !f.locked);
+  if (!list.length) return;
+  const box = sel.length > 1 ? boxOf(sel) : { x0: 0, y0: 0, x1: project.settings.compW, y1: project.settings.compH };
+  for (const f of list) {
+    const b = fixtureBounds(f);
+    const dx = { l: box.x0 - b.x0, cx: (box.x0 + box.x1 - b.x0 - b.x1) / 2, r: box.x1 - b.x1 }[edge] || 0;
+    const dy = { t: box.y0 - b.y0, cy: (box.y0 + box.y1 - b.y0 - b.y1) / 2, b: box.y1 - b.y1 }[edge] || 0;
+    shiftFixture(f, dx, dy);
+  }
+  arranged();
+}
+// The first and last fixture stay; the ones between get the same spacing between centres
+function distributeSel(axis) {
+  const list = selected().filter(f => !f.locked);
+  if (list.length < 3) return;
+  const mid = b => (axis === 'x' ? b.x0 + b.x1 : b.y0 + b.y1) / 2;
+  const items = list.map(f => ({ f, c: mid(fixtureBounds(f)) })).sort((a, b) => a.c - b.c);
+  const first = items[0].c, step = (items[items.length - 1].c - first) / (items.length - 1);
+  items.forEach((it, i) => { const d = first + i * step - it.c; shiftFixture(it.f, axis === 'x' ? d : 0, axis === 'y' ? d : 0); });
+  arranged();
+}
+// Move the selection as a group, so that together they sit in the middle of the canvas
+function centreSel() {
+  const list = selected().filter(f => !f.locked);
+  if (!list.length) return;
+  const b = boxOf(list), dx = project.settings.compW / 2 - (b.x0 + b.x1) / 2, dy = project.settings.compH / 2 - (b.y0 + b.y1) / 2;
+  list.forEach(f => shiftFixture(f, dx, dy));
+  arranged();
+}
+function arrangeSection(sel) {
+  const free = sel.filter(f => !f.locked).length, many = sel.length > 1;
+  const b = (ic, title, fn, off) => h('button', { class: 'btn icon', type: 'button', title, 'aria-label': title, disabled: !free || !!off, onclick: fn }, icon(ic));
+  const align = [
+    h('div', { class: 'grp' }, b('alignL', 'Align left', () => alignSel('l')), b('alignCX', 'Align centres horizontally', () => alignSel('cx')), b('alignR', 'Align right', () => alignSel('r'))),
+    h('div', { class: 'grp' }, b('alignT', 'Align top', () => alignSel('t')), b('alignCY', 'Align centres vertically', () => alignSel('cy')), b('alignB', 'Align bottom', () => alignSel('b')))];
+  const centre = h('div', { class: 'grp' }, b('centre', many ? 'Centre them together on the canvas' : 'Centre on the canvas', centreSel));
+  return sec('Arrange',
+    many ? [h('div', { class: 'arrange' }, align),   // aligning on the first row, spacing and centring on the second
+      h('div', { class: 'arrange' }, h('div', { class: 'grp' },
+        b('distH', 'Distribute horizontally: the same spacing between centres', () => distributeSel('x'), free < 3),
+        b('distV', 'Distribute vertically: the same spacing between centres', () => distributeSel('y'), free < 3)), centre)]
+      : h('div', { class: 'arrange' }, align, centre),
+    h('p', { class: 'note' }, !free ? (many ? 'These are all locked. Unlock them to move them.' : 'Locked. Unlock it to move it.')
+      : (many ? 'Aligns to the edges of the selection. Distribute (3 or more) keeps the outermost two and spaces the centres evenly between them.' : 'Aligns to the edges of the canvas.') +
+        (free < sel.length ? ' Locked fixtures stay where they are.' : '')));
+}
+
 /* ============================================================ bottom dock */
 function renderDock() {
   $$('#dockTabs button[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === ui.dockTab));
@@ -2953,22 +3089,28 @@ function sceneTile(z, sc, i, keys, look) {
   tile.style.setProperty('--tag', sc.tag);
   tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));
   tile.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); goScene(z, sc, e.shiftKey); } });
-  tile.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'scene:' + z.id + ':' + sc.id); e.dataTransfer.effectAllowed = 'move'; tile.classList.add('dragging'); });
+  tile.addEventListener('dragstart', e => { e.dataTransfer.setData(dragType('scene'), z.id + ':' + sc.id); e.dataTransfer.effectAllowed = 'move'; tile.classList.add('dragging'); });
   tile.addEventListener('dragend', () => tile.classList.remove('dragging'));
-  tile.addEventListener('dragover', e => { e.preventDefault(); tile.classList.add('drop'); });
+  tile.addEventListener('dragover', e => { if (!e.dataTransfer.types.includes(dragType('scene'))) return; e.preventDefault(); tile.classList.add('drop'); });
   tile.addEventListener('dragleave', () => tile.classList.remove('drop'));
   tile.addEventListener('drop', e => {  // drop onto a scene: take its place (also moves scenes between zones)
-    e.preventDefault(); tile.classList.remove('drop');
-    const [kind, zid, sid] = e.dataTransfer.getData('text/plain').split(':');
-    const fz = kind === 'scene' && zoneById(zid), moving = fz && fz.scenes.find(s => s.id === sid);
-    if (!moving || moving === sc) return;
-    const to = z.scenes.indexOf(sc);
-    fz.scenes.splice(fz.scenes.indexOf(moving), 1);
-    z.scenes.splice(to, 0, moving);
-    if (fz !== z && fz.scene === moving.id) fz.scene = null;
-    commit();
+    const d = e.dataTransfer.getData(dragType('scene'));
+    tile.classList.remove('drop');
+    if (!d) return;
+    e.preventDefault();
+    moveScene(d, z, z.scenes.indexOf(sc));
   });
   return tile;
+}
+// Move a scene ('zoneId:sceneId') into a zone: onto a scene it takes that scene's place, onto the row it goes last
+function moveScene(d, z, to = z.scenes.length) {
+  const [zid, sid] = d.split(':');
+  const fz = zoneById(zid), moving = fz && fz.scenes.find(s => s.id === sid);
+  if (!moving || (fz === z && fz.scenes[to] === moving)) return;
+  fz.scenes.splice(fz.scenes.indexOf(moving), 1);
+  z.scenes.splice(to, 0, moving);
+  if (fz !== z && fz.scene === moving.id) fz.scene = null;
+  commit();
 }
 function renderScenes(body) {
   const fadeIn = numInput(project.settings, 'fade', { min: 0, max: 60, step: 0.1, aria: 'Fade time for new scenes', onCommit: commit });
@@ -2986,6 +3128,17 @@ function renderScenes(body) {
       h('div', { class: 'zc' }, zoneOpacityInput(z, 80),
         h('button', { class: 'btn sm', type: 'button', title: `Store ${z.name}'s current layers as a new scene`, onclick: e => { e.stopPropagation(); storeScene(z); } }, '+ Store')));
     const r = h('div', { class: 'scenerow' + (z === sel ? ' sel' : '') }, head);
+    head.title += '\nDrag it to change the order of the zones.';
+    reorderable(head, r, 'zone', () => [z.id], ([id], after) => moveZoneTo(id, z, after));
+    // a scene dropped on the row, but not on a scene, goes to the end of this zone's scenes
+    r.addEventListener('dragover', e => {
+      if (!e.dataTransfer.types.includes(dragType('scene'))) return;
+      const onTile = !!e.target.closest('.scene');   // a scene tile shows its own drop frame
+      r.classList.toggle('drop-in', !onTile);
+      if (!onTile) e.preventDefault();
+    });
+    r.addEventListener('dragleave', e => { if (!r.contains(e.relatedTarget)) r.classList.remove('drop-in'); });
+    r.addEventListener('drop', e => { r.classList.remove('drop-in'); const d = e.dataTransfer.getData(dragType('scene')); if (!d || e.defaultPrevented) return; e.preventDefault(); moveScene(d, z); });
     z.scenes.forEach((sc, i) => r.append(sceneTile(z, sc, i, z === sel, look)));
     if (!z.scenes.length) r.append(h('span', { class: 'rowhint' }, `No scenes yet. Set up ${z.name}'s layers in the Content tab, then + Store.`));
     rows.append(r);

@@ -1,4 +1,4 @@
-# openLedMapper 0.3.1
+# openLedMapper 0.3.2
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -32,11 +32,16 @@ On Windows, allow Python through the firewall on private networks when asked, ot
 
 `Identify` (or `I`) lights only the selected fixtures: first pixel red, last pixel blue, and a green dot running in wiring order. Use it to check direction and patching on the real install.
 
+**Arrange** in the Inspector lines fixtures up. With several selected: align their left edges, centres or right edges, or their tops, middles or bottoms, to the box around all of them; distribute 3 or more so their centres are evenly spaced (the outermost two stay where they are); or centre them together on the canvas. With one selected, the same buttons align it to the canvas. Locked fixtures stay put but still count for the box, so the others can line up with a locked one. **Ctrl Z** undoes.
+
+Drag fixtures in the list to change their order: the last one is drawn on top, and **Auto-patch** fills the outputs in this order. Fixtures already patched keep their addresses; their order on an output is set in the Patch panel.
+
 ## Zones
 
 A zone is a rectangle of the canvas with its own layers, its own scenes and one opacity slider, its master. Content is drawn to fit the zone, so a centred effect centres on the zone. Fixture pixels inside a zone take its content; pixels outside every zone stay black.
 
 - Zones higher in the list cover the ones below, as far as their opacity goes. New zones go underneath the others, so a big zone on top can cover everything, and lowering its opacity reveals the zones under it.
+- Drag a zone in the Content tab's list, or a zone's header in the Scenes panel, to change the order.
 - Draw zones with the **Zone tool** (`Z`): drag on the stage to draw one, click to select, drag a zone's label to move it and its handles to resize it, double-click to edit its layers. The Inspector shows its exact position and size, which lights it covers, **Fit to selected fixtures**, and its order.
 - **+ Zone** in the Content tab adds one around the selected fixtures, or over the whole canvas.
 - Projects from earlier versions open as one zone covering the whole canvas.
@@ -63,7 +68,7 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 - Click a scene to fade that zone to it over the scene's fade time; other zones carry on. **Shift**-click cuts straight to it. Keys **1–9** do the same for the first nine scenes of the selected zone.
 - With a zone's master at 0 you can still recall its scenes; they just don't show until you bring the master up.
 - The fade crossfades the zone's picture, so any two looks fade smoothly into each other. Starting another scene in the middle of a fade continues from what the zone shows at that moment.
-- **⋯** on a scene: update it with the zone's current layers, rename it, change its fade time or colour, duplicate or delete it. Drag scenes to reorder them, or onto another zone's row to move them there.
+- **⋯** on a scene: update it with the zone's current layers, rename it, change its fade time or colour, duplicate or delete it. Drag scenes to reorder them, or onto another zone's row (even one with no scenes yet) to move them there.
 - **edited** on the current scene means the layers changed since you recalled it.
 - New scenes get the fade time set in the panel. Scenes are saved in the project; **Ctrl Z** undoes a delete.
 

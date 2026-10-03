@@ -1,6 +1,6 @@
-# Weft LED Mapper 0.2
+# Weft LED Mapper 0.3
 
-A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), layer generators, ISF shaders, images, video or a screen capture across them, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
+A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 
 The interface runs in your browser. `weft.py` is a small local server that sends the Art-Net packets, because browsers cannot send UDP.
 
@@ -26,15 +26,26 @@ On Windows, allow Python through the firewall on private networks when asked, ot
 1. **Settings → Composition.** Set the size of the canvas the content is rendered at. Fixture coordinates use these units.
 2. **Fixtures.** Pick a tool on the stage: `L` line, `M` matrix, `C` circle/ring, `P` path. Drag to draw, or click for a default size. You can also bring fixtures in with **SVG…** (see below). Edit exact values in the Inspector, including pixel count, color order, wiring start and direction.
 3. **Patch.** In the Patch panel, add a controller: IP address, number of outputs, universes per output and first universe. Then drag fixtures from the list onto an output. Fixtures chained on one output are addressed in order, automatically.
-4. **Content.** Click a generator in Sources to play it in the selected layer. Add layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
-5. **Scenes.** When a look is right, press **Store scene** in the Scenes panel.
+4. **Content.** Click a generator in Sources to play it in the selected layer of the selected zone. Add zones, layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
+5. **Scenes.** When a zone's look is right, press **+ Store** on its row in the Scenes panel.
 6. **Art-Net ON.**
 
 `Identify` (or `I`) lights only the selected fixtures: first pixel red, last pixel blue, and a green dot running in wiring order. Use it to check direction and patching on the real install.
 
+## Zones
+
+A zone is a rectangle of the canvas with its own layers, its own scenes and one opacity slider, its master. Content is drawn to fit the zone, so a centred effect centres on the zone. Fixture pixels inside a zone take its content; pixels outside every zone stay black.
+
+- Zones higher in the list cover the ones below, as far as their opacity goes. New zones go underneath the others, so a big zone on top can cover everything, and lowering its opacity reveals the zones under it.
+- Draw zones with the **Zone tool** (`Z`): drag on the stage to draw one, click to select, drag a zone's label to move it and its handles to resize it, double-click to edit its layers. The Inspector shows its exact position and size, which lights it covers, **Fit to selected fixtures**, and its order.
+- **+ Zone** in the Content tab adds one around the selected fixtures, or over the whole canvas.
+- Projects from earlier versions open as one zone covering the whole canvas.
+
 ## Layers
 
-The Content tab lists the layers, top layer first, each with an opacity slider and an eye to hide it. Clicking a source plays it in the selected layer, crossfading over the Crossfade time. Each layer has its own parameters, so two layers can run the same generator with different settings.
+The Content tab lists the zones, then the layers of the selected zone (top layer first, each with an opacity slider and an eye to hide it), then the selected layer's settings with a live preview above its parameters. Clicking a source plays it in the selected layer, crossfading over the Crossfade time. Each layer has its own parameters, so two layers can run the same generator with different settings.
+
+Sources show a still preview of each generator; hover one to see it move. A green frame marks the source in the selected layer, a green dot one playing elsewhere.
 
 The blend mode sets how a layer combines with the layers below it:
 
@@ -47,11 +58,12 @@ Layers are mixed on the GPU, and the stage preview shows the same mix that is se
 
 ## Scenes
 
-A scene stores all the layers: sources, parameters, blend modes and opacity. In the Scenes panel:
+Each zone has its own scenes. A scene stores the zone's layers: sources, parameters, blend modes and opacity. The Scenes panel has one row per zone, with the zone's opacity slider (its master) and **+ Store** on the left:
 
-- Click a scene to fade to it over its fade time. **Shift**-click cuts straight to it. Keys **1–9** do the same for the first nine scenes.
-- The fade crossfades the whole output, so any two looks fade smoothly into each other. Starting another scene in the middle of a fade continues from what is on the LEDs at that moment.
-- **⋯** on a scene: update it with the current layers, rename it, change its fade time or colour, duplicate or delete it. Drag scenes to reorder them.
+- Click a scene to fade that zone to it over the scene's fade time; other zones carry on. **Shift**-click cuts straight to it. Keys **1–9** do the same for the first nine scenes of the selected zone.
+- With a zone's master at 0 you can still recall its scenes; they just don't show until you bring the master up.
+- The fade crossfades the zone's picture, so any two looks fade smoothly into each other. Starting another scene in the middle of a fade continues from what the zone shows at that moment.
+- **⋯** on a scene: update it with the zone's current layers, rename it, change its fade time or colour, duplicate or delete it. Drag scenes to reorder them, or onto another zone's row to move them there.
 - **edited** on the current scene means the layers changed since you recalled it.
 - New scenes get the fade time set in the panel. Scenes are saved in the project; **Ctrl Z** undoes a delete.
 

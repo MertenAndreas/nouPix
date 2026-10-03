@@ -106,15 +106,14 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .list .srcrow { grid-template-columns: 16px minmax(0,1fr) auto auto; }
 .list li.live { background: var(--live-soft); border-left-color: var(--live); }
 .list li.live .nm { color: var(--text); font-weight: 600; }
-.list li.used { border-left-color: rgba(70,224,140,.45); }
-.list li.used .nm { color: var(--text); }
-.phead .meta { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.phead .meta { flex: 1; min-width: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.sources .phead h2 { flex: none; }
+.sec h3 svg { width: 14px; height: 14px; flex: none; }
 .layers { padding: 2px 0 0; margin: 0 -4px; }
 .layers li { grid-template-columns: 20px 12px minmax(0,1fr) auto 64px; padding: 0 4px; gap: 6px; }
 .layers li.nosrc .nm { color: var(--muted); font-style: italic; }
 .layers .eye { width: 20px; height: 20px; }
 .layers .eye svg { width: 14px; height: 14px; }
-.layers input[type=range] { height: 16px; }
 .x { width: 18px; height: 18px; border: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 3px; padding: 0; display: grid; place-items: center; }
 .x:hover { background: var(--bg4); color: var(--text); }
 .empty { padding: 16px 14px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
@@ -193,8 +192,43 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .nodes, .monitor, .scenepanel { height: 100%; display: flex; flex-direction: column; min-height: 0; }
 .nodes .bar, .monitor .bar, .scenepanel .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 7px 12px; border-bottom: 1px solid var(--line); color: var(--text2); font-size: 12px; }
 .bar .fill { flex: 1; }
-.scenes { flex: 1; overflow: auto; padding: 10px 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; align-content: start; }
-.scene { position: relative; height: 62px; border-radius: 6px; background: var(--bg3); border: 1px solid var(--line2); border-left: 4px solid var(--tag, var(--line2)); padding: 6px 4px 6px 9px; cursor: pointer; display: grid; grid-template-rows: auto 1fr; user-select: none; overflow: hidden; }
+.zonerows { flex: 1; overflow: auto; padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.scenerow { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px; margin: 0 -5px; border-radius: 8px; overflow-x: auto; }
+.scenerow.sel { background: var(--accent-soft); }
+.zhead { flex: none; width: 176px; height: 54px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 8px 0 10px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line); cursor: pointer; }
+.zhead.sel { border-color: var(--accent); }
+.zhead .zt { display: flex; align-items: center; gap: 7px; font-weight: 600; min-width: 0; }
+.zhead .zt .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zhead .zc { display: flex; align-items: center; gap: 6px; }
+.zhead input[type=range] { height: 16px; }
+.rowhint { color: var(--muted); font-size: 12px; padding: 0 6px; white-space: nowrap; }
+.ztag { flex: none; width: 10px; height: 10px; box-sizing: border-box; border-radius: 2px; border: 1.5px dashed; }
+.zones li { grid-template-columns: 10px minmax(0,1fr) 64px; height: 36px; padding: 0 4px; gap: 8px; margin: 0 -4px; }
+.zones .zn { display: flex; flex-direction: column; min-width: 0; }
+.zones .zn .nm { font-weight: 500; }
+.zones li.sel .zn .nm { font-weight: 600; }
+.zones .sub { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zones input[type=range], .layers input[type=range] { height: 16px; }
+.chipsline { display: flex; flex-wrap: wrap; gap: 4px; }
+.lpreview { display: block; max-width: 100%; border-radius: 4px; background: #000; border: 1px solid var(--line2); }
+.srcgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; padding: 10px; }
+.tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; cursor: pointer; outline-offset: 2px; }
+.tile .tb { position: relative; aspect-ratio: 1 / 1; border-radius: 5px; overflow: hidden; border: 1px solid var(--line2); background: var(--bg2); }
+.tile .tb canvas { position: relative; display: block; width: 100%; height: 100%; }
+.tile .tb .ic { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
+.tile .tb .ic svg { width: 22px; height: 22px; }
+.tile:hover .tb { border-color: #4a5263; }
+.tile.live .tb::after { content: ''; position: absolute; inset: 0; border: 2px solid var(--live); border-radius: 5px; pointer-events: none; }
+.tile.used .tb::before { content: ''; position: absolute; top: 4px; left: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 2px var(--bg1); z-index: 1; }
+.tile .tag { position: absolute; left: 4px; bottom: 4px; font: 9px/13px var(--mono); padding: 0 4px; border-radius: 2px; background: rgba(10,11,14,.82); color: var(--text2); }
+.tile .tag.warn { color: var(--warn); }
+.tile .tag.err { color: var(--danger); }
+.tile .x { position: absolute; top: 3px; right: 3px; display: none; background: rgba(10,11,14,.85); }
+.tile:hover .x, .tile:focus-within .x { display: grid; }
+.tile .nm { font-size: 11px; line-height: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text2); }
+.tile.live .nm { color: var(--text); font-weight: 600; }
+.tile.used .nm { color: var(--text); }
+.scene { position: relative; flex: none; width: 128px; height: 54px; box-sizing: border-box; border-radius: 6px; background: var(--bg3); border: 1px solid var(--line2); border-left: 4px solid var(--tag, var(--line2)); padding: 6px 4px 6px 9px; cursor: pointer; display: grid; grid-template-rows: auto 1fr; user-select: none; overflow: hidden; }
 .scene:hover { background: var(--bg4); }
 .scene.live { background: var(--live-soft); border-color: var(--live); border-left-color: var(--tag, var(--live)); box-shadow: 0 0 12px rgba(70,224,140,.12); }
 .scene .t { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }
@@ -353,7 +387,7 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
       </section>
       <section class="sources">
         <div class="phead"><h2>Sources</h2><span class="meta" id="srcTarget"></span><button class="btn sm" id="btnAddSrc" type="button">+ Add</button></div>
-        <div class="pbody"><ul class="list" id="srcList"></ul></div>
+        <div class="pbody"><div class="srcgrid" id="srcList"></div></div>
       </section>
     </aside>
 
@@ -368,6 +402,7 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
           <label><input type="checkbox" id="vSnap"> Snap</label>
           <label><input type="checkbox" id="vLabels"> Labels</label>
           <label><input type="checkbox" id="vWiring"> Wiring</label>
+          <label><input type="checkbox" id="vZones"> Zones</label>
           <span class="zoom" id="zoomLbl">100%</span>
           <button class="btn sm" id="btnFit" type="button" title="Fit (F)">Fit</button>
         </div>
@@ -380,6 +415,8 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
             <button type="button" data-tool="matrix" data-key="M" title="Matrix (M)" aria-label="Matrix tool"><svg viewBox="0 0 18 18"><g fill="currentColor"><circle cx="4" cy="4" r="1.5"/><circle cx="9" cy="4" r="1.5"/><circle cx="14" cy="4" r="1.5"/><circle cx="4" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="14" cy="9" r="1.5"/><circle cx="4" cy="14" r="1.5"/><circle cx="9" cy="14" r="1.5"/><circle cx="14" cy="14" r="1.5"/></g></svg></button>
             <button type="button" data-tool="circle" data-key="C" title="Circle / ring (C)" aria-label="Circle tool"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><g fill="currentColor"><circle cx="9" cy="3" r="1.5"/><circle cx="15" cy="9" r="1.5"/><circle cx="9" cy="15" r="1.5"/><circle cx="3" cy="9" r="1.5"/></g></svg></button>
             <button type="button" data-tool="path" data-key="P" title="Path / free strip (P)" aria-label="Path tool"><svg viewBox="0 0 18 18"><path d="M2.5 14c3-8 5 2 8-4s4-6 5-6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="2.5" cy="14" r="1.7" fill="currentColor"/><circle cx="15.5" cy="3.5" r="1.7" fill="currentColor"/></svg></button>
+            <hr>
+            <button type="button" data-tool="zone" data-key="Z" title="Zones: draw, move and resize them (Z)" aria-label="Zone tool"><svg viewBox="0 0 18 18"><rect x="2.5" y="3.5" width="13" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"/><rect x="1" y="2" width="3" height="3" fill="currentColor"/><rect x="14" y="13" width="3" height="3" fill="currentColor"/></svg></button>
           </div>
           <div class="hint" id="hint" hidden></div>
         </div>
@@ -482,6 +519,7 @@ const ICONS = {
   eye: '<svg viewBox="0 0 16 16"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>',
   eyeOff: '<svg viewBox="0 0 16 16"><path d="M2 2l12 12M6.2 4A7 7 0 018 3.5C12 3.5 14.5 8 14.5 8a12 12 0 01-2 2.6M9.9 12.2A6 6 0 018 12.5C4 12.5 1.5 8 1.5 8a12 12 0 012.4-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
   lock: '<svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+  zone: '<svg viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.5 1.8"/><rect x="1" y="2" width="3" height="3" fill="currentColor"/><rect x="12" y="11" width="3" height="3" fill="currentColor"/></svg>',
   x: '<svg viewBox="0 0 12 12" width="11" height="11"><path d="M3 3l6 6M9 3L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
 };
 const icon = name => svgEl(ICONS[name]);
@@ -511,22 +549,22 @@ const BLEND_NOTES = {
 let project = null;
 const ui = {
   sel: new Set(), tool: 'select', view: { zoom: 1, x: 0, y: 0 }, fitted: false,
-  outputOn: false, blackout: false, outputMode: 'content', layer: null, scene: null,
-  showContent: true, contentOp: 0.35, showGuide: true, guideOp: 0.5, showGrid: true, snap: true, showLabels: true, showWiring: false,
+  outputOn: false, blackout: false, outputMode: 'content', zone: null, layer: null, hoverSrc: null,
+  showContent: true, contentOp: 0.35, showGuide: true, guideOp: 0.5, showGrid: true, snap: true, showLabels: true, showWiring: false, showZones: true,
   dockTab: 'patch', rightTab: 'inspector', selCtrl: null, monitorKey: null, dockH: 250, dockCollapsed: false,
   hoverFx: null, hoverPx: null, cursor: null,
 };
-const UI_PREFS = ['contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed'];
+const UI_PREFS = ['contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed'];
 
 let geomDirty = true, patchDirty = true;
 const markGeom = () => { geomDirty = true; };
 const markPatch = () => { patchDirty = true; };
 
 function blankProject(name = 'Untitled') {
+  const settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   return {
-    format: 'weft-project', version: 1, name,
-    settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
-    fixtures: [], controllers: [], sources: builtinSources(), layers: [newLayer('b-rainbow')], scenes: [], guide: null,
+    format: 'weft-project', version: 3, name, settings,
+    fixtures: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
   };
 }
 function builtinSources() {
@@ -535,6 +573,20 @@ function builtinSources() {
 // A layer plays one source. Parameters are kept per source, so switching back restores them.
 function newLayer(src = null) { return { id: uid(), src, params: {}, opacity: 1, blend: 'alpha', on: true }; }
 const cloneLayers = layers => JSON.parse(JSON.stringify(layers));
+// A zone is a rectangle of the canvas with its own layers and scenes; content is drawn to fit it.
+// Zones later in the list are higher up and cover the ones below, as far as their opacity goes.
+function newZone(props = {}) { return Object.assign({ id: uid(), name: 'Zone 1', tag: TAGS[1], x: 0, y: 0, w: 1000, h: 640, opacity: 1, layers: [], scenes: [], scene: null }, props); }
+function clampZone(z, s = project.settings) {
+  z.w = clamp(Math.round(z.w) || 1, 1, s.compW); z.h = clamp(Math.round(z.h) || 1, 1, s.compH);
+  z.x = clamp(Math.round(z.x) || 0, 0, s.compW - z.w); z.y = clamp(Math.round(z.y) || 0, 0, s.compH - z.h);
+}
+// When the composition is resized, zones that covered all of it keep covering all of it
+function fitZonesToCanvas(oldW, oldH) {
+  for (const z of project.zones) {
+    if (z.x === 0 && z.y === 0 && z.w === oldW && z.h === oldH) { z.w = project.settings.compW; z.h = project.settings.compH; }
+    clampZone(z);
+  }
+}
 function newFixture(type, props = {}) {
   const f = {
     id: uid(), type, name: nextName(type), enabled: true, locked: false,
@@ -583,13 +635,17 @@ function hydrate(p) {
   out.controllers = p.controllers || [];
   out.controllers.forEach(ensureChains);
   out.sources = builtinSources().concat((p.sources || []).filter(s => !s.builtin));
-  if (!Array.isArray(p.layers)) { // Weft 0.1: one live source, parameters stored on the sources
-    const L = newLayer(p.activeSource || 'b-rainbow');
-    for (const s of p.sources || []) if (s.params && Object.keys(s.params).length) L.params[s.id] = s.params;
-    out.layers = [L];
+  if (!Array.isArray(p.zones)) { // Weft 0.2 and older: one set of layers and scenes for the whole canvas
+    let layers = p.layers;
+    if (!Array.isArray(layers)) { // Weft 0.1: one live source, parameters stored on the sources
+      const L = newLayer(p.activeSource || 'b-rainbow');
+      for (const s of p.sources || []) if (s.params && Object.keys(s.params).length) L.params[s.id] = s.params;
+      layers = [L];
+    }
+    out.zones = [newZone({ w: out.settings.compW, h: out.settings.compH, layers, scenes: p.scenes || [] })];
   }
   for (const s of out.sources) delete s.params;
-  delete out.activeSource;
+  delete out.activeSource; delete out.layers; delete out.scenes;
   const known = new Set(out.sources.map(s => s.id));
   const fixLayer = l => {
     const L = Object.assign(newLayer(), l);
@@ -600,8 +656,16 @@ function hydrate(p) {
     L.on = L.on !== false;
     return L;
   };
-  out.layers = out.layers.map(fixLayer);
-  out.scenes = (Array.isArray(p.scenes) ? p.scenes : []).map((sc, i) => Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2, tag: TAGS[i % TAGS.length] }, sc, { layers: (sc.layers || []).map(fixLayer) }));
+  const fixScenes = list => (Array.isArray(list) ? list : []).map((sc, i) => Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2, tag: TAGS[i % TAGS.length] }, sc, { layers: (sc.layers || []).map(fixLayer) }));
+  out.zones = out.zones.map((zn, i) => {
+    const z = Object.assign(newZone({ name: 'Zone ' + (i + 1) }), zn);
+    z.layers = (Array.isArray(z.layers) ? z.layers : []).map(fixLayer);
+    z.scenes = fixScenes(z.scenes);
+    z.opacity = isFinite(z.opacity) ? clamp(+z.opacity, 0, 1) : 1;
+    if (!z.scenes.some(sc => sc.id === z.scene)) z.scene = null;
+    clampZone(z, out.settings);
+    return z;
+  });
   return out;
 }
 
@@ -821,6 +885,7 @@ function simulateChannels(c, chain, extra) {
 }
 
 /* ============================================================ content sources */
+// Sources draw into the bottom-left corner of these canvases, at the size of the zone they play in.
 const glCanvas = document.createElement('canvas');
 glCanvas.width = 16; glCanvas.height = 16;
 let gl = null;
@@ -830,6 +895,7 @@ const mctx = mediaCanvas.getContext('2d');
 const runtimes = new Map();   // source id -> { R, hdr, error }
 const mediaEls = new Map();   // source id -> <img>/<video> (not saved in projects)
 let clockT = 0, clockDT = 1 / 40, frameIndex = 0;
+let isfTime = null;           // a fixed TIME while drawing still thumbnails
 let readBuf = new Uint8Array(4);
 
 function parseISFHeader(code) {
@@ -839,7 +905,7 @@ function parseISFHeader(code) {
 }
 function sourceCode(src) { return src.builtin ? (BUILTINS.find(b => b.id === src.builtin) || {}).code || '' : src.code || ''; }
 function sizeContent() {
-  const W = project.settings.compW, H = project.settings.compH;
+  const W = Math.max(project.settings.compW, THUMB), H = Math.max(project.settings.compH, THUMB);
   if (glCanvas.width !== W || glCanvas.height !== H) { glCanvas.width = W; glCanvas.height = H; }
   if (mediaCanvas.width !== W || mediaCanvas.height !== H) { mediaCanvas.width = W; mediaCanvas.height = H; }
 }
@@ -856,7 +922,7 @@ function runtimeOf(src) {
   const R = new interactiveShaderFormat.Renderer(gl);
   try { R.loadSource(code); } catch (e) { R.valid = false; R.error = e.message; }
   if (!R.valid) { rt.error = (R.errorLine ? 'Line ' + R.errorLine + ': ' : '') + String(R.error || 'Shader did not compile'); return rt; }
-  R.setDateUniforms = function () { this.setValue('TIME', clockT); this.setValue('TIMEDELTA', clockDT); this.setValue('FRAMEINDEX', frameIndex); };
+  R.setDateUniforms = function () { this.setValue('TIME', isfTime ?? clockT); this.setValue('TIMEDELTA', clockDT); this.setValue('FRAMEINDEX', frameIndex); };
   rt.R = R;
   return rt;
 }
@@ -882,38 +948,41 @@ function applyParams(rt, L, src) {
     try { rt.R.setValue(inp.NAME, typeof v === 'boolean' ? (v ? 1 : 0) : v); } catch (e) { /* input not used by the shader */ }
   }
 }
-function drawMedia(src) {
-  const W = mediaCanvas.width, H = mediaCanvas.height;
-  mctx.clearRect(0, 0, W, H);
+function drawMedia(src, w, h) {
+  const top = mediaCanvas.height - h;
+  mctx.clearRect(0, top, w, h);
   const el = mediaEls.get(src.id);
   if (!el) return false;
   const iw = el.videoWidth || el.naturalWidth, ih = el.videoHeight || el.naturalHeight;
   if (!iw || !ih) return false;
-  let dw = W, dh = H;
+  let dw = w, dh = h;
   if (src.fit !== 'stretch') {
-    const s = src.fit === 'fill' ? Math.max(W / iw, H / ih) : Math.min(W / iw, H / ih);
+    const s = src.fit === 'fill' ? Math.max(w / iw, h / ih) : Math.min(w / iw, h / ih);
     dw = iw * s; dh = ih * s;
   }
-  try { mctx.drawImage(el, (W - dw) / 2, (H - dh) / 2, dw, dh); } catch (e) { return false; }
-  return true;
+  mctx.save(); mctx.beginPath(); mctx.rect(0, top, w, h); mctx.clip();
+  let ok = true;
+  try { mctx.drawImage(el, (w - dw) / 2, top + (h - dh) / 2, dw, dh); } catch (e) { ok = false; }
+  mctx.restore();
+  return ok;
 }
-// Draw one layer's source; returns the canvas holding it, or null if there is nothing to show
-function renderSource(src, L) {
+// Draw one layer's source at w × h; returns the canvas holding it, or null if there is nothing to show
+function renderSource(src, L, w, h) {
   if (!src) return null;
   if (src.kind === 'isf') {
     const rt = runtimeOf(src);
     if (!rt.R) return null;
     applyParams(rt, L, src);
-    rt.R.draw(glCanvas);
+    rt.R.draw({ width: w, height: h });
     return glCanvas;
   }
-  return drawMedia(src) ? mediaCanvas : null;
+  return drawMedia(src, w, h) ? mediaCanvas : null;
 }
 // Play the videos that some layer shows (also restarts ones the browser paused in the background),
 // pause the ones nothing shows.
 function syncMedia() {
   const used = new Set();
-  for (const L of project.layers.concat(fade && fade.from || [])) if (L.on && L.src) used.add(L.src);
+  for (const z of project.zones) for (const L of z.layers.concat(z._fade && z._fade.from || [])) if (L.on && L.src) used.add(L.src);
   for (const [id, el] of mediaEls) {
     if (!(el instanceof HTMLVideoElement)) continue;
     if (!used.has(id)) { if (!el.paused && !el.srcObject) el.pause(); }
@@ -921,9 +990,10 @@ function syncMedia() {
   }
 }
 
-/* ============================================================ mixer: composites the layers on the GPU */
-// Its own WebGL context, separate from the shaders'. Each layer is uploaded as a texture and blended
-// onto the layers below; the result is the canvas the stage shows and the pixels are sampled from.
+/* ============================================================ mixer: composites zones and layers on the GPU */
+// Its own WebGL context, separate from the shaders'. Each zone's layers are blended at the zone's size,
+// crossfaded if the zone is fading, then laid onto the output canvas at the zone's place with its opacity.
+// That canvas is what the stage shows and what the pixels are sampled from.
 const mixer = (() => {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 16;
@@ -931,7 +1001,7 @@ const mixer = (() => {
   try { g = canvas.getContext('webgl', { preserveDrawingBuffer: true, alpha: false, antialias: false, depth: false }); } catch (e) { g = null; }
   if (!g) return { ok: false, canvas };
   const VS = 'attribute vec2 p; varying vec2 uv; void main() { uv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }';
-  const BLEND = `precision mediump float; varying vec2 uv; uniform sampler2D base, top; uniform float opacity; uniform int mode;
+  const BLEND = `precision mediump float; varying vec2 uv; uniform sampler2D base, top; uniform vec2 scale; uniform float opacity; uniform int mode;
 vec3 blend(vec3 b, vec3 t) {
   if (mode == 1) return b + t;
   if (mode == 2) return 1.0 - (1.0 - b) * (1.0 - t);
@@ -943,17 +1013,17 @@ vec3 blend(vec3 b, vec3 t) {
   return t;
 }
 void main() {
-  vec4 b = texture2D(base, uv), t = texture2D(top, uv);
+  vec4 b = texture2D(base, uv * scale), t = texture2D(top, uv * scale);
   gl_FragColor = vec4(mix(b.rgb, clamp(blend(b.rgb, t.rgb), 0.0, 1.0), t.a * opacity), 1.0);
 }`;
-  const MIX = 'precision mediump float; varying vec2 uv; uniform sampler2D a, b; uniform float t;\nvoid main() { gl_FragColor = vec4(mix(texture2D(a, uv).rgb, texture2D(b, uv).rgb, t), 1.0); }';
+  const MIX = 'precision mediump float; varying vec2 uv; uniform sampler2D a, b; uniform vec2 sa, sb; uniform float t;\nvoid main() { gl_FragColor = vec4(mix(texture2D(a, uv * sa).rgb, texture2D(b, uv * sb).rgb, t), 1.0); }';
   const program = fs => {
     const p = g.createProgram();
     for (const [type, code] of [[g.VERTEX_SHADER, VS], [g.FRAGMENT_SHADER, fs]]) { const s = g.createShader(type); g.shaderSource(s, code); g.compileShader(s); g.attachShader(p, s); }
     g.bindAttribLocation(p, 0, 'p');
     g.linkProgram(p);
     const u = {};
-    for (const n of ['base', 'top', 'opacity', 'mode', 'a', 'b', 't']) u[n] = g.getUniformLocation(p, n);
+    for (const n of ['base', 'top', 'scale', 'opacity', 'mode', 'a', 'b', 'sa', 'sb', 't']) u[n] = g.getUniformLocation(p, n);
     return { p, u };
   };
   const blendP = program(BLEND), mixP = program(MIX);
@@ -970,94 +1040,185 @@ void main() {
     for (const k of [g.TEXTURE_WRAP_S, g.TEXTURE_WRAP_T]) g.texParameteri(g.TEXTURE_2D, k, g.CLAMP_TO_EDGE);
     return t;
   };
-  const target = () => ({ tex: texture(), fb: g.createFramebuffer() });
-  const slots = [[target(), target()], [target(), target()]]; // ping-pong pairs: 0 = current look, 1 = the look it fades from
-  const cur = [0, 0];
-  const upload = texture(), frozen = texture();
-  let W = 0, H = 0;
+  const target = () => ({ tex: texture(), fb: g.createFramebuffer(), w: 0, h: 0 });
+  const size = (t, w, h) => {
+    if (t.w === w && t.h === h) return;
+    t.w = w; t.h = h;
+    g.bindTexture(g.TEXTURE_2D, t.tex);
+    g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, w, h, 0, g.RGBA, g.UNSIGNED_BYTE, null);
+    g.bindFramebuffer(g.FRAMEBUFFER, t.fb);
+    g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, t.tex, 0);
+  };
+  const slots = [[target(), target()], [target(), target()]]; // ping-pong pairs: 0 = a zone's current look, 1 = the look it fades from
+  const cur = [0, 0], area = [[1, 1], [1, 1]];                // area = the zone size accumulated in each slot
+  const upload = texture();
+  const zones = new Map();                                     // zone id -> { out: its picture, frozen: a copy to fade from }
+  let TW = 1, TH = 1, CW = 0, CH = 0;
   const bindTex = (unit, t, loc) => { g.activeTexture(g.TEXTURE0 + unit); g.bindTexture(g.TEXTURE_2D, t); g.uniform1i(loc, unit); };
-  const pass = (fb, prog, set) => { g.bindFramebuffer(g.FRAMEBUFFER, fb); g.viewport(0, 0, W, H); g.useProgram(prog.p); set(prog.u); g.drawArrays(g.TRIANGLES, 0, 6); };
+  const pass = (fb, x, y, w, h, prog, set) => { g.bindFramebuffer(g.FRAMEBUFFER, fb); g.viewport(x, y, w, h); g.useProgram(prog.p); set(prog.u); g.drawArrays(g.TRIANGLES, 0, 6); };
+  const scaleOf = slot => [area[slot][0] / TW, area[slot][1] / TH];
   return {
     ok: true, canvas,
-    resize(w, h) {
-      if (w === W && h === H) return;
-      W = canvas.width = w; H = canvas.height = h;
-      for (const pair of slots) for (const t of pair) {
-        g.bindTexture(g.TEXTURE_2D, t.tex);
-        g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, w, h, 0, g.RGBA, g.UNSIGNED_BYTE, null);
-        g.bindFramebuffer(g.FRAMEBUFFER, t.fb);
-        g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, t.tex, 0);
-      }
-      g.bindTexture(g.TEXTURE_2D, frozen);
-      g.texImage2D(g.TEXTURE_2D, 0, g.RGB, w, h, 0, g.RGB, g.UNSIGNED_BYTE, null);
-      g.bindFramebuffer(g.FRAMEBUFFER, null);
+    // textures match the source canvases (tw × th); the output canvas is the composition (cw × ch)
+    resize(tw, th, cw, ch) {
+      if (tw !== TW || th !== TH) { TW = tw; TH = th; for (const pair of slots) for (const t of pair) size(t, tw, th); }
+      if (cw !== CW || ch !== CH) { CW = canvas.width = cw; CH = canvas.height = ch; }
     },
-    begin(slot) {
-      cur[slot] = 0;
+    clear() { g.bindFramebuffer(g.FRAMEBUFFER, null); g.viewport(0, 0, CW, CH); g.clearColor(0, 0, 0, 1); g.clear(g.COLOR_BUFFER_BIT); },
+    begin(slot, w, h) {
+      cur[slot] = 0; area[slot] = [w, h];
       g.bindFramebuffer(g.FRAMEBUFFER, slots[slot][0].fb);
-      g.viewport(0, 0, W, H); g.clearColor(0, 0, 0, 1); g.clear(g.COLOR_BUFFER_BIT);
+      g.clearColor(0, 0, 0, 1); g.clear(g.COLOR_BUFFER_BIT);
     },
     layer(slot, image, mode, opacity) {
       g.activeTexture(g.TEXTURE1); g.bindTexture(g.TEXTURE_2D, upload);
       g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, image);
-      const from = slots[slot][cur[slot]], to = slots[slot][1 - cur[slot]];
-      pass(to.fb, blendP, u => { bindTex(0, from.tex, u.base); bindTex(1, upload, u.top); g.uniform1f(u.opacity, opacity); g.uniform1i(u.mode, mode); });
+      const from = slots[slot][cur[slot]], to = slots[slot][1 - cur[slot]], [w, h] = area[slot];
+      pass(to.fb, 0, 0, w, h, blendP, u => { bindTex(0, from.tex, u.base); bindTex(1, upload, u.top); g.uniform2fv(u.scale, scaleOf(slot)); g.uniform1f(u.opacity, opacity); g.uniform1i(u.mode, mode); });
       cur[slot] = 1 - cur[slot];
     },
-    // Show the current look, crossfaded by t from slot 1 or from the frozen frame (from = null: no fade)
-    present(from, t) {
-      const to = slots[0][cur[0]].tex;
-      const a = from === 'frozen' ? frozen : from === 1 ? slots[1][cur[1]].tex : to;
-      pass(null, mixP, u => { bindTex(0, a, u.a); bindTex(1, to, u.b); g.uniform1f(u.t, from == null ? 1 : t); });
+    // The zone's picture: its current look, crossfaded by t from slot 1 or from its frozen frame (from = null: no fade)
+    zone(z, from, t) {
+      let Z = zones.get(z.id);
+      if (!Z) zones.set(z.id, Z = { out: target(), frozen: null });
+      size(Z.out, z.w, z.h);
+      const b = slots[0][cur[0]].tex, sb = scaleOf(0);
+      const [a, sa] = from === 1 ? [slots[1][cur[1]].tex, scaleOf(1)] : from === 'frozen' && Z.frozen ? [Z.frozen, [1, 1]] : [b, sb];
+      pass(Z.out.fb, 0, 0, z.w, z.h, mixP, u => { bindTex(0, a, u.a); bindTex(1, b, u.b); g.uniform2fv(u.sa, sa); g.uniform2fv(u.sb, sb); g.uniform1f(u.t, from == null ? 1 : t); });
     },
-    // Keep a copy of what is showing now, to fade from when a fade is interrupted by another
-    freeze() {
-      g.bindFramebuffer(g.FRAMEBUFFER, null);
-      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, frozen);
-      g.copyTexImage2D(g.TEXTURE_2D, 0, g.RGB, 0, 0, W, H, 0);
+    // Keep a copy of the zone's picture, to fade from when a fade is interrupted by another
+    freeze(z) {
+      const Z = zones.get(z.id);
+      if (!Z || !Z.out.w) return false;
+      if (!Z.frozen) Z.frozen = texture();
+      g.bindFramebuffer(g.FRAMEBUFFER, Z.out.fb);
+      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, Z.frozen);
+      g.copyTexImage2D(g.TEXTURE_2D, 0, g.RGBA, 0, 0, Z.out.w, Z.out.h, 0);
+      return true;
+    },
+    // Lay the zone's picture onto the output at its place, over what is there, by its opacity
+    composite(z, opacity) {
+      const Z = zones.get(z.id);
+      g.enable(g.BLEND); g.blendColor(0, 0, 0, opacity); g.blendFunc(g.CONSTANT_ALPHA, g.ONE_MINUS_CONSTANT_ALPHA);
+      pass(null, z.x, CH - z.y - z.h, z.w, z.h, mixP, u => { bindTex(0, Z.out.tex, u.a); bindTex(1, Z.out.tex, u.b); g.uniform2fv(u.sa, [1, 1]); g.uniform2fv(u.sb, [1, 1]); g.uniform1f(u.t, 1); });
+      g.disable(g.BLEND);
+    },
+    prune(ids) {
+      for (const [id, Z] of zones) {
+        if (ids.has(id)) continue;
+        g.deleteTexture(Z.out.tex); g.deleteFramebuffer(Z.out.fb); if (Z.frozen) g.deleteTexture(Z.frozen);
+        zones.delete(id);
+      }
     },
     read(x, y, w, h, buf) { g.bindFramebuffer(g.FRAMEBUFFER, null); g.readPixels(x, y, w, h, g.RGBA, g.UNSIGNED_BYTE, buf); },
   };
 })();
 
-/* ============================================================ layers, looks and fades */
-let fade = null; // { from: layers to fade from (null: the frozen frame), start, dur, scene }
-const selLayer = () => project.layers.find(L => L.id === ui.layer) || project.layers[project.layers.length - 1] || null;
-// Crossfade from what is showing now to whatever the layers become next
-function startFade(dur, scene = null) {
-  if (!(dur > 0.01) || !mixer.ok) { fade = null; return; }
-  if (fade) mixer.freeze();
-  fade = { from: fade ? null : cloneLayers(project.layers), start: clockT, dur, scene };
+/* ============================================================ zones, looks and fades */
+const zoneById = id => project.zones.find(z => z.id === id);
+const selZone = () => zoneById(ui.zone) || project.zones[project.zones.length - 1] || null;
+const selLayer = () => { const z = selZone(); return z ? z.layers.find(L => L.id === ui.layer) || z.layers[z.layers.length - 1] || null : null; };
+// Crossfade a zone from what it shows now to whatever its layers become next
+function startFade(z, dur, scene = null) {
+  if (!(dur > 0.01) || !mixer.ok) { z._fade = null; return; }
+  const frozen = !!z._fade && mixer.freeze(z); // a fade is already running: continue from exactly what the zone shows now
+  z._fade = { from: frozen ? null : cloneLayers(z.layers), start: clockT, dur, scene };
 }
-// Play a source in a layer (the selected one by default), crossfading over the transition time
+// Play a source in a layer of the selected zone (the selected layer by default), crossfading over the transition time
 function loadSource(id, L = selLayer()) {
-  if (!L) { L = newLayer(); project.layers.push(L); }
+  const z = selZone();
+  if (!z) return;
+  if (!L) { L = newLayer(); z.layers.push(L); }
   ui.layer = L.id;
-  if (L.src !== id) { startFade(project.settings.transition); L.src = id; }
+  if (L.src !== id) { startFade(z, project.settings.transition); L.src = id; }
   syncMedia();
   refreshScenes();
 }
-function renderLook(layers, slot) {
-  mixer.begin(slot);
+// Zones fully covered by an opaque zone above them, or at zero opacity, cannot be seen and are not drawn
+function hiddenZone(i) {
+  const zs = project.zones, z = zs[i];
+  if (!(z.opacity > 0)) return true;
+  for (let j = i + 1; j < zs.length; j++) {
+    const o = zs[j];
+    if (o.opacity >= 1 && o.x <= z.x && o.y <= z.y && o.x + o.w >= z.x + z.w && o.y + o.h >= z.y + z.h) return true;
+  }
+  return false;
+}
+let preview = null; // { layer, canvas }: the Content tab's live picture of the selected layer
+function renderLook(layers, slot, z) {
+  mixer.begin(slot, z.w, z.h);
   for (const L of layers) {
     if (!L.on || !(L.opacity > 0)) continue;
-    const c = renderSource(srcById(L.src), L);
-    if (c) mixer.layer(slot, c, BLEND_IDX[L.blend] || 0, L.opacity);
+    const c = renderSource(srcById(L.src), L, z.w, z.h);
+    if (!c) continue;
+    if (slot === 0 && preview && preview.layer === L) drawPreview(c, z);
+    mixer.layer(slot, c, BLEND_IDX[L.blend] || 0, L.opacity);
   }
+}
+function drawPreview(c, z) {
+  const p = preview.canvas;
+  if (!p.isConnected) { preview = null; return; }
+  p.getContext('2d').drawImage(c, 0, c.height - z.h, z.w, z.h, 0, 0, p.width, p.height);
 }
 function renderContent() {
   if (!mixer.ok) { for (const f of project.fixtures) f._col.fill(0); return; }
-  mixer.resize(project.settings.compW, project.settings.compH);
-  renderLook(project.layers, 0);
-  let t = 1;
-  if (fade) {
-    t = (clockT - fade.start) / fade.dur;
-    if (t >= 1) { fade = null; syncMedia(); }
-    else if (fade.from) renderLook(fade.from, 1);
-  }
-  mixer.present(fade ? (fade.from ? 1 : 'frozen') : null, t);
+  const s = project.settings, sel = selZone();
+  mixer.resize(glCanvas.width, glCanvas.height, s.compW, s.compH);
+  mixer.clear();
+  project.zones.forEach((z, i) => {
+    let t = 1;
+    if (z._fade) { t = (clockT - z._fade.start) / z._fade.dur; if (t >= 1) { z._fade = null; syncMedia(); } }
+    const show = !hiddenZone(i);
+    if (!show && z !== sel) return; // the selected zone still renders, for its layer preview
+    const f = z._fade;
+    renderLook(z.layers, 0, z);
+    if (f && f.from) renderLook(f.from, 1, z);
+    mixer.zone(z, f ? (f.from ? 1 : 'frozen') : null, t);
+    if (show) mixer.composite(z, z.opacity);
+  });
   sampleMix();
 }
+
+/* ============================================================ source thumbnails */
+// A still frame of each source, drawn once with default settings; the one under the pointer plays.
+const THUMB = 96, THUMB_TIME = 1.3;
+const thumbs = new Map(); // source id -> canvas
+function thumbOf(src) {
+  let c = thumbs.get(src.id);
+  if (!c) { c = h('canvas', { width: THUMB, height: THUMB }); c._stale = true; thumbs.set(src.id, c); }
+  return c;
+}
+function drawThumb(src, still) {
+  const c = thumbs.get(src.id);
+  let img = null;
+  if (src.kind === 'isf') {
+    const rt = runtimeOf(src);
+    if (rt.R) {
+      isfTime = still ? THUMB_TIME : null;
+      applyParams(rt, { params: {} }, src);
+      rt.R.draw({ width: THUMB, height: THUMB });
+      isfTime = null;
+      img = glCanvas;
+    }
+  } else if (drawMedia(src, THUMB, THUMB)) img = mediaCanvas;
+  c._stale = !img && src.kind !== 'isf' && mediaEls.has(src.id); // media still loading: try again next frame
+  if (!img) return;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, THUMB, THUMB);
+  x.drawImage(img, 0, img.height - THUMB, THUMB, THUMB, 0, 0, THUMB, THUMB);
+}
+function updateThumbs() {
+  if (!gl) return;
+  const hov = ui.hoverSrc && srcById(ui.hoverSrc);
+  if (hov && thumbs.has(hov.id)) drawThumb(hov, false);
+  let n = 0;
+  for (const s of project.sources) {
+    const c = thumbs.get(s.id);
+    if (c && c._stale && s !== hov && n++ < 3) drawThumb(s, true);
+  }
+}
+function markThumb(src) { const c = thumbs.get(src.id); if (c) c._stale = true; }
+
 let fixtureBB = null;
 function computeBB() {
   const W = project.settings.compW, H = project.settings.compH;
@@ -1184,6 +1345,7 @@ function tick() {
   sizeContent();
   if (ui.outputMode === 'content' || ui.showContent) renderContent();
   if (ui.outputMode !== 'content') testPattern(ui.outputMode);
+  updateThumbs();
   if (now - mediaChecked > 1000) { mediaChecked = now; syncMedia(); }
   buildOutput();
   if (ui.outputOn) sendFrame();
@@ -1386,6 +1548,7 @@ function drawView() {
     ctx.drawImage(guideImg, ox + (W - iw * s) / 2 * z, oy + (H - ih * s) / 2 * z, iw * s * z, ih * s * z);
     ctx.globalAlpha = 1;
   }
+  if (ui.showZones || ui.tool === 'zone') drawZones();
   ctx.strokeStyle = '#2f3541'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(ox) - 0.5, Math.round(oy) - 0.5, Math.round(W * z) + 1, Math.round(H * z) + 1);
   ctx.font = '10px ' + FONT_MONO; ctx.fillStyle = '#6c7481'; ctx.fillText(`${W} × ${H}`, ox, oy - 6);
 
@@ -1425,6 +1588,7 @@ function drawView() {
   drawOverlays();
 }
 function drawOverlays() {
+  if (ui.tool === 'zone') drawZoneEdit();
   if (draft) {
     prepDraft(draft);
     ctx.save(); ctx.setLineDash([5, 4]); outlinePath(draft, ctx); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
@@ -1450,6 +1614,84 @@ function drawOverlays() {
 function prepDraft(d) { d._pts = computePoints(d); d._n = pixelCount(d); d._pitch = fixturePitch(d); }
 let FONT_MONO = null, FONT_UI = null;
 function fonts() { if (!FONT_MONO) { const cs = getComputedStyle(document.documentElement); FONT_MONO = cs.getPropertyValue('--mono').trim(); FONT_UI = cs.getPropertyValue('--ui').trim(); } }
+
+/* ---------- zones on the stage ---------- */
+let zoneDraft = null, zoneLabels = [];
+const ZONE_CURSORS = { nw: 'nwse-resize', n: 'ns-resize', ne: 'nesw-resize', e: 'ew-resize', se: 'nwse-resize', s: 'ns-resize', sw: 'nesw-resize', w: 'ew-resize' };
+function zoneHandlePoints(z) {
+  const x0 = z.x, y0 = z.y, x1 = z.x + z.w, y1 = z.y + z.h, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
+  return { nw: [x0, y0], n: [xm, y0], ne: [x1, y0], e: [x1, ym], se: [x1, y1], s: [xm, y1], sw: [x0, y1], w: [x0, ym] };
+}
+function drawZones() {
+  const sel = selZone(), editing = ui.tool === 'zone', zm = ui.view.zoom;
+  zoneLabels = [];
+  ctx.save();
+  project.zones.forEach((z, i) => {
+    const [sx, sy] = toS(z.x, z.y), on = editing && z === sel;
+    ctx.setLineDash(on ? [] : [6, 4]);
+    ctx.lineWidth = on ? 1.5 : 1.2;
+    ctx.strokeStyle = on ? '#3cc8ff' : z.tag;
+    ctx.globalAlpha = editing ? 1 : 0.8;
+    ctx.strokeRect(Math.round(sx) + 0.5, Math.round(sy) + 0.5, Math.max(1, Math.round(z.w * zm) - 1), Math.max(1, Math.round(z.h * zm) - 1));
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    // label: name, and what covers it or its opacity
+    const over = zoneAbove(i);
+    const extra = over ? `under ${over.name} ${pct(over.opacity)}` : z.opacity < 1 ? pct(z.opacity) : '';
+    ctx.font = '600 11px ' + FONT_UI; const nw = ctx.measureText(z.name).width;
+    ctx.font = '400 11px ' + FONT_UI; const ew = extra ? ctx.measureText(extra).width + 6 : 0;
+    const lx = Math.round(sx), ly = z.y * zm >= 22 ? Math.round(sy) - 21 : Math.round(sy) + 5, lw = Math.round(nw + ew + 14);
+    ctx.fillStyle = 'rgba(10,11,14,.85)'; ctx.fillRect(lx, ly, lw, 18);
+    ctx.strokeStyle = on ? '#3cc8ff' : z.tag; ctx.lineWidth = 1; ctx.strokeRect(lx + 0.5, ly + 0.5, lw - 1, 17);
+    ctx.font = '600 11px ' + FONT_UI; ctx.fillStyle = z.tag; ctx.fillText(z.name, lx + 7, ly + 13);
+    if (extra) { ctx.font = '400 11px ' + FONT_UI; ctx.fillStyle = '#a2a9b5'; ctx.fillText(extra, lx + 13 + nw, ly + 13); }
+    zoneLabels.push({ z, x: lx, y: ly, w: lw, h: 18 });
+  });
+  ctx.restore();
+}
+function drawZoneEdit() {
+  const z = selZone();
+  ctx.save();
+  if (z) for (const [x, y] of Object.values(zoneHandlePoints(z))) {
+    const [sx, sy] = toS(x, y);
+    ctx.fillStyle = '#fff'; ctx.fillRect(sx - 4.5, sy - 4.5, 9, 9);
+    ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.5; ctx.strokeRect(sx - 4.5, sy - 4.5, 9, 9);
+  }
+  if (zoneDraft) {
+    const [sx, sy] = toS(zoneDraft.x, zoneDraft.y), w = zoneDraft.w * ui.view.zoom, hh = zoneDraft.h * ui.view.zoom;
+    ctx.fillStyle = 'rgba(60,200,255,0.08)'; ctx.fillRect(sx, sy, w, hh);
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.2; ctx.strokeRect(sx + 0.5, sy + 0.5, w, hh); ctx.setLineDash([]);
+    ctx.font = '10px ' + FONT_MONO; ctx.fillStyle = '#3cc8ff';
+    ctx.fillText(`${Math.round(zoneDraft.w)} × ${Math.round(zoneDraft.h)}`, sx, sy - 6);
+  }
+  ctx.restore();
+}
+function hitZoneHandle(sx, sy) {
+  const z = selZone();
+  if (!z) return null;
+  for (const [k, [x, y]] of Object.entries(zoneHandlePoints(z))) { const [hx, hy] = toS(x, y); if (Math.abs(sx - hx) <= 6 && Math.abs(sy - hy) <= 6) return k; }
+  return null;
+}
+function hitZoneLabel(sx, sy) {
+  for (let i = zoneLabels.length - 1; i >= 0; i--) { const l = zoneLabels[i]; if (sx >= l.x && sx <= l.x + l.w && sy >= l.y && sy <= l.y + l.h) return l.z; }
+  return null;
+}
+// The smallest zone under the point, so zones under a big one stay reachable
+function hitZone(x, y) {
+  let best = null;
+  for (const z of project.zones) if (x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h && (!best || z.w * z.h < best.w * best.h)) best = z;
+  return best;
+}
+function resizeZone(z, o, hd, x, y) {
+  let x0 = o.x, y0 = o.y, x1 = o.x + o.w, y1 = o.y + o.h;
+  if (hd.includes('w')) x0 = Math.min(x, x1 - 4);
+  if (hd.includes('e')) x1 = Math.max(x, x0 + 4);
+  if (hd.includes('n')) y0 = Math.min(y, y1 - 4);
+  if (hd.includes('s')) y1 = Math.max(y, y0 + 4);
+  const W = project.settings.compW, H = project.settings.compH;
+  x0 = clamp(x0, 0, W); x1 = clamp(x1, 0, W); y0 = clamp(y0, 0, H); y1 = clamp(y1, 0, H);
+  Object.assign(z, { x: Math.round(x0), y: Math.round(y0), w: Math.max(1, Math.round(x1 - x0)), h: Math.max(1, Math.round(y1 - y0)) });
+}
+const rectOf = (x0, y0, x1, y1) => ({ x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) });
 
 /* ---------- hit testing ---------- */
 function distSeg(px, py, ax, ay, bx, by) {
@@ -1573,6 +1815,15 @@ cv.addEventListener('pointerdown', e => {
   if (e.button === 1 || e.button === 2 || spaceHeld) { drag = { kind: 'pan', sx, sy, vx: ui.view.x, vy: ui.view.y }; cv.style.cursor = 'grabbing'; return; }
   if (e.button !== 0) return;
   const tool = ui.tool;
+  if (tool === 'zone') {
+    // handles resize the selected zone, a label moves its zone, a drag anywhere else draws a new zone, a click selects
+    const hd = hitZoneHandle(sx, sy), sz = selZone();
+    if (hd) { drag = { kind: 'zoneSize', z: sz, hd, o: { x: sz.x, y: sz.y, w: sz.w, h: sz.h }, changed: false }; return; }
+    const lz = hitZoneLabel(sx, sy);
+    if (lz) { if (ui.zone !== lz.id) selectZone(lz); drag = { kind: 'zoneMove', z: lz, x0: x, y0: y, o: { x: lz.x, y: lz.y }, changed: false }; return; }
+    drag = { kind: 'zoneNew', x0: snapV(x, e), y0: snapV(y, e), sx, sy, pick: hitZone(x, y) };
+    return;
+  }
   if (tool === 'line' || tool === 'circle' || tool === 'matrix') {
     const px = snapV(x, e), py = snapV(y, e);
     drag = { kind: 'create', type: tool, x0: px, y0: py, moved: false };
@@ -1607,7 +1858,10 @@ cv.addEventListener('pointermove', e => {
   ui.cursor = [x, y];
   if (!drag) {
     if (pathDraft) pathDraft.cursor = [snapV(x, e), snapV(y, e)];
-    if (ui.tool === 'select' && !spaceHeld) {
+    if (ui.tool === 'zone' && !spaceHeld) {
+      const hd = hitZoneHandle(sx, sy);
+      cv.style.cursor = hd ? ZONE_CURSORS[hd] : hitZoneLabel(sx, sy) ? 'move' : 'crosshair';
+    } else if (ui.tool === 'select' && !spaceHeld) {
       const hd = hitHandle(sx, sy);
       const f = hd ? null : hitFixture(x, y);
       ui.hoverFx = f ? f.id : null;
@@ -1617,6 +1871,9 @@ cv.addEventListener('pointermove', e => {
     return;
   }
   if (drag.kind === 'pan') { ui.view.x = drag.vx + sx - drag.sx; ui.view.y = drag.vy + sy - drag.sy; return; }
+  if (drag.kind === 'zoneMove') { Object.assign(drag.z, { x: drag.o.x + snapV(x - drag.x0, e), y: drag.o.y + snapV(y - drag.y0, e) }); clampZone(drag.z); drag.changed = true; syncInspector(); return; }
+  if (drag.kind === 'zoneSize') { resizeZone(drag.z, drag.o, drag.hd, snapV(x, e), snapV(y, e)); drag.changed = true; syncInspector(); return; }
+  if (drag.kind === 'zoneNew') { if (zoneDraft || Math.hypot(sx - drag.sx, sy - drag.sy) > 4) zoneDraft = rectOf(drag.x0, drag.y0, snapV(x, e), snapV(y, e)); return; }
   if (drag.kind === 'create') {
     drag.moved = drag.moved || Math.hypot(x - drag.x0, y - drag.y0) * ui.view.zoom > 4;
     let px = snapV(x, e), py = snapV(y, e);
@@ -1656,8 +1913,12 @@ function endDrag(e) {
     addFixture(f);
     setTool('select');
     toast(`${f.name} added: ${pixelCount(f)} pixels`);
-  } else if (d.kind === 'handle' || d.kind === 'move') {
+  } else if (d.kind === 'handle' || d.kind === 'move' || d.kind === 'zoneMove' || d.kind === 'zoneSize') {
     if (d.changed) { commit(); renderRight(); }
+  } else if (d.kind === 'zoneNew') {
+    const r = zoneDraft; zoneDraft = null;
+    if (r && r.w * ui.view.zoom >= 8 && r.h * ui.view.zoom >= 8) addZone(r);
+    else if (!r && d.pick) selectZone(d.pick);
   } else if (d.kind === 'marquee') {
     marquee = null; onSelection();
   }
@@ -1666,6 +1927,11 @@ cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
 cv.addEventListener('pointerleave', () => { if (!drag) { ui.hoverFx = null; ui.hoverPx = null; ui.cursor = null; } });
 cv.addEventListener('dblclick', e => {
+  if (ui.tool === 'zone') {
+    const [sx, sy] = evPos(e), [x, y] = toC(sx, sy), z = hitZoneLabel(sx, sy) || hitZone(x, y);
+    if (z) { selectZone(z); ui.rightTab = 'content'; renderRight(); }
+    return;
+  }
   if (ui.tool !== 'select') return;
   const [x, y] = toC(...evPos(e));
   const f = hitFixture(x, y);
@@ -1696,11 +1962,13 @@ function setTool(t) {
     matrix: 'Drag a rectangle · Shift for a square · click for a 16 × 16 default',
     circle: 'Drag from the centre outwards · click for a default ring',
     path: 'Click to add points · double-click or Enter to finish · Backspace removes a point · Esc cancels',
+    zone: 'Drag to draw a zone · click to select · drag a label to move, handles to resize · double-click to edit its layers',
   };
   const hint = $('#hint');
   hint.hidden = !hints[t];
   hint.textContent = hints[t] || '';
   cv.style.cursor = t === 'select' ? 'default' : 'crosshair';
+  if (project && ui.rightTab === 'inspector') renderRight();
 }
 function finishPathSilently() {
   const f = newFixture('path', { pts: pathDraft.pts.slice() });
@@ -1824,38 +2092,45 @@ function renderFxList() {
 
 /* ============================================================ source list */
 function renderSrcList() {
-  const ul = $('#srcList');
-  const L = selLayer(), n = L ? project.layers.indexOf(L) + 1 : 1;
-  $('#srcTarget').textContent = '→ layer ' + n;
-  $('#srcTarget').title = 'Clicking a source plays it in layer ' + n;
-  ul.replaceChildren(...project.sources.map(s => {
-    const kind = s.kind === 'isf' ? (s.builtin ? 'GEN' : 'ISF') : s.kind === 'screen' ? 'CAP' : s.kind === 'video' ? 'VID' : 'IMG';
+  const grid = $('#srcList');
+  const z = selZone(), L = selLayer(), n = z && L ? z.layers.indexOf(L) + 1 : 1;
+  const where = z ? `${z.name} layer ${n}` : 'a new layer';
+  $('#srcTarget').textContent = z ? `→ ${z.name} · L${n}` : '';
+  $('#srcTarget').title = 'Clicking a source plays it in ' + where;
+  const usedBy = new Map();
+  for (const zz of project.zones) zz.layers.forEach((l, i) => { if (l.on && l.src && l !== L) usedBy.set(l.src, (usedBy.has(l.src) ? usedBy.get(l.src) + ', ' : '') + `${zz.name} layer ${i + 1}`); });
+  grid.replaceChildren(...project.sources.map(s => {
+    const kind = s.kind === 'isf' ? 'ISF' : s.kind === 'screen' ? 'CAP' : s.kind === 'video' ? 'VID' : 'IMG';
     const missing = (s.kind === 'image' || s.kind === 'video' || s.kind === 'screen') && !mediaEls.get(s.id);
-    const live = L && L.src === s.id;
-    const used = !live && project.layers.some(x => x.on && x.src === s.id);
     const rt = s.kind === 'isf' && runtimes.get(s.id);
-    const li = h('li', { class: 'srcrow ' + (live ? 'live' : used ? 'used' : ''), title: live ? `Playing in layer ${n}` : used ? 'Playing in another layer' : `Click to play in layer ${n}` },
-      h('span', { class: 'ty' }, icon(s.kind === 'isf' ? 'isf' : s.kind)),
-      h('span', { class: 'nm' }, s.name),
-      missing ? h('span', { class: 'badge warn', title: s.kind === 'screen' ? 'Capture not running' : 'File not loaded in this session' }, s.kind === 'screen' ? 'OFF' : 'RELINK')
-        : rt && rt.error ? h('span', { class: 'badge err' }, 'ERROR') : h('span', { class: 'badge' }, kind),
-      s.builtin ? h('span') : h('button', { class: 'x', type: 'button', title: 'Remove source', 'aria-label': 'Remove ' + s.name, onclick: e => { e.stopPropagation(); removeSource(s); } }, icon('x')));
-    li.addEventListener('click', () => { loadSource(s.id); renderSrcList(); ui.rightTab = 'content'; renderRight(); commitSoft(); });
-    return li;
+    const live = L && L.src === s.id, used = usedBy.get(s.id);
+    const tag = missing ? [s.kind === 'screen' ? 'OFF' : 'RELINK', 'warn'] : rt && rt.error ? ['ERROR', 'err'] : s.builtin ? null : [kind, ''];
+    const tile = h('div', { class: 'tile' + (live ? ' live' : used ? ' used' : ''), role: 'button', tabindex: 0,
+      title: live ? `${s.name}: playing in ${where}` : `${s.name}${used ? ': playing in ' + used : ''}. Click to play it in ${where}` },
+      h('div', { class: 'tb' }, h('span', { class: 'ic' }, icon(s.kind === 'isf' ? 'isf' : s.kind)), thumbOf(s),
+        tag ? h('span', { class: 'tag ' + tag[1] }, tag[0]) : null,
+        s.builtin ? null : h('button', { class: 'x', type: 'button', title: 'Remove source', 'aria-label': 'Remove ' + s.name, onclick: e => { e.stopPropagation(); removeSource(s); } }, icon('x'))),
+      h('span', { class: 'nm' }, s.name));
+    const go = () => { loadSource(s.id); renderSrcList(); ui.rightTab = 'content'; renderRight(); commitSoft(); };
+    tile.addEventListener('click', go);
+    tile.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    tile.addEventListener('mouseenter', () => { ui.hoverSrc = s.id; });
+    tile.addEventListener('mouseleave', () => { if (ui.hoverSrc === s.id) ui.hoverSrc = null; markThumb(s); });
+    return tile;
   }));
 }
 function removeSource(s) {
   const el = mediaEls.get(s.id);
   if (el && el.srcObject) el.srcObject.getTracks().forEach(t => t.stop());
-  mediaEls.delete(s.id); runtimes.delete(s.id);
+  mediaEls.delete(s.id); runtimes.delete(s.id); thumbs.delete(s.id);
   project.sources = project.sources.filter(x => x !== s);
-  for (const L of project.layers.concat(...project.scenes.map(sc => sc.layers))) if (L.src === s.id) L.src = null;
+  for (const z of project.zones) for (const L of z.layers.concat(...z.scenes.map(sc => sc.layers))) if (L.src === s.id) L.src = null;
   renderSrcList(); renderRight(); commit();
 }
 
 /* ============================================================ right panel */
 function renderRight() {
-  binders = [];
+  binders = []; preview = null;
   $$('#rightTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === ui.rightTab));
   const body = $('#rightBody');
   const keep = body.scrollTop;
@@ -1869,6 +2144,7 @@ const geoIn = () => markGeom();
 const geo = (extra = {}) => Object.assign({ onInput: geoIn, onCommit: commit }, extra);
 
 function renderInspector(body) {
+  if (ui.tool === 'zone') return renderZoneInspector(body);
   const sel = selected();
   if (!sel.length) {
     const px = project.fixtures.reduce((a, f) => a + pixelCount(f), 0);
@@ -1882,7 +2158,7 @@ function renderInspector(body) {
         '<code>Alt</code> while dragging turns snapping off · <code>Shift</code> constrains<br>' +
         '<code>Ctrl D</code> duplicate · <code>Del</code> delete · arrows nudge (<code>Shift</code> ×10)<br>' +
         '<code>Ctrl Z</code> undo · <code>Ctrl S</code> save · <code>B</code> blackout · <code>I</code> identify<br>' +
-        '<code>1</code>–<code>9</code> go to scene (<code>Shift</code> cuts instead of fading)' })));
+        '<code>Z</code> zones · <code>1</code>–<code>9</code> scenes of the selected zone (<code>Shift</code> cuts)' })));
     return;
   }
   if (sel.length > 1) return renderMulti(body, sel);
@@ -1998,14 +2274,145 @@ function renderMulti(body, sel) {
       h('button', { class: 'btn danger-t', type: 'button', onclick: deleteSel }, 'Delete'))));
 }
 
-/* ---------- content tab ---------- */
+/* ---------- zones ---------- */
 const pct = v => Math.round(v * 100) + '%';
 const lookEdited = () => { commitSoft(); refreshScenes(); };
-function layersSection() {
+function nextZoneName() { let n = 1; while (project.zones.some(z => z.name === 'Zone ' + n)) n++; return 'Zone ' + n; }
+function selectZone(z) {
+  if (ui.zone !== z.id) { ui.zone = z.id; ui.layer = null; }
+  renderRight(); renderSrcList(); refreshScenes();
+}
+// The first zone above zones[i] that overlaps it and shows: it covers zones[i] there
+function zoneAbove(i) {
+  const zs = project.zones, z = zs[i];
+  for (let j = zs.length - 1; j > i; j--) { const o = zs[j]; if (o.opacity > 0 && o.x < z.x + z.w && z.x < o.x + o.w && o.y < z.y + z.h && z.y < o.y + o.h) return o; }
+  return null;
+}
+// New zones go under the others: zones higher in the list cover the ones below
+function addZone(rect) {
+  const z = newZone(Object.assign({ name: nextZoneName(), tag: TAGS[(project.zones.length + 1) % TAGS.length] }, rect));
+  clampZone(z);
+  project.zones.unshift(z);
+  ui.zone = z.id; ui.layer = null;
+  commit(); renderRight(); renderSrcList();
+  const over = zoneAbove(0);
+  toast(over ? `${z.name} added under ${over.name}. Lower ${over.name}'s opacity in the Scenes tab to see it, or move ${z.name} up.` : `${z.name} added`);
+  return z;
+}
+function fixtureRect(list, pad = 0) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const f of list) { const P = f._pts || computePoints(f); for (let i = 0; i < P.length; i += 2) { x0 = Math.min(x0, P[i]); x1 = Math.max(x1, P[i]); y0 = Math.min(y0, P[i + 1]); y1 = Math.max(y1, P[i + 1]); } }
+  return x1 < x0 ? null : { x: Math.floor(x0 - pad), y: Math.floor(y0 - pad), w: Math.ceil(x1 - x0 + 2 * pad), h: Math.ceil(y1 - y0 + 2 * pad) };
+}
+function newZoneFromUI() {
+  const r = fixtureRect(selected(), 6) || { x: 0, y: 0, w: project.settings.compW, h: project.settings.compH };
+  addZone(r);
+  setTool('zone');
+}
+function fitZone(z) { const r = fixtureRect(selected(), 6); if (!r) return; Object.assign(z, r); clampZone(z); commit(); renderRight(); }
+function moveZone(z, d) {
+  const i = project.zones.indexOf(z), j = i + d;
+  if (j < 0 || j >= project.zones.length) return;
+  project.zones.splice(i, 1); project.zones.splice(j, 0, z);
+  commit(); renderRight();
+}
+function duplicateZone(z) {
+  const c = Object.assign(JSON.parse(JSON.stringify(z, replacer)), { id: uid(), name: z.name + ' copy', scene: null });
+  c.scenes.forEach(sc => { sc.id = uid(); });
+  const off = Math.max(project.settings.grid, 10) * 2;
+  if (c.x + c.w + off <= project.settings.compW && c.y + c.h + off <= project.settings.compH) { c.x += off; c.y += off; }
+  project.zones.splice(project.zones.indexOf(z), 0, c);
+  ui.zone = c.id; ui.layer = null;
+  commit(); renderRight(); renderSrcList();
+}
+function deleteZone(z) {
+  if (!z) return;
+  project.zones = project.zones.filter(x => x !== z);
+  if (mixer.ok) mixer.prune(new Set(project.zones.map(x => x.id)));
+  if (ui.zone === z.id) { ui.zone = null; ui.layer = null; }
+  syncMedia(); commit(); renderRight(); renderSrcList();
+  toast(`${z.name} deleted. Ctrl Z brings it back.`);
+}
+// The opacity of a zone is its master. Every slider for it (Content tab, Scenes tab, Inspector) stays in step.
+function setZoneOpacity(z, v, from) {
+  z.opacity = v;
+  for (const el of $$(`[data-zone-op="${z.id}"]`)) if (el !== from) el.value = v;
+  for (const el of $$(`[data-zone-pct="${z.id}"]`)) el.textContent = pct(v);
+}
+function zoneOpacityInput(z, width) {
+  const r = h('input', { type: 'range', min: 0, max: 1, step: 0.01, value: z.opacity, 'data-zone-op': z.id, title: z.name + ' opacity (its master)', 'aria-label': z.name + ' opacity' });
+  r.style.width = width + 'px';
+  r.addEventListener('input', () => setZoneOpacity(z, parseFloat(r.value), r));
+  r.addEventListener('change', commitSoft);
+  r.addEventListener('click', e => e.stopPropagation());
+  return r;
+}
+const zoneTag = z => h('span', { class: 'ztag', style: { borderColor: z.tag } });
+function fixturesInZone(z) {
+  const out = [];
+  let px = 0;
+  for (const f of project.fixtures) {
+    const P = f._pts; let k = 0;
+    if (P) for (let i = 0; i < P.length; i += 2) if (P[i] >= z.x && P[i] <= z.x + z.w && P[i + 1] >= z.y && P[i + 1] <= z.y + z.h) k++;
+    if (k) { out.push(f); px += k; }
+  }
+  return { list: out, px };
+}
+function renderZoneInspector(body) {
+  const z = selZone();
+  if (!z) { body.append(sec('Zones', h('p', { class: 'note' }, 'No zones yet. Drag on the stage to draw one.'))); return; }
+  const i = project.zones.indexOf(z);
+  const sizeTxt = h('span', { class: 'mono muted', style: { letterSpacing: 0, textTransform: 'none' } });
+  const upd = () => { sizeTxt.textContent = `${z.w} × ${z.h}`; };
+  upd(); binders.push(upd);
+  const g = o => Object.assign({ int: true, onInput: () => { clampZone(z); syncInspector(); }, onCommit: () => { clampZone(z); commit(); syncInspector(); } }, o);
+  const sw = h('div', { class: 'swatches' }, TAGS.map(c => h('button', { type: 'button', class: z.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Zone color ' + c, onclick: () => { z.tag = c; commit(); renderRight(); } })));
+  body.append(sec(null,
+    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon('zone')), 'Zone', h('span', { class: 'fill' }), sizeTxt),
+    row('Name', textInput(z, 'name', { aria: 'Zone name', onInput: () => refreshScenes(), onCommit: () => { commit(); renderSrcList(); } })),
+    row('Color', sw),
+    row('Opacity', h('div', { class: 'slider' }, zoneOpacityInput(z, 150), h('span', { class: 'mono', 'data-zone-pct': z.id }, pct(z.opacity))))));
+  body.append(sec('Area',
+    row('Position', numInput(z, 'x', g({ prefix: 'X', min: 0, aria: 'Zone X' })), numInput(z, 'y', g({ prefix: 'Y', min: 0, aria: 'Zone Y' }))),
+    row('Size', numInput(z, 'w', g({ prefix: 'W', min: 1, aria: 'Zone width' })), numInput(z, 'h', g({ prefix: 'H', min: 1, aria: 'Zone height' }))),
+    h('div', { class: 'actions' },
+      h('button', { class: 'btn', type: 'button', disabled: !ui.sel.size, title: ui.sel.size ? '' : 'Select fixtures first (Select tool, V)', onclick: () => fitZone(z) }, 'Fit to selected fixtures'),
+      h('button', { class: 'btn', type: 'button', onclick: () => { Object.assign(z, { x: 0, y: 0, w: project.settings.compW, h: project.settings.compH }); commit(); renderRight(); } }, 'Whole canvas'))));
+  const inside = fixturesInZone(z), over = zoneAbove(i);
+  body.append(sec('Lights in this zone',
+    inside.list.length ? h('div', { class: 'chipsline' }, inside.list.map(f => h('span', { class: 'badge' }, f.name))) : h('p', { class: 'note' }, 'No fixtures inside this zone yet.'),
+    h('p', { class: 'note' }, (inside.px ? `${fmtN(inside.px)} pixels take their color from this zone` + (over ? `, except where ${over.name} covers it (${over.name} is above it, at ${pct(over.opacity)}).` : '.') : '') +
+      ' Content is drawn to fit the zone, so a shader\'s centre is the zone\'s centre.')));
+  body.append(sec('Content and order',
+    h('p', { class: 'note' }, `${z.layers.length} layer${z.layers.length === 1 ? '' : 's'}, ${z.scenes.length} scene${z.scenes.length === 1 ? '' : 's'}. Zones higher in the list cover the ones below.`),
+    h('div', { class: 'actions' },
+      h('button', { class: 'btn', type: 'button', onclick: () => { ui.rightTab = 'content'; renderRight(); } }, 'Edit layers'),
+      h('button', { class: 'btn', type: 'button', disabled: i === project.zones.length - 1, onclick: () => moveZone(z, 1) }, 'Move up'),
+      h('button', { class: 'btn', type: 'button', disabled: i === 0, onclick: () => moveZone(z, -1) }, 'Move down')),
+    h('div', { class: 'actions' },
+      h('button', { class: 'btn', type: 'button', onclick: () => duplicateZone(z) }, 'Duplicate'),
+      h('button', { class: 'btn danger-t', type: 'button', onclick: () => deleteZone(z) }, 'Delete zone'))));
+}
+
+/* ---------- content tab ---------- */
+function zonesSection() {
+  const cur = selZone();
+  const list = h('ul', { class: 'list zones' });
+  for (const z of project.zones.slice().reverse()) {
+    const names = z.layers.filter(L => L.on && L.src && srcById(L.src)).map(L => srcById(L.src).name);
+    list.append(h('li', { class: z === cur ? 'sel' : '', title: `${z.name} · ${z.w} × ${z.h} at ${z.x}, ${z.y}`, onclick: () => selectZone(z) },
+      zoneTag(z), h('span', { class: 'zn' }, h('span', { class: 'nm' }, z.name), h('span', { class: 'sub' }, names.join(' · ') || 'Empty')),
+      zoneOpacityInput(z, 64)));
+  }
+  if (!project.zones.length) list.append(h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, 'No zones, so the output is black. Add one to play content.'));
+  return sec(null, h('h3', null, 'Zones', h('span', { class: 'fill' }),
+    h('button', { class: 'btn sm', type: 'button', title: 'Add a zone around the selected fixtures (or the whole canvas), under the others', onclick: newZoneFromUI }, '+ Zone')), list);
+}
+function layersSection(z) {
   const cur = selLayer();
   const list = h('ul', { class: 'list layers' });
-  for (const L of project.layers.slice().reverse()) {
-    const i = project.layers.indexOf(L) + 1, src = srcById(L.src);
+  for (const L of z.layers.slice().reverse()) {
+    const i = z.layers.indexOf(L) + 1, src = srcById(L.src);
     const op = h('input', { type: 'range', min: 0, max: 1, step: 0.01, value: L.opacity, title: 'Opacity', 'aria-label': `Layer ${i} opacity` });
     op.addEventListener('input', () => { L.opacity = parseFloat(op.value); syncInspector(); });
     op.addEventListener('change', lookEdited);
@@ -2017,38 +2424,42 @@ function layersSection() {
       eye, h('span', { class: 'meta' }, i), h('span', { class: 'nm' }, src ? src.name : 'Empty'),
       h('span', { class: 'meta' }, L.blend === 'alpha' ? '' : BLENDS[BLEND_IDX[L.blend]][1]), op));
   }
-  if (!project.layers.length) list.append(h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, 'No layers, so the output is black. Add a layer to play content.'));
-  return sec(null, h('h3', null, 'Layers', h('span', { class: 'fill' }), h('button', { class: 'btn sm', type: 'button', title: 'Add an empty layer above the selected one', onclick: addLayer }, '+ Layer')), list);
+  if (!z.layers.length) list.append(h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, 'No layers, so this zone is black. Add a layer, or click a source.'));
+  return sec(null, h('h3', null, 'Layers', h('span', { style: { color: z.tag, letterSpacing: '.06em' } }, '· ' + z.name), h('span', { class: 'fill' }),
+    h('button', { class: 'btn sm', type: 'button', title: 'Add an empty layer above the selected one', onclick: () => addLayer(z) }, '+ Layer')), list);
 }
-function addLayer() {
+function addLayer(z) {
   const L = newLayer(), cur = selLayer();
-  project.layers.splice(cur ? project.layers.indexOf(cur) + 1 : project.layers.length, 0, L);
+  z.layers.splice(cur ? z.layers.indexOf(cur) + 1 : z.layers.length, 0, L);
   ui.layer = L.id; ui.rightTab = 'content';
   commit(); renderRight(); renderSrcList();
 }
-function moveLayer(L, d) {
-  const i = project.layers.indexOf(L), j = i + d;
-  if (j < 0 || j >= project.layers.length) return;
-  project.layers.splice(i, 1); project.layers.splice(j, 0, L);
+function moveLayer(z, L, d) {
+  const i = z.layers.indexOf(L), j = i + d;
+  if (j < 0 || j >= z.layers.length) return;
+  z.layers.splice(i, 1); z.layers.splice(j, 0, L);
   commit(); renderRight(); renderSrcList();
 }
-function duplicateLayer(L) {
+function duplicateLayer(z, L) {
   const c = Object.assign(cloneLayers([L])[0], { id: uid() });
-  project.layers.splice(project.layers.indexOf(L) + 1, 0, c);
+  z.layers.splice(z.layers.indexOf(L) + 1, 0, c);
   ui.layer = c.id;
   commit(); renderRight(); renderSrcList();
 }
-function removeLayer(L) {
-  project.layers = project.layers.filter(x => x !== L);
+function removeLayer(z, L) {
+  z.layers = z.layers.filter(x => x !== L);
   ui.layer = null;
   syncMedia(); commit(); renderRight(); renderSrcList();
 }
 function renderContentTab(body) {
   if (!mixer.ok) body.append(sec('Content', h('div', { class: 'errbox' }, 'WebGL is off or unavailable in this browser, so content cannot be rendered. Use Chrome or Edge with hardware acceleration on.')));
-  body.append(layersSection());
+  body.append(zonesSection());
+  const z = selZone();
+  if (!z) return;
+  body.append(layersSection(z));
   const L = selLayer();
   if (!L) return;
-  const n = project.layers.indexOf(L) + 1;
+  const n = z.layers.indexOf(L) + 1;
   const src = srcById(L.src);
   body.append(sec('Layer ' + n,
     row('Source', selectEl([['', 'Empty'], ...project.sources.map(s => [s.id, s.name])], L.src || '', v => { loadSource(v || null, L); commit(); renderRight(); renderSrcList(); }, { aria: 'Layer source' })),
@@ -2056,14 +2467,19 @@ function renderContentTab(body) {
     sliderRow('Opacity', L, 'opacity', { fmt: pct, onInput: () => syncInspector(), onCommit: lookEdited }),
     h('p', { class: 'note' }, n === 1 && L.blend !== 'alpha' ? 'This is the bottom layer, so it blends onto black.' : BLEND_NOTES[L.blend]),
     h('div', { class: 'actions' },
-      h('button', { class: 'btn sm', type: 'button', disabled: n === project.layers.length, onclick: () => moveLayer(L, 1) }, 'Move up'),
-      h('button', { class: 'btn sm', type: 'button', disabled: n === 1, onclick: () => moveLayer(L, -1) }, 'Move down'),
-      h('button', { class: 'btn sm', type: 'button', onclick: () => duplicateLayer(L) }, 'Duplicate'),
-      h('button', { class: 'btn sm danger-t', type: 'button', onclick: () => removeLayer(L) }, 'Remove'))));
+      h('button', { class: 'btn sm', type: 'button', disabled: n === z.layers.length, onclick: () => moveLayer(z, L, 1) }, 'Move up'),
+      h('button', { class: 'btn sm', type: 'button', disabled: n === 1, onclick: () => moveLayer(z, L, -1) }, 'Move down'),
+      h('button', { class: 'btn sm', type: 'button', onclick: () => duplicateLayer(z, L) }, 'Duplicate'),
+      h('button', { class: 'btn sm danger-t', type: 'button', onclick: () => removeLayer(z, L) }, 'Remove'))));
   if (!src) { body.append(sec(null, h('p', { class: 'note' }, 'This layer is empty. Click a source in the Sources list to play it here.'))); return; }
 
+  // live picture of this layer, in the zone's proportions
+  const ar = z.w / z.h, ph = clamp(Math.round(276 / ar), 36, 110), pw = Math.min(276, Math.round(ph * ar));
+  const pv = h('canvas', { class: 'lpreview', width: pw, height: ph, 'aria-label': 'Live preview of this layer' });
+  preview = { layer: L, canvas: pv };
   const rt = src.kind === 'isf' ? runtimeOf(src) : null;
-  const head = [];
+  const head = [pv];
+  if (!L.on) head.push(h('p', { class: 'note' }, 'The layer is hidden, so the preview is paused.'));
   if (!src.builtin) head.push(row('Name', textInput(src, 'name', { aria: 'Source name', onInput: renderSrcList, onCommit: commit })));
   const desc = rt && rt.hdr && rt.hdr.DESCRIPTION;
   head.push(h('p', { class: 'note' }, (src.kind === 'isf' ? (src.builtin ? 'Built-in generator. ' : 'ISF shader. ') : '') + (desc ? desc.replace(/\.?$/, '.') : '')));
@@ -2108,7 +2524,7 @@ function renderContentTab(body) {
     const k = [];
     if (!el) k.push(h('p', { class: 'note' }, 'This file is not loaded in this session (browsers do not keep file access between visits).'));
     k.push(h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: () => pickMedia(src) }, el ? 'Replace file…' : 'Load file…')));
-    k.push(row('Fit', seg([['fit', 'Fit'], ['fill', 'Fill'], ['stretch', 'Stretch']], src.fit || 'fit', v => { src.fit = v; commit(); })));
+    k.push(row('Fit', seg([['fit', 'Fit'], ['fill', 'Fill'], ['stretch', 'Stretch']], src.fit || 'fit', v => { src.fit = v; markThumb(src); commit(); })));
     if (src.kind === 'video') {
       k.push(sliderRow('Speed', src, 'rate', { min: 0.1, max: 4, step: 0.05, fmt: v => v.toFixed(2) + '×', onInput: v => { if (el) el.playbackRate = v; }, onCommit: commit }));
       k.push(h('div', { class: 'actions' },
@@ -2131,8 +2547,10 @@ function renderContentTab(body) {
 /* ---------- settings tab ---------- */
 function renderSettings(body) {
   const s = project.settings;
+  let before = [s.compW, s.compH];
+  const onSize = () => { fitZonesToCanvas(...before); before = [s.compW, s.compH]; markGeom(); commit(); };
   body.append(sec('Composition',
-    row('Size', numInput(s, 'compW', { prefix: 'W', int: true, min: 16, max: 8192, onCommit: () => { markGeom(); commit(); } }), numInput(s, 'compH', { prefix: 'H', int: true, min: 16, max: 8192, onCommit: () => { markGeom(); commit(); } })),
+    row('Size', numInput(s, 'compW', { prefix: 'W', int: true, min: 16, max: 8192, onCommit: onSize }), numInput(s, 'compH', { prefix: 'H', int: true, min: 16, max: 8192, onCommit: onSize })),
     h('p', { class: 'note' }, 'The canvas content is rendered at this size and sampled at each pixel position. Fixture coordinates are in these units.')));
   body.append(sec('Output',
     sliderRow('Frame rate', s, 'fps', { min: 1, max: 60, step: 1, fmt: v => v + ' fps', onCommit: () => { startClock(); commit(); } }),
@@ -2230,35 +2648,36 @@ function schedulePanels() {
 }
 
 /* ---------- scenes ---------- */
-// A scene is a copy of the layers. Recalling it crossfades the whole output to it.
+// Each zone has its own scenes. A scene is a copy of the zone's layers; recalling it crossfades that zone to it.
 const lookOf = layers => JSON.stringify(layers.map(L => [L.src, L.on, L.opacity, L.blend, L.params[L.src] || {}]));
-const snapshotLayers = () => cloneLayers(project.layers).map(L => Object.assign(L, { params: L.src && L.params[L.src] ? { [L.src]: L.params[L.src] } : {} }));
+const snapshotLayers = z => cloneLayers(z.layers).map(L => Object.assign(L, { params: L.src && L.params[L.src] ? { [L.src]: L.params[L.src] } : {} }));
 function refreshScenes() { if (ui.dockTab === 'scenes' && !ui.dockCollapsed) renderDock(); }
-function goScene(sc, cut = false) {
-  startFade(cut ? 0 : sc.fade, sc.id);
-  project.layers = cloneLayers(sc.layers).map(L => Object.assign(L, { src: srcById(L.src) ? L.src : null }));
-  ui.scene = sc.id;
-  if (!project.layers.some(L => L.id === ui.layer)) ui.layer = null;
+function goScene(z, sc, cut = false) {
+  startFade(z, cut ? 0 : sc.fade, sc.id);
+  z.layers = cloneLayers(sc.layers).map(L => Object.assign(L, { src: srcById(L.src) ? L.src : null }));
+  z.scene = sc.id;
+  if (ui.zone !== z.id || !z.layers.some(L => L.id === ui.layer)) ui.layer = null;
+  ui.zone = z.id;
   syncMedia(); renderSrcList(); renderDock();
-  if (ui.rightTab === 'content') renderRight();
+  if (ui.rightTab === 'content' || ui.tool === 'zone') renderRight();
   commitSoft();
 }
-function storeScene() {
-  let n = project.scenes.length + 1;
-  while (project.scenes.some(s => s.name === 'Scene ' + n)) n++;
-  const sc = { id: uid(), name: 'Scene ' + n, fade: project.settings.fade, tag: TAGS[project.scenes.length % TAGS.length], layers: snapshotLayers() };
-  project.scenes.push(sc);
-  ui.scene = sc.id;
+function storeScene(z) {
+  let n = z.scenes.length + 1;
+  while (z.scenes.some(s => s.name === 'Scene ' + n)) n++;
+  const sc = { id: uid(), name: 'Scene ' + n, fade: project.settings.fade, tag: TAGS[z.scenes.length % TAGS.length], layers: snapshotLayers(z) };
+  z.scenes.push(sc);
+  z.scene = sc.id; ui.zone = z.id;
   commit();
-  toast(`Stored ${sc.name}. Use ⋯ on its button to rename it or change its fade time.`);
+  toast(`Stored ${sc.name} in ${z.name}. Use ⋯ on its button to rename it or change its fade time.`);
 }
-function sceneMenu(anchor, sc) {
+function sceneMenu(anchor, z, sc) {
   menu(anchor, [
-    ['Update with the current layers', () => { sc.layers = snapshotLayers(); ui.scene = sc.id; commit(); toast(`${sc.name} updated`); }],
+    [`Update with ${z.name}'s current layers`, () => { sc.layers = snapshotLayers(z); z.scene = sc.id; commit(); toast(`${sc.name} updated`); }],
     ['Rename, fade time, color…', () => editScene(sc)],
-    ['Duplicate', () => { const c = Object.assign(JSON.parse(JSON.stringify(sc)), { id: uid(), name: sc.name + ' copy' }); project.scenes.splice(project.scenes.indexOf(sc) + 1, 0, c); commit(); }],
+    ['Duplicate', () => { const c = Object.assign(JSON.parse(JSON.stringify(sc)), { id: uid(), name: sc.name + ' copy' }); z.scenes.splice(z.scenes.indexOf(sc) + 1, 0, c); commit(); }],
     '-',
-    ['Delete', () => { project.scenes = project.scenes.filter(x => x !== sc); if (ui.scene === sc.id) ui.scene = null; commit(); toast(`${sc.name} deleted. Ctrl Z brings it back.`); }],
+    ['Delete', () => { z.scenes = z.scenes.filter(x => x !== sc); if (z.scene === sc.id) z.scene = null; commit(); toast(`${sc.name} deleted. Ctrl Z brings it back.`); }],
   ]);
 }
 function editScene(sc) {
@@ -2267,7 +2686,7 @@ function editScene(sc) {
   const save = () => { sc.name = tmp.name.trim() || sc.name; sc.fade = tmp.fade; sc.tag = tmp.tag; close(); commit(); };
   const sw = h('div', { class: 'swatches' });
   for (const c of TAGS) {
-    const b = h('button', { type: 'button', class: tmp.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Colour ' + c, onclick: () => { tmp.tag = c; $$('button', sw).forEach(x => x.classList.toggle('on', x === b)); } });
+    const b = h('button', { type: 'button', class: tmp.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Color ' + c, onclick: () => { tmp.tag = c; $$('button', sw).forEach(x => x.classList.toggle('on', x === b)); } });
     sw.append(b);
   }
   const nameIn = textInput(tmp, 'name', { aria: 'Scene name' });
@@ -2279,58 +2698,68 @@ function editScene(sc) {
         row('Name', nameIn),
         numRow('Fade (s)', tmp, 'fade', { min: 0, max: 60, step: 0.1 }),
         row('Color', sw),
-        h('p', { class: 'note' }, 'The fade is how long the output takes to change to this scene when you click it. 0 cuts straight to it.')),
+        h('p', { class: 'note' }, 'The fade is how long the zone takes to change to this scene when you click it. 0 cuts straight to it.')),
       h('footer', null, h('button', { class: 'btn', type: 'button', onclick: close }, 'Cancel'), h('button', { class: 'btn primary', type: 'button', onclick: save }, 'Save'))));
   document.body.append(bg);
   nameIn.focus(); nameIn.select();
+}
+function sceneTile(z, sc, i, keys, look) {
+  const live = z.scene === sc.id;
+  const edited = live && lookOf(sc.layers) !== look;
+  const tile = h('div', { class: 'scene' + (live ? ' live' : ''), role: 'button', tabindex: 0, draggable: true, 'data-zone': z.id, 'data-id': sc.id,
+    title: `${sc.name} · ${sc.layers.length} layer${sc.layers.length === 1 ? '' : 's'} · ${sc.fade > 0 ? 'fades in over ' + fmtV(sc.fade) + ' s' : 'cuts in'}\nDrag to reorder` },
+    h('div', { class: 't' }, keys && i < 9 ? h('span', { class: 'k' }, i + 1) : null, h('span', { class: 'nm' }, sc.name),
+      h('button', { class: 'x', type: 'button', title: 'Update, rename, delete…', 'aria-label': 'Options for ' + sc.name, onclick: e => { e.stopPropagation(); sceneMenu(e.currentTarget, z, sc); } }, '⋯')),
+    h('div', { class: 's' }, h('span', null, sc.fade > 0 ? fmtV(sc.fade) + ' s' : 'cut'), h('span', { class: 'fill' }),
+      edited ? h('span', { class: 'badge warn', title: 'The layers have changed since this scene was recalled. ⋯ → Update saves the changes into it.' }, 'edited') : null),
+    h('i', { class: 'prog' }));
+  tile.style.setProperty('--tag', sc.tag);
+  tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));
+  tile.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); goScene(z, sc, e.shiftKey); } });
+  tile.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'scene:' + z.id + ':' + sc.id); e.dataTransfer.effectAllowed = 'move'; tile.classList.add('dragging'); });
+  tile.addEventListener('dragend', () => tile.classList.remove('dragging'));
+  tile.addEventListener('dragover', e => { e.preventDefault(); tile.classList.add('drop'); });
+  tile.addEventListener('dragleave', () => tile.classList.remove('drop'));
+  tile.addEventListener('drop', e => {  // drop onto a scene: take its place (also moves scenes between zones)
+    e.preventDefault(); tile.classList.remove('drop');
+    const [kind, zid, sid] = e.dataTransfer.getData('text/plain').split(':');
+    const fz = kind === 'scene' && zoneById(zid), moving = fz && fz.scenes.find(s => s.id === sid);
+    if (!moving || moving === sc) return;
+    const to = z.scenes.indexOf(sc);
+    fz.scenes.splice(fz.scenes.indexOf(moving), 1);
+    z.scenes.splice(to, 0, moving);
+    if (fz !== z && fz.scene === moving.id) fz.scene = null;
+    commit();
+  });
+  return tile;
 }
 function renderScenes(body) {
   const fadeIn = numInput(project.settings, 'fade', { min: 0, max: 60, step: 0.1, aria: 'Fade time for new scenes', onCommit: commit });
   fadeIn.style.width = '56px';
   const bar = h('div', { class: 'bar' },
-    h('button', { class: 'btn primary', type: 'button', title: 'Save the current layers as a new scene', onclick: storeScene }, '+ Store scene'),
     h('label', { class: 'checkrow', title: 'Fade time given to scenes you store from now on' }, 'New scenes fade in', fadeIn, 's'),
     h('span', { class: 'fill' }),
-    h('span', { class: 'muted' }, 'Click: fade to it · Shift-click: cut · Keys 1–9'));
-  const grid = h('div', { class: 'scenes' });
-  const look = lookOf(project.layers);
-  project.scenes.forEach((sc, i) => {
-    const live = ui.scene === sc.id;
-    const edited = live && lookOf(sc.layers) !== look;
-    const tile = h('div', { class: 'scene' + (live ? ' live' : ''), role: 'button', tabindex: 0, draggable: true, 'data-id': sc.id,
-      title: `${sc.name} · ${sc.layers.length} layer${sc.layers.length === 1 ? '' : 's'} · ${sc.fade > 0 ? 'fades in over ' + fmtV(sc.fade) + ' s' : 'cuts in'}\nDrag to reorder` },
-      h('div', { class: 't' }, i < 9 ? h('span', { class: 'k' }, i + 1) : null, h('span', { class: 'nm' }, sc.name),
-        h('button', { class: 'x', type: 'button', title: 'Update, rename, delete…', 'aria-label': 'Options for ' + sc.name, onclick: e => { e.stopPropagation(); sceneMenu(e.currentTarget, sc); } }, '⋯')),
-      h('div', { class: 's' }, h('span', null, sc.fade > 0 ? fmtV(sc.fade) + ' s' : 'cut'), h('span', { class: 'fill' }),
-        edited ? h('span', { class: 'badge warn', title: 'The layers have changed since this scene was recalled. ⋯ → Update saves the changes into it.' }, 'edited') : null),
-      h('i', { class: 'prog' }));
-    tile.style.setProperty('--tag', sc.tag);
-    tile.addEventListener('click', e => goScene(sc, e.shiftKey));
-    tile.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goScene(sc, e.shiftKey); } });
-    tile.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'scene:' + sc.id); e.dataTransfer.effectAllowed = 'move'; tile.classList.add('dragging'); });
-    tile.addEventListener('dragend', () => tile.classList.remove('dragging'));
-    tile.addEventListener('dragover', e => { e.preventDefault(); tile.classList.add('drop'); });
-    tile.addEventListener('dragleave', () => tile.classList.remove('drop'));
-    tile.addEventListener('drop', e => {
-      e.preventDefault(); tile.classList.remove('drop');
-      const d = e.dataTransfer.getData('text/plain');
-      const moving = d.startsWith('scene:') && project.scenes.find(s => s.id === d.slice(6));
-      if (!moving || moving === sc) return;
-      const to = project.scenes.indexOf(sc);
-      project.scenes.splice(project.scenes.indexOf(moving), 1);
-      project.scenes.splice(to, 0, moving);
-      commit();
-    });
-    grid.append(tile);
-  });
-  if (!project.scenes.length) grid.append(h('div', { class: 'empty', style: { gridColumn: '1 / -1' } },
-    'No scenes yet. Set up the layers the way you want them in the Content tab, then press Store scene. A scene keeps every layer: its source, parameters, blend mode and opacity.'));
-  body.append(h('div', { class: 'scenepanel' }, bar, grid));
+    h('span', { class: 'muted' }, 'Click: fade · Shift-click: cut · Keys 1–9: scenes of the selected zone · Upper zones cover lower ones'));
+  const rows = h('div', { class: 'zonerows' });
+  const sel = selZone();
+  for (const z of project.zones.slice().reverse()) {
+    const look = lookOf(z.layers);
+    const head = h('div', { class: 'zhead' + (z === sel ? ' sel' : ''), title: `${z.name}: click to select. The slider is the zone's opacity, its master.`, onclick: () => selectZone(z) },
+      h('div', { class: 'zt' }, zoneTag(z), h('span', { class: 'nm' }, z.name), h('span', { class: 'mono muted', 'data-zone-pct': z.id }, pct(z.opacity))),
+      h('div', { class: 'zc' }, zoneOpacityInput(z, 80),
+        h('button', { class: 'btn sm', type: 'button', title: `Store ${z.name}'s current layers as a new scene`, onclick: e => { e.stopPropagation(); storeScene(z); } }, '+ Store')));
+    const r = h('div', { class: 'scenerow' + (z === sel ? ' sel' : '') }, head);
+    z.scenes.forEach((sc, i) => r.append(sceneTile(z, sc, i, z === sel, look)));
+    if (!z.scenes.length) r.append(h('span', { class: 'rowhint' }, `No scenes yet. Set up ${z.name}'s layers in the Content tab, then + Store.`));
+    rows.append(r);
+  }
+  if (!project.zones.length) rows.append(h('div', { class: 'empty' }, 'No zones. Add one in the Content tab, or draw one with the Zone tool (Z).'));
+  body.append(h('div', { class: 'scenepanel' }, bar, rows));
 }
 function drawSceneProgress() {
   for (const el of $$('#dockBody .scene')) {
-    const on = fade && fade.scene === el.dataset.id;
-    const w = on ? (clamp((clockT - fade.start) / fade.dur, 0, 1) * 100).toFixed(1) + '%' : '0px';
+    const z = zoneById(el.dataset.zone), f = z && z._fade;
+    const w = f && f.scene === el.dataset.id ? (clamp((clockT - f.start) / f.dur, 0, 1) * 100).toFixed(1) + '%' : '0px';
     if (el.lastChild.style.width !== w) el.lastChild.style.width = w;
   }
 }
@@ -2606,7 +3035,8 @@ function savePrefs() { const o = {}; for (const k of UI_PREFS) o[k] = ui[k]; sto
 function loadProject(p, { resetView = true } = {}) {
   project = hydrate(p);
   runtimes.clear();
-  ui.sel.clear(); ui.selCtrl = null; ui.layer = null; ui.scene = null; fade = null;
+  ui.sel.clear(); ui.selCtrl = null; ui.zone = null; ui.layer = null;
+  if (mixer.ok) mixer.prune(new Set(project.zones.map(z => z.id)));
   loadGuide();
   markGeom(); markPatch(); rebuildGeometry(); computeBB(); computePatch();
   if (resetView) ui.fitted = false;
@@ -2672,6 +3102,7 @@ function attachMedia(src, file) {
     src.kind = 'video';
   } else { el = new Image(); el.src = url; src.kind = 'image'; }
   mediaEls.set(src.id, el);
+  markThumb(src);
   src.name = src.name || file.name;
 }
 function addMediaFile(file) {
@@ -2694,6 +3125,7 @@ async function startCapture(src) {
     await el.play().catch(() => {});
     stream.getVideoTracks()[0].addEventListener('ended', () => { mediaEls.delete(src.id); renderSrcList(); if (ui.rightTab === 'content') renderRight(); });
     mediaEls.set(src.id, el);
+    markThumb(src);
     renderSrcList(); renderRight();
   } catch (e) {
     toast(e && e.name === 'NotAllowedError' ? 'Screen capture was blocked or cancelled. It works when Weft is opened from weft.py in a desktop browser.' : 'Screen capture is not available in this browser.', 'warn');
@@ -2703,6 +3135,7 @@ function stopCapture(src) {
   const el = mediaEls.get(src.id);
   if (el && el.srcObject) el.srcObject.getTracks().forEach(t => t.stop());
   mediaEls.delete(src.id);
+  markThumb(src);
   renderSrcList(); renderRight();
 }
 function addScreenSource() {
@@ -2902,14 +3335,26 @@ function demoProject() {
   const c = newController({ name: 'Pixel controller A', ip: '10.0.0.50', outputs: 4, upo: 4, startUniverse: 0 });
   c.chains = [[panel.id], strips.map(s => s.id), rings.map(r => r.id), [wave.id]];
   project.controllers.push(c);
-  project.layers = [newLayer('b-plasma')];
-  const S = (name, tag, fade, layers) => ({ id: uid(), name, tag, fade, layers: layers.map(([src, o = {}]) => Object.assign(newLayer(src), o, { params: o.params ? { [src]: o.params } : {} })) });
-  project.scenes = [
-    S('Plasma', TAGS[0], 2, [['b-plasma']]),
-    S('Fire and sparks', TAGS[1], 3, [['b-fire'], ['b-twinkle', { blend: 'add', opacity: 0.7, params: { color: [1, 0.75, 0.3, 1], density: 0.15 } }]]),
-    S('Rainbow comets', TAGS[4], 1.5, [['b-rainbow', { params: { mode: 1 } }], ['b-comet', { blend: 'multiply', params: { mode: 2, color: [1, 1, 1, 1], count: 3, tail: 0.6 } }]]),
-    S('Blue pool', TAGS[5], 4, [['b-water'], ['b-shape', { blend: 'multiply', params: { shape: 1, size: 0.9, thickness: 0.5, softness: 0.6 } }]]),
-  ];
+  const L = (src, o = {}) => Object.assign(newLayer(src), o, { params: o.params ? { [src]: o.params } : {} });
+  const S = (name, tag, fade, layers) => ({ id: uid(), name, tag, fade, layers });
+  const zAll = newZone({ name: 'All', tag: TAGS[1], scenes: [
+    S('Plasma', TAGS[0], 2, [L('b-plasma')]),
+    S('Fire and sparks', TAGS[1], 3, [L('b-fire'), L('b-twinkle', { blend: 'add', opacity: 0.7, params: { color: [1, 0.75, 0.3, 1], density: 0.15 } })]),
+    S('Rainbow comets', TAGS[4], 1.5, [L('b-rainbow', { params: { mode: 1 } }), L('b-comet', { blend: 'multiply', params: { mode: 2, color: [1, 1, 1, 1], count: 3, tail: 0.6 } })]),
+    S('Blue pool', TAGS[5], 4, [L('b-water')]),
+  ] });
+  const zRings = newZone({ name: 'Rings', tag: TAGS[2], x: 390, y: 360, w: 600, h: 210, scenes: [
+    S('Comets', TAGS[2], 1.5, [L('b-comet', { params: { mode: 2, count: 3, tail: 0.55, color: [0.2, 0.85, 1, 1] } }), L('b-twinkle', { blend: 'add', opacity: 0.8, params: { color: [1, 0.8, 0.5, 1], density: 0.2, cells: 8 } })]),
+    S('Color wipe', TAGS[4], 1, [L('b-wipe', { params: { mode: 2 } })]),
+    S('Pulse', TAGS[0], 0.5, [L('b-pulse')]),
+    S('Strobe hit', TAGS[6], 0, [L('b-strobe', { params: { rate: 8 } })]),
+  ] });
+  const zStrips = newZone({ name: 'Strips', tag: TAGS[3], x: 360, y: 60, w: 620, h: 190, scenes: [
+    S('Rain', TAGS[5], 2, [L('b-rain', { params: { angle: 90 } })]),
+    S('Bars', TAGS[0], 1, [L('b-bars', { params: { count: 6, angle: 0 } })]),
+  ] });
+  for (const z of [zAll, zRings, zStrips]) { z.scene = z.scenes[0].id; z.layers = cloneLayers(z.scenes[0].layers); }
+  project.zones = [zStrips, zRings, zAll]; // All is on top: lower its opacity to see Rings and Strips
   const out = project;
   project = saved;
   return JSON.parse(JSON.stringify(out, replacer));
@@ -2959,8 +3404,8 @@ function updateStatus() {
   parts.push(`zoom ${Math.round(ui.view.zoom * 100)}%`);
   parts.push(`<b>${project.fixtures.length}</b> fixtures · <b>${fmtN(px)}</b> px` + (unp ? ` · <span style="color:var(--warn)">${unp} unpatched</span>` : ''));
   parts.push(`<b>${universes.length}</b> universes`);
-  const sc = project.scenes.find(x => x.id === ui.scene);
-  if (sc) parts.push(`scene <b>${esc(sc.name)}</b>` + (fade && fade.scene === sc.id ? ' (fading)' : ''));
+  const z = selZone(), sc = z && z.scenes.find(x => x.id === z.scene);
+  if (z) parts.push(`${esc(z.name)}` + (sc ? ` · <b>${esc(sc.name)}</b>` + (z._fade && z._fade.scene === sc.id ? ' (fading)' : '') : ''));
   parts.push(ui.outputOn && bridge.connected ? `out <b>${outStats.fps.toFixed(1)}</b> fps · ${outStats.universes} U/frame` : `render ${project.settings.fps} fps`);
   let hov = '';
   const hp = ui.hoverPx;
@@ -3004,7 +3449,7 @@ function initUI() {
   };
   bindView('#vContent', 'showContent'); bindView('#vContentOp', 'contentOp', true);
   bindView('#vGuide', 'showGuide'); bindView('#vGuideOp', 'guideOp', true);
-  bindView('#vGrid', 'showGrid'); bindView('#vSnap', 'snap'); bindView('#vLabels', 'showLabels'); bindView('#vWiring', 'showWiring');
+  bindView('#vGrid', 'showGrid'); bindView('#vSnap', 'snap'); bindView('#vLabels', 'showLabels'); bindView('#vWiring', 'showWiring'); bindView('#vZones', 'showZones');
   $('#btnFit').addEventListener('click', fitView);
   $$('#rail button').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
   $$('#rightTabs button').forEach(b => b.addEventListener('click', () => { ui.rightTab = b.dataset.tab; savePrefs(); renderRight(); }));
@@ -3060,17 +3505,17 @@ function onKey(e) {
   if (mod && k === 'a') { e.preventDefault(); ui.sel = new Set(project.fixtures.filter(f => !f.locked).map(f => f.id)); onSelection(); return; }
   if (mod) return;
   const digit = /^Digit([1-9])$/.exec(e.code);
-  if (digit) { const sc = project.scenes[+digit[1] - 1]; if (sc) goScene(sc, e.shiftKey); return; }
+  if (digit) { const z = selZone(), sc = z && z.scenes[+digit[1] - 1]; if (sc) goScene(z, sc, e.shiftKey); return; }
   if (e.code === 'Space') { spaceHeld = true; cv.style.cursor = 'grab'; e.preventDefault(); return; }
   if (ui.tool === 'path' && pathDraft) {
     if (e.key === 'Enter') { finishPath(); return; }
     if (e.key === 'Backspace') { pathDraft.pts.splice(-2); e.preventDefault(); return; }
     if (e.key === 'Escape') { pathDraft = null; setTool('select'); return; }
   }
-  const tools = { v: 'select', l: 'line', m: 'matrix', c: 'circle', p: 'path' };
+  const tools = { v: 'select', l: 'line', m: 'matrix', c: 'circle', p: 'path', z: 'zone' };
   if (tools[k]) { setTool(tools[k]); return; }
   if (e.key === 'Escape') { if (ui.tool !== 'select') setTool('select'); else if (ui.sel.size) { ui.sel.clear(); onSelection(); } return; }
-  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSel(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); if (ui.tool === 'zone') deleteZone(selZone()); else deleteSel(); return; }
   if (k === 'f') { fitView(); return; }
   if (k === 'g') { ui.snap = !ui.snap; $('#vSnap').checked = ui.snap; savePrefs(); toast('Snap ' + (ui.snap ? 'on' : 'off')); return; }
   if (k === 'b') { toggleBlackout(); return; }
@@ -3101,7 +3546,7 @@ function boot() {
   connectBridge();
   new ResizeObserver(() => resizeView()).observe(stageEl);
   requestAnimationFrame(frameLoop);
-  window.weft = { get project() { return project; }, get tickCost() { return tickCost; }, get fade() { return fade; }, get clockT() { return clockT; }, loadProject, ui, universes: () => universes, computePatch, setOutput, bridge, tick, mixer, goScene, storeScene, loadSource, mediaEl: id => mediaEls.get(id) };
+  window.weft = { get project() { return project; }, get tickCost() { return tickCost; }, get fade() { return fade; }, get clockT() { return clockT; }, loadProject, ui, universes: () => universes, computePatch, setOutput, bridge, tick, mixer, goScene, storeScene, loadSource, selectZone, addZone, setTool, mediaEl: id => mediaEls.get(id) };
 }
 boot();
 

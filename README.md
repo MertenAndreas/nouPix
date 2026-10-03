@@ -1,6 +1,6 @@
-# Weft LED Mapper 0.1
+# Weft LED Mapper 0.2
 
-A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), play generators, ISF shaders, images, video or a screen capture across them, patch them to Art-Net controller outputs, and send it out.
+A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), layer generators, ISF shaders, images, video or a screen capture across them, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 
 The interface runs in your browser. `weft.py` is a small local server that sends the Art-Net packets, because browsers cannot send UDP.
 
@@ -12,7 +12,12 @@ You need Python 3.8 or newer. Nothing else to install.
 - **macOS:** double-click `start-weft.command` (the first time, right-click → Open)
 - **Any system:** `python3 weft.py`
 
-Your browser opens at `http://127.0.0.1:8080/`. Chrome or Edge work best. Keep the terminal window open: closing it stops the Art-Net output. Give Weft its own browser window rather than a background tab, because browsers can slow down hidden tabs.
+Weft opens in its own window at `http://127.0.0.1:8080/`, using Chrome or Edge (or Chromium or Brave) started with the switches that stop the browser from slowing down or pausing a hidden window. You can minimise it or cover it with other windows and the output keeps running. Keep the terminal window open: closing it stops the Art-Net output. Closing the Weft window stops it too, which is why Weft asks before it closes while Art-Net is on.
+
+The Weft window has its own browser profile (in `~/.weft/browser-profile`), so it doesn't share settings or storage with your normal browser. If you have a project from an earlier version open in your normal browser, save it there with **Project → Save project file** and open that file in the Weft window.
+
+- `--default-browser` opens your normal browser instead (output can then slow down when that window is hidden).
+- `--browser-path PATH` picks the browser if it isn't found automatically.
 
 On Windows, allow Python through the firewall on private networks when asked, otherwise node discovery won't receive replies.
 
@@ -21,10 +26,40 @@ On Windows, allow Python through the firewall on private networks when asked, ot
 1. **Settings → Composition.** Set the size of the canvas the content is rendered at. Fixture coordinates use these units.
 2. **Fixtures.** Pick a tool on the stage: `L` line, `M` matrix, `C` circle/ring, `P` path. Drag to draw, or click for a default size. You can also bring fixtures in with **SVG…** (see below). Edit exact values in the Inspector, including pixel count, color order, wiring start and direction.
 3. **Patch.** In the Patch panel, add a controller: IP address, number of outputs, universes per output and first universe. Then drag fixtures from the list onto an output. Fixtures chained on one output are addressed in order, automatically.
-4. **Source.** Click a generator in Sources. Tweak it in the Content tab. You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
-5. **Art-Net ON.**
+4. **Content.** Click a generator in Sources to play it in the selected layer. Add layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
+5. **Scenes.** When a look is right, press **Store scene** in the Scenes panel.
+6. **Art-Net ON.**
 
 `Identify` (or `I`) lights only the selected fixtures: first pixel red, last pixel blue, and a green dot running in wiring order. Use it to check direction and patching on the real install.
+
+## Layers
+
+The Content tab lists the layers, top layer first, each with an opacity slider and an eye to hide it. Clicking a source plays it in the selected layer, crossfading over the Crossfade time. Each layer has its own parameters, so two layers can run the same generator with different settings.
+
+The blend mode sets how a layer combines with the layers below it:
+
+- **Alpha** covers them, as far as its opacity (and the source's own transparency) goes.
+- **Add** and **Screen** add light, so black is invisible. Use them for chases, comets and sparkles over a background.
+- **Multiply** keeps what is below where the layer is white and hides it where it's black. With the **Shape mask** generator this shows the layers below only inside a circle, ring, rectangle or band.
+- **Subtract**, **Lighten**, **Darken** and **Difference** work as in image editors.
+
+Layers are mixed on the GPU, and the stage preview shows the same mix that is sent out.
+
+## Scenes
+
+A scene stores all the layers: sources, parameters, blend modes and opacity. In the Scenes panel:
+
+- Click a scene to fade to it over its fade time. **Shift**-click cuts straight to it. Keys **1–9** do the same for the first nine scenes.
+- The fade crossfades the whole output, so any two looks fade smoothly into each other. Starting another scene in the middle of a fade continues from what is on the LEDs at that moment.
+- **⋯** on a scene: update it with the current layers, rename it, change its fade time or colour, duplicate or delete it. Drag scenes to reorder them.
+- **edited** on the current scene means the layers changed since you recalled it.
+- New scenes get the fade time set in the panel. Scenes are saved in the project; **Ctrl Z** undoes a delete.
+
+## Keeping the output running
+
+- The Weft window keeps rendering when minimised or covered (see Start). While Art-Net is on, the page also holds a browser lock that stops Chrome from freezing it, and videos the browser pauses in the background are restarted.
+- If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal prints when that starts and when frames come back.
+- Only one Weft window sends at a time. Switching Art-Net on in a second window switches it off in the first.
 
 ## How addressing works
 
@@ -55,7 +90,7 @@ Circles, arcs, lines and paths become fixtures, fitted into the composition. Cir
 
 ## Limits of this version
 
-Art-Net only (no sACN/E1.31 yet). One content layer at a time, with crossfades. No Syphon, Spout or NDI: use window capture instead. It's been tested in Chromium; Firefox and Safari should work but are less tested.
+Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture instead. Rendering lives in the Weft window, so closing it stops the output. It's been tested in Chromium; Firefox and Safari should work but are less tested and don't get the keep-running switches.
 
 ## Credits
 

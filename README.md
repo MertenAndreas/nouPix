@@ -1,4 +1,4 @@
-# openLedMapper 0.4.0
+# openLedMapper 0.5.0
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -24,11 +24,17 @@ On Windows, allow Python through the firewall on private networks when asked, ot
 ## Workflow
 
 1. **Settings → Composition.** Set the size of the canvas the content is rendered at. Fixture coordinates use these units.
-2. **Fixtures.** Pick a tool on the stage: `L` line, `M` matrix, `C` circle/ring, `P` path. Drag to draw, or click for a default size. You can also bring fixtures in with **SVG…** (see below). Edit exact values in the Inspector, including pixel count, color order, wiring start and direction.
+2. **Fixtures.** Pick a tool on the stage: `L` line, `M` matrix, `C` circle/ring, `P` path (straight segments), `N` pen (curves). Drag to draw, or click for a default size. You can also bring fixtures in with **SVG…** (see below). Edit exact values in the Inspector, including pixel count, color order, wiring start and direction.
 3. **Patch.** In the Patch panel, add a controller: IP address, number of outputs, universes per output and first universe. Then drag fixtures from the list onto an output. Fixtures chained on one output are addressed in order, automatically.
 4. **Content.** Click a generator in Sources to play it in the selected layer of the selected zone. Add zones, layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
 5. **Scenes.** When a zone's look is right, press **+ Store** on its row in the Scenes panel.
 6. **Art-Net ON.**
+
+**Pen** (`N`) draws curved strips as in Illustrator: click for a corner point, click and drag to pull out the handles of a smooth point, click the first point to close the shape, double-click or `Enter` to finish (`Backspace` removes the last point, `Esc` cancels). Pixels are spaced evenly along the curve. On a selected path, drag a handle to reshape the curve (the point's other handle turns with it; hold `Alt` to move one handle on its own), and double-click a point to switch it between smooth and corner.
+
+With **Wiring** on, the stage also draws the data cable between fixtures chained on one output: a thin dashed line with an arrow from the last pixel of one to the first pixel of the next.
+
+**Ctrl D** duplicates. A copy goes on the same output as the fixture it copies, after the fixtures already there, if all its pixels fit; otherwise it stays unpatched.
 
 `Identify` (or `I`) lights only the selected fixtures: first pixel red, last pixel blue, and a green dot running in wiring order. Use it to check direction and patching on the real install.
 
@@ -62,6 +68,8 @@ A zone is a rectangle of the canvas with its own layers, its own scenes and one 
 ## Layers
 
 The Content tab lists the zones, then the layers of the selected zone (top layer first, each with an opacity slider and an eye to hide it), then the selected layer's settings with a live preview above its parameters. Clicking a source plays it in the selected layer, crossfading over the Crossfade time. Each layer has its own parameters, so two layers can run the same generator with different settings.
+
+**Speed** goes from 0 to 100 % of a generator's full speed, with **Reverse** next to it. Each layer keeps its own clock for it, so dragging the slider speeds the animation up or down smoothly instead of making it jump. (Custom ISF shaders get this too when they have a float input named `speed` used as `TIME * speed`.)
 
 Sources show a still preview of each generator; hover one to see it move. A green frame marks the source in the selected layer, a green dot one playing elsewhere.
 
@@ -99,8 +107,10 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 - **Whole pixels** mode never splits a pixel across universes: 170 RGB or 128 RGBW pixels per universe, as most pixel controllers expect. **Split** mode packs all 512 channels.
 - Pixels that don't fit in an output's universes are not sent. They show in red in the Patch panel and Inspector.
 - Universe numbers are Art-Net 15-bit port addresses, starting at 0. The DMX Monitor also shows them as net / subnet / universe.
+- **Advanced patch** (Inspector → Output, one fixture): set the universe and channel the fixture starts at, inside its output's universes, for example to leave a gap of channels on purpose. The fixtures after it on that output carry on from its last channel. A start that overlaps the fixture before it is flagged, and a set start is dropped when the fixture moves to another output.
 - Every packet is a full 512-channel ArtDmx packet with a sequence number, sent unicast to the controller's IP. ArtSync is optional (Settings).
-- **Gamma**, **master**, **RGB trim** and **RGBW white extraction** are applied to the output. The stage preview shows the colours before gamma.
+- **Frame rate** (Settings): 40 frames a second by default, up to 100. Above 44, frames come faster than a DMX line refreshes; pixel controllers take them, but some DMX nodes skip frames.
+- **Gamma**, **master**, each fixture's **colour trims** (red, green, blue, and white for orders with W; Inspector → Pixels) and **RGBW white extraction** are applied to the output. Projects from before 0.5 had one trim for all fixtures: each fixture starts from it. The stage preview shows the colours before gamma.
 
 ## SVG import
 

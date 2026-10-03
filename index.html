@@ -45,6 +45,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ---------- app frame ---------- */
 #app { height: 100%; overflow: hidden; display: grid; grid-template-rows: 46px minmax(0, 1fr) 24px; }
 .workspace { display: grid; grid-template-columns: 250px minmax(0, 1fr) 300px; min-height: 0; }
+.workspace.noright { grid-template-columns: 250px minmax(0, 1fr); }
+.workspace.noright > .right { display: none; }
+#btnRight.on { color: var(--accent); border-color: var(--accent); }
+.right .tabs button { padding: 0 10px; }
 .center { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; border-inline: 1px solid var(--line); }
 aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: column; }
 
@@ -80,6 +84,10 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn.danger-t { color: var(--danger); }
 .btn.sm { height: 22px; padding: 0 7px; font-size: 11.5px; }
+.btn.grpbtn { width: 26px; padding: 0; }
+.btn.grpbtn:disabled { opacity: .3; }
+.btn.grpbtn.ready { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px rgba(60,200,255,.2), 0 0 10px rgba(60,200,255,.25); }
+.btn.grpbtn svg { width: 15px; height: 15px; }
 .btn.rev.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .btn svg { width: 15px; height: 15px; flex: none; }
 .btn-out { min-width: 118px; font-weight: 600; letter-spacing: 0.03em; }
@@ -415,6 +423,7 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
         <div class="phead"><h2>Fixtures</h2>
           <button class="btn sm" id="btnImportSvg" type="button" title="Import an SVG as fixtures and/or guide">SVG…</button>
           <button class="btn sm" id="btnAddFx" type="button">+ Add</button>
+          <button class="btn sm grpbtn" id="btnGroup" type="button" disabled></button>
         </div>
         <div class="pbody"><ul class="list" id="fxList"></ul></div>
       </section>
@@ -438,6 +447,7 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
           <label><input type="checkbox" id="vZones"> Zones</label>
           <span class="zoom" id="zoomLbl">100%</span>
           <button class="btn sm" id="btnFit" type="button" title="Fit (F)">Fit</button>
+          <button class="btn sm icon" id="btnRight" type="button" title="Show or hide the Inspector / Content / Settings panel (H)" aria-label="Show or hide the right panel"></button>
         </div>
         <div class="stage" id="stage">
           <canvas id="view"></canvas>
@@ -475,6 +485,8 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
         <button type="button" data-tab="inspector">Inspector</button>
         <button type="button" data-tab="content">Content</button>
         <button type="button" data-tab="settings">Settings</button>
+        <span class="fill"></span>
+        <span class="tabtools"><button class="btn ghost sm" id="btnHideRight" type="button" title="Hide this panel (H)" aria-label="Hide the right panel">»</button></span>
       </div>
       <div class="pbody" id="rightBody"></div>
     </aside>
@@ -585,6 +597,9 @@ const ICONS = {
   distV: '<svg viewBox="0 0 16 16"><path d="M2 1.5h12M2 14.5h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".55"/><g fill="currentColor"><rect x="4" y="3.6" width="8" height="2.2" rx=".5"/><rect x="4" y="6.9" width="8" height="2.2" rx=".5"/><rect x="4" y="10.2" width="8" height="2.2" rx=".5"/></g></svg>',
   centre: '<svg viewBox="0 0 16 16"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="5.5" y="5.5" width="5" height="5" rx=".6" fill="currentColor"/></svg>',
   group: '<svg viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 011-1h3.2l1.5 1.5h5.8a1 1 0 011 1v6.5a1 1 0 01-1 1H2.75a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg>',
+  groupAdd: '<svg viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 011-1h3.2l1.5 1.5h5.8a1 1 0 011 1v6.5a1 1 0 01-1 1H2.75a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M8 7.2v4M6 9.2h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  ungroup: '<svg viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 011-1h3.2l1.5 1.5h5.8a1 1 0 011 1v6.5a1 1 0 01-1 1H2.75a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round" stroke-dasharray="2.2 1.6"/><path d="M6 9.2h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  panel: '<svg viewBox="0 0 16 16"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10 3v10" stroke="currentColor" stroke-width="1.3"/><rect x="10.6" y="3.4" width="3" height="9.2" fill="currentColor" opacity=".45"/></svg>',
   chev: '<svg viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 const icon = name => svgEl(ICONS[name]);
@@ -616,10 +631,10 @@ const ui = {
   sel: new Set(), tool: 'select', view: { zoom: 1, x: 0, y: 0 }, fitted: false,
   outputOn: false, blackout: false, outputMode: 'content', zone: null, layer: null, hoverSrc: null,
   showContent: true, contentOp: 0.35, showGuide: true, guideOp: 0.5, showGrid: true, snap: true, showLabels: true, showWiring: false, showZones: true,
-  dockTab: 'patch', rightTab: 'inspector', selCtrl: null, monitorKey: null, dockH: 250, dockCollapsed: false,
+  dockTab: 'patch', rightTab: 'inspector', rightHidden: false, selCtrl: null, monitorKey: null, dockH: 250, dockCollapsed: false,
   hoverFx: null, hoverGroup: null, hoverPx: null, cursor: null,
 };
-const UI_PREFS = ['contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed'];
+const UI_PREFS = ['contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden'];
 
 let geomDirty = true, patchDirty = true;
 const markGeom = () => { geomDirty = true; };
@@ -2433,7 +2448,7 @@ cv.addEventListener('dblclick', e => {
   const f = hitFixture(x, y);
   if (!f) return;
   if (f.group != null && !(ui.sel.size === 1 && ui.sel.has(f.id))) { ui.sel = new Set([f.id]); onSelection(); }   // into its group: just this one
-  ui.rightTab = 'inspector'; renderRight(); const inp = $('#fxName'); if (inp) { inp.focus(); inp.select(); }
+  focusName('fxName');
 });
 cv.addEventListener('wheel', e => {
   e.preventDefault();
@@ -2637,7 +2652,7 @@ function groupRow(g, m, whole) {
     else ui.sel = new Set(ids);
     onSelection();
   });
-  li.addEventListener('dblclick', e => { if (e.target.closest('.chev')) return; ui.rightTab = 'inspector'; renderRight(); const i = $('#grpName'); if (i) { i.focus(); i.select(); } });
+  li.addEventListener('dblclick', e => { if (e.target.closest('.chev')) return; focusName('grpName'); });
   li.addEventListener('mouseenter', () => { ui.hoverGroup = g.id; });
   li.addEventListener('mouseleave', () => { if (ui.hoverGroup === g.id) ui.hoverGroup = null; });
   listDraggable(li, () => membersOf(g).map(f => f.id), g.id);
@@ -2666,6 +2681,20 @@ function renderFxList() {
     rows.push(li);
   });
   ul.replaceChildren(...rows);
+  updateGroupButton();
+}
+// The Group button in the Fixtures header: Group with two or more fixtures selected, Ungroup when the selection is
+// a group or one fixture inside a group, dimmed otherwise
+function groupAction(sel = selected()) {
+  if (wholeGroup(sel) || (sel.length === 1 && sel[0].group != null)) return 'ungroup';
+  return sel.length >= 2 ? 'group' : null;
+}
+function updateGroupButton() {
+  const b = $('#btnGroup'), a = groupAction();
+  b.replaceChildren(icon(a === 'ungroup' ? 'ungroup' : 'groupAdd'));
+  b.disabled = !a; b.classList.toggle('ready', !!a);
+  b.title = a === 'ungroup' ? 'Ungroup: keep the fixtures, remove the group (Ctrl Shift G)' : a === 'group' ? 'Group the selected fixtures (Ctrl G)' : 'Group: select two or more fixtures (Ctrl G)';
+  b.setAttribute('aria-label', a === 'ungroup' ? 'Ungroup' : 'Group');
 }
 function fixtureRow(f) {
   const li = h('li', { class: (ui.sel.has(f.id) ? 'sel ' : '') + (f.enabled ? '' : 'off'), draggable: true, 'data-id': f.id, title: `${f.name} · ${TYPE_LABEL[f.type]} · ${pixelCount(f)} px · ${f.order}\nDrag to change the order, into or out of a group, or onto a patch output` },
@@ -2685,7 +2714,7 @@ function fixtureRow(f) {
     ui.lastClicked = f.id;
     onSelection();
   });
-  li.addEventListener('dblclick', () => { ui.rightTab = 'inspector'; renderRight(); const i = $('#fxName'); if (i) { i.focus(); i.select(); } });
+  li.addEventListener('dblclick', () => focusName('fxName'));
   li.addEventListener('mouseenter', () => { ui.hoverFx = f.id; });
   li.addEventListener('mouseleave', () => { if (ui.hoverFx === f.id) ui.hoverFx = null; });
   // the selection moves together; but with its whole group selected, a fixture's row takes just that fixture (out of the group)
@@ -2858,7 +2887,7 @@ function renderInspector(body) {
         '<code>Space</code>-drag or right-drag to pan · wheel to zoom · <code>F</code> fit<br>' +
         '<code>Alt</code> while dragging turns snapping off · <code>Shift</code> constrains<br>' +
         '<code>Ctrl D</code> duplicate · <code>Del</code> delete · arrows nudge (<code>Shift</code> ×10)<br>' +
-        '<code>Ctrl G</code> group · <code>Ctrl Shift G</code> ungroup · double-click a fixture of a group to select just it<br>' +
+        '<code>H</code> hides this panel · <code>Ctrl G</code> group · <code>Ctrl Shift G</code> ungroup · double-click a fixture of a group to select just it<br>' +
         '<code>Ctrl Z</code> undo · <code>Ctrl S</code> save · <code>B</code> blackout · <code>I</code> identify<br>' +
         '<code>Z</code> zones · <code>1</code>–<code>9</code> scenes of the selected zone (<code>Shift</code> cuts)' })));
     return;
@@ -2995,8 +3024,7 @@ function groupSection(g, sel) {
   const nameIn = textInput(g, 'name', { id: 'grpName', aria: 'Group name', onInput: () => renderFxList(), onCommit: commit });
   const sw = h('div', { class: 'swatches' }, TAGS.map(c => h('button', { type: 'button', class: g.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Group colour ' + c, onclick: () => { g.tag = c; commit(); renderRight(); } })));
   return sec(null,
-    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: g.tag } }, icon('group')), 'Group', h('span', { class: 'fill' }),
-      h('button', { class: 'btn sm', type: 'button', title: 'Keep the fixtures, remove the group (Ctrl Shift G)', onclick: ungroupSel }, 'Ungroup')),
+    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: g.tag } }, icon('group')), 'Group'),
     row('Name', nameIn), row('Colour', sw),
     h('p', { class: 'note' }, sel.length === 1 ? `1 fixture · ${fmtN(px)} pixels. Drop fixtures on the group's name in the list to add them.`
       : `${sel.length} fixtures · ${fmtN(px)} pixels. To edit just one of them, double-click it on the stage or click it in the list.`));
@@ -3009,8 +3037,7 @@ function renderMulti(body, sel) {
     g ? groupSection(g, sel) : null,
     sec(null,
       g ? h('h3', null, `All ${sel.length} fixtures`)
-        : h('h3', null, `${sel.length} fixtures selected`, h('span', { class: 'fill' }),
-          h('button', { class: 'btn sm', type: 'button', title: 'Put them in a group (Ctrl G)', onclick: groupSel }, icon('group'), 'Group')),
+        : h('h3', null, `${sel.length} fixtures selected`),
       h('p', { class: 'note' }, g ? 'Changes here apply to each of them.' : `${fmtN(px)} pixels in total. Changes below apply to all of them.`),
       sel.some(f => f.type !== 'matrix') ? row('Pixels each', pxIn) : null,
       row('Color order', selectEl([['', 'Mixed / keep'], ...ORDERS.map(o => [o, o])], sel.every(f => f.order === sel[0].order) ? sel[0].order : '', v => { if (!v) return; sel.forEach(f => { f.order = v; }); markPatch(); commit(); renderRight(); }, { aria: 'Color order for all' })),
@@ -3339,6 +3366,16 @@ function renderSettings(body) {
 }
 
 /* ---------- selection + actions ---------- */
+// The right panel (Inspector, Content, Settings) can be hidden to give the stage more room
+function showRight(on) {
+  ui.rightHidden = !on;
+  $('.workspace').classList.toggle('noright', ui.rightHidden);
+  $('#btnRight').classList.toggle('on', !ui.rightHidden);
+  $('#btnRight').setAttribute('aria-pressed', String(!ui.rightHidden));
+  savePrefs();
+}
+// Rename: open the Inspector (showing the panel if it is hidden) with the name selected
+function focusName(id) { if (ui.rightHidden) showRight(true); ui.rightTab = 'inspector'; renderRight(); const i = $('#' + id); if (i) { i.focus(); i.select(); } }
 function onSelection() {
   unfoldForSelection();
   renderFxList();
@@ -4398,6 +4435,11 @@ function initUI() {
   $$('#rail button').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
   $$('#rightTabs button').forEach(b => b.addEventListener('click', () => { ui.rightTab = b.dataset.tab; savePrefs(); renderRight(); }));
   $$('#dockTabs button[data-tab]').forEach(b => b.addEventListener('click', () => { ui.dockTab = b.dataset.tab; ui.dockCollapsed = false; savePrefs(); renderDock(); }));
+  $('#btnGroup').addEventListener('click', () => { groupAction() === 'ungroup' ? ungroupSel() : groupSel(); });
+  $('#btnRight').replaceChildren(icon('panel'));
+  $('#btnRight').addEventListener('click', () => showRight(ui.rightHidden));
+  $('#btnHideRight').addEventListener('click', () => showRight(false));
+  showRight(!ui.rightHidden);
   $('#btnDock').addEventListener('click', () => { ui.dockCollapsed = !ui.dockCollapsed; savePrefs(); renderDock(); });
   const grip = $('#dockGrip');
   grip.addEventListener('pointerdown', e => {
@@ -4462,6 +4504,7 @@ function onKey(e) {
   if (e.key === 'Escape') { if (ui.tool !== 'select') setTool('select'); else if (ui.sel.size) { ui.sel.clear(); onSelection(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); if (ui.tool === 'zone') deleteZone(selZone()); else deleteSel(); return; }
   if (k === 'f') { fitView(); return; }
+  if (k === 'h') { showRight(ui.rightHidden); return; }
   if (k === 'g') { ui.snap = !ui.snap; $('#vSnap').checked = ui.snap; savePrefs(); toast('Snap ' + (ui.snap ? 'on' : 'off')); return; }
   if (k === 'b') { toggleBlackout(); return; }
   if (k === 'i') { toggleIdentify(); return; }

@@ -1,6 +1,6 @@
 # openLedMapper — notes for Claude Code
 
-LED pixel-mapping software by Albert (OneEightyOne, LED hardware engineer). Draw or import fixtures, split the
+LED pixel-mapping software by Albert. Draw or import fixtures, split the
 canvas into zones, layer ISF shaders / images / video / screen capture per zone, store scenes, patch fixtures to
 Art-Net controller outputs, send. Albert works efficiently: short updates, test before handing over, say plainly
 what was and wasn't verified.

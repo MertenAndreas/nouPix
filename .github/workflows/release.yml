@@ -162,4 +162,4 @@ jobs:
               Open the disk image and drag openLedMapper onto Applications.
             - **Linux, or any computer with Python 3.8+:** the source code below, then `python3 openledmapper.py`
 
-            The apps aren't signed yet, so Windows and macOS warn the first time you open them. See *Start* in the README.
+            The apps aren't signed yet, so Windows and macOS warn the first time you open them. See *Download* in the README for what to click.

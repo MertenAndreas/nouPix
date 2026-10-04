@@ -359,6 +359,8 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
 .menu button:disabled { opacity: .4; cursor: default; background: none; }
 .menu button.danger { color: var(--danger); }
 .menu button .mk { margin-left: auto; padding-left: 18px; color: var(--muted); font-family: var(--mono); font-size: 10.5px; }
+.menu button .sm { margin-left: auto; padding-left: 18px; color: var(--muted); }
+.menu button.open { background: var(--bg4); }
 .menu .mh { padding: 4px 10px 5px; color: var(--muted); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hide-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
@@ -2904,7 +2906,8 @@ function renderInspector(body) {
         '<code>V</code> select · <code>L</code> line · <code>M</code> matrix · <code>C</code> circle · <code>P</code> path · <code>N</code> pen<br>' +
         '<code>Space</code>-drag or right-drag to pan · wheel to zoom · <code>F</code> fit<br>' +
         '<code>Alt</code> while dragging turns snapping off · <code>Shift</code> constrains<br>' +
-        '<code>Ctrl D</code> duplicate · <code>Del</code> delete · arrows nudge (<code>Shift</code> ×10)<br>' +
+        '<code>Ctrl C</code> / <code>Ctrl X</code> / <code>Ctrl V</code> copy, cut, paste fixtures (also into another project) · <code>Ctrl D</code> duplicate · <code>Del</code> delete · arrows nudge (<code>Shift</code> ×10)<br>' +
+        'Right-click anything for its options: patch to an output, paste here, delete a zone or a scene…<br>' +
         '<code>H</code> hides this panel · <code>Ctrl G</code> group · <code>Ctrl Shift G</code> ungroup · double-click a fixture of a group to select just it<br>' +
         '<code>Ctrl Z</code> undo · <code>Ctrl S</code> save · <code>B</code> blackout · <code>I</code> identify<br>' +
         '<code>Z</code> zones · <code>1</code>–<code>9</code> scenes of the selected zone (<code>Shift</code> cuts)' })));
@@ -4287,26 +4290,45 @@ function classifyShape(P, pitch, label) {
 
 /* ============================================================ menus */
 // A menu under an element (a button), or at a point (a right-click: { x, y } in window pixels).
-// Items: [label, action, { key, danger, disabled }], '-' for a line, { head: text } for a title; false is left out.
+// Items: [label, action, { key, danger, disabled }], [label, null, { sub: items }] for a submenu, '-' for a line,
+// { head: text } for a title; false is left out.
 function menu(anchor, items) {
   $$('.menu').forEach(m => m.remove());
-  const at = anchor instanceof Element ? null : anchor, r = at ? null : anchor.getBoundingClientRect();
-  const list = items.filter(Boolean).filter((it, i, a) => it !== '-' || (i > 0 && i < a.length - 1 && a[i - 1] !== '-' && !a[i - 1].head));
-  const close = () => { m.remove(); document.removeEventListener('pointerdown', off, true); removeEventListener('keydown', esc, true); removeEventListener('blur', close); removeEventListener('resize', close); };
-  const off = e => { if (!m.contains(e.target)) close(); };
+  const open = [];   // the menu and the submenus open from it, outermost first
+  const close = () => { open.splice(0).forEach(m => m.remove()); document.removeEventListener('pointerdown', off, true); removeEventListener('keydown', esc, true); removeEventListener('blur', close); removeEventListener('resize', close); };
+  const off = e => { if (!open.some(m => m.contains(e.target))) close(); };
   const esc = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
-  const m = h('div', { class: 'menu', role: 'menu' }, list.map(it => it === '-' ? h('hr') : it.head ? h('div', { class: 'mh' }, it.head)
-    : h('button', { type: 'button', role: 'menuitem', class: it[2] && it[2].danger ? 'danger' : '', disabled: !!(it[2] && it[2].disabled), onclick: () => { close(); it[1](); } },
-      it[0], it[2] && it[2].key ? h('span', { class: 'mk' }, it[2].key) : null)));
-  document.body.append(m);
-  const w = m.offsetWidth, ht = m.offsetHeight;
-  if (at) {
-    m.style.left = Math.max(8, Math.min(at.x, innerWidth - w - 8)) + 'px';
-    m.style.top = Math.max(8, at.y + ht > innerHeight - 8 ? at.y - ht : at.y) + 'px';
-  } else {
-    m.style.left = Math.min(r.left, innerWidth - w - 8) + 'px';
-    m.style.top = (r.bottom + 4 + ht > innerHeight - 8 ? Math.max(8, r.top - ht - 4) : r.bottom + 4) + 'px';
-  }
+  const show = (items, level, from) => {
+    open.splice(level).forEach(m => m.remove());
+    const list = items.filter(Boolean).filter((it, i, a) => it !== '-' || (i > 0 && i < a.length - 1 && a[i - 1] !== '-' && !a[i - 1].head));
+    const m = h('div', { class: 'menu', role: 'menu' }, list.map(it => {
+      if (it === '-') return h('hr');
+      if (it.head) return h('div', { class: 'mh' }, it.head);
+      const o = it[2] || {};
+      const b = h('button', { type: 'button', role: 'menuitem', class: o.danger ? 'danger' : '', disabled: !!o.disabled, 'aria-haspopup': o.sub ? 'menu' : null },
+        it[0], o.sub ? h('span', { class: 'sm' }, '▸') : o.key ? h('span', { class: 'mk' }, o.key) : null);
+      const openSub = () => { $$('button.open', m).forEach(x => x.classList.remove('open')); b.classList.add('open'); show(o.sub, level + 1, b); };
+      b.addEventListener('pointerenter', () => { if (o.sub) openSub(); else if (open.length > level + 1) { $$('button.open', m).forEach(x => x.classList.remove('open')); open.splice(level + 1).forEach(x => x.remove()); } });
+      b.addEventListener('click', () => { if (o.sub) openSub(); else { close(); it[1](); } });
+      return b;
+    }));
+    document.body.append(m);
+    open.push(m);
+    const w = m.offsetWidth, ht = m.offsetHeight;
+    if (level > 0) {   // beside the item it opens from
+      const r = from.getBoundingClientRect();
+      m.style.left = (r.right + w - 2 > innerWidth - 8 ? Math.max(8, r.left - w + 2) : r.right - 2) + 'px';
+      m.style.top = Math.max(8, Math.min(r.top - 5, innerHeight - ht - 8)) + 'px';
+    } else if (!(from instanceof Element)) {
+      m.style.left = Math.max(8, Math.min(from.x, innerWidth - w - 8)) + 'px';
+      m.style.top = Math.max(8, from.y + ht > innerHeight - 8 ? from.y - ht : from.y) + 'px';
+    } else {
+      const r = from.getBoundingClientRect();
+      m.style.left = Math.min(r.left, innerWidth - w - 8) + 'px';
+      m.style.top = (r.bottom + 4 + ht > innerHeight - 8 ? Math.max(8, r.top - ht - 4) : r.bottom + 4) + 'px';
+    }
+  };
+  show(items, 0, anchor);
   setTimeout(() => { document.addEventListener('pointerdown', off, true); addEventListener('keydown', esc, true); addEventListener('blur', close); addEventListener('resize', close); }, 0);
 }
 // Right-click on el opens the menu fn(e) builds
@@ -4329,6 +4351,8 @@ function fixtureMenu(e, f, pick) {
     { head: one ? one.name : g ? `${groupName(g)} · ${sel.length} fixtures` : `${sel.length} fixtures` },
     one && ['Rename…', () => focusName('fxName'), { key: 'double-click' }],
     g && ['Rename group…', () => focusName('grpName')],
+    ['Copy', copySel, { key: MOD + 'C' }],
+    ['Cut', () => { copySel(); deleteSel(); }, { key: MOD + 'X', disabled: allLocked }],
     ['Duplicate', duplicateSel, { key: MOD + 'D' }],
     ga === 'group' && ['Group', groupSel, { key: MOD + 'G' }],
     ga === 'ungroup' && ['Ungroup', ungroupSel, { key: MOD + '⇧G' }],
@@ -4342,6 +4366,7 @@ function fixtureMenu(e, f, pick) {
     ['Send to back', () => restackSel(false)],
     [one ? 'New zone around it' : 'New zone around them', () => addZone(fixtureRect(sel, 6))],
     '-',
+    ['Patch to', null, { sub: patchToItems(sel) }],
     patched.length && ['Show in Patch', () => showInPatch(patched[0])],
     patched.length && [patched.length === 1 ? 'Unpatch' : `Unpatch ${patched.length} fixtures`, () => { patched.forEach(x => unassign(x.id)); markPatch(); commit(); renderRight(); }],
     '-',
@@ -4354,6 +4379,7 @@ function groupMenu(e, g, m) {
   menu(at(e), [
     { head: `${groupName(g)} · ${m.length} fixtures` },
     ['Rename…', () => focusName('grpName'), { key: 'double-click' }],
+    ['Copy', copySel, { key: MOD + 'C' }],
     ['Duplicate group', duplicateSel, { key: MOD + 'D' }],
     ['Ungroup', ungroupSel, { key: MOD + '⇧G' }],
     [g.open ? 'Fold' : 'Unfold', () => { g.open = !g.open; renderFxList(); saveSoon(); }],
@@ -4361,6 +4387,7 @@ function groupMenu(e, g, m) {
     ['Bring to front', () => restackSel(true)],
     ['Send to back', () => restackSel(false)],
     ['New zone around it', () => addZone(fixtureRect(m, 6))],
+    ['Patch to', null, { sub: patchToItems(m) }],
     '-',
     ['Delete group and its fixtures', deleteSel, { key: 'Del', danger: true, disabled: m.every(f => f.locked) }],
   ]);
@@ -4380,6 +4407,108 @@ function restackSel(front) {
   project.fixtures = F;
   normalizeGroups(); markGeom(); commit(); renderRight();
 }
+/* ---------- copy and paste fixtures ---------- */
+// Copied fixtures go on the system clipboard as text, so they paste into another project, another openLedMapper
+// window, or the desktop app; they are also kept here for "Paste here" when the clipboard can't be read.
+let clip = store.get('openledmapper.clip', null);
+const isClip = d => isObj(d) && d.openledmapper === 'fixtures' && Array.isArray(d.fixtures);
+function clipOfSel() {
+  const sel = selected();
+  if (!sel.length) return null;
+  const groups = selUnits(sel).filter(u => u.g).map(u => ({ id: u.g.id, name: u.g.name, tag: u.g.tag }));
+  const whole = new Set(groups.map(g => g.id));
+  const fixtures = sel.map(f => { const c = JSON.parse(JSON.stringify(snapshotGeom(f))); if (!whole.has(c.group)) delete c.group; delete c.addr; return c; });
+  return { openledmapper: 'fixtures', version: 1, fixtures, groups };
+}
+function copySel(e) {
+  const d = clipOfSel();
+  if (!d) return false;
+  clip = d; store.set('openledmapper.clip', d);
+  const text = JSON.stringify(d);
+  if (e && e.clipboardData) e.clipboardData.setData('text/plain', text);
+  else if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+  toast(d.fixtures.length === 1 ? `Copied ${d.fixtures[0].name}` : `Copied ${d.fixtures.length} fixtures`);
+  return true;
+}
+// Ctrl V: where they were, moved down and right while that place is taken. Paste here: centred on the point.
+function pasteFixtures(d, point) {
+  if (!isClip(d)) return;
+  const ids = new Set(project.fixtures.map(f => f.id)), names = new Set(project.fixtures.map(f => f.name));
+  const gmap = new Map((Array.isArray(d.groups) ? d.groups : []).filter(g => isObj(g) && isId(g.id)).map((g, i) => [String(g.id),
+    { id: uid(), name: typeof g.name === 'string' && g.name ? g.name : nextGroupName(), tag: typeof g.tag === 'string' ? g.tag : TAGS[(project.groups.length + 2 + i) % TAGS.length], open: true }]));
+  const list = d.fixtures.filter(f => isObj(f) && TYPE_LABEL[f.type]).map((f0, i) => {
+    const f = JSON.parse(JSON.stringify(f0));
+    delete f.id; delete f.addr; f.locked = false;
+    const g = isId(f.group) && gmap.get(String(f.group));
+    if (g) f.group = g.id; else delete f.group;
+    fixFixture(f, i, ids);
+    let n = f.name;
+    if (names.has(n)) { n = f.name + ' copy'; for (let k = 2; names.has(n); k++) n = `${f.name} copy ${k}`; }
+    f.name = n; names.add(n);
+    return f;
+  });
+  if (!list.length) return;
+  const b = boxOf(list);
+  let dx = 0, dy = 0;
+  if (point) { dx = point[0] - (b.x0 + b.x1) / 2; dy = point[1] - (b.y0 + b.y1) / 2; }
+  else {
+    const near = (a, b) => typeof a === 'number' ? typeof b === 'number' && Math.abs(a - b) < 0.01 : Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((v, i) => near(v, b[i])) : a === b;
+    const at = (f, ox, oy) => { const c = JSON.parse(JSON.stringify(f)); moveFixture(c, JSON.parse(JSON.stringify(f)), ox, oy); return c; };
+    const taken = g => project.fixtures.some(f => f.type === g.type && Object.keys(FIXTURE_FIELDS[g.type]).every(k => near(f[k], g[k])));
+    const off = Math.max(project.settings.grid, 10) * 2;
+    for (let k = 0; k < 50 && taken(at(list[0], dx, dy)); k++) { dx += off; dy += off; }
+  }
+  for (const f of list) shiftFixture(f, dx, dy);
+  project.groups.push(...[...gmap.values()].filter(g => list.some(f => f.group === g.id)));
+  project.fixtures.push(...list);
+  ui.sel = new Set(list.map(f => f.id));
+  normalizeGroups(); markGeom(); rebuildGeometry();
+  commit(); onSelection();
+  toast(`Pasted ${list.length === 1 ? list[0].name : list.length + ' fixtures'}. Patch ${list.length === 1 ? 'it' : 'them'} with right-click → Patch to.`);
+}
+function pasteFromClipboard(point) {
+  const fallback = () => clip ? pasteFixtures(clip, point) : toast('Nothing to paste: copy fixtures first (right-click → Copy, or ' + MOD + 'C).');
+  if (!navigator.clipboard || !navigator.clipboard.readText) return fallback();
+  navigator.clipboard.readText().then(t => { let d = null; try { d = JSON.parse(t); } catch (e) { /* not ours */ } isClip(d) ? pasteFixtures(d, point) : fallback(); }, fallback);
+}
+const typingIn = t => t && t.closest && t.closest('input:not([type=checkbox]):not([type=range]):not([type=color]), textarea, select, [contenteditable="true"]');
+document.addEventListener('copy', e => { if (typingIn(e.target) || $('.modal-bg') || !ui.sel.size) return; if (copySel(e)) e.preventDefault(); });
+document.addEventListener('cut', e => { if (typingIn(e.target) || $('.modal-bg') || !ui.sel.size) return; if (copySel(e)) { e.preventDefault(); deleteSel(); } });
+document.addEventListener('paste', e => {
+  if (typingIn(e.target) || $('.modal-bg')) return;
+  let d = null;
+  try { d = JSON.parse(e.clipboardData.getData('text/plain')); } catch (err) { /* not fixtures */ }
+  if (!isClip(d)) return;
+  e.preventDefault();
+  pasteFixtures(d, null);
+});
+
+/* ---------- patch to ---------- */
+// The outputs of every controller, to put the fixtures on, after what is there already, in list order
+function patchToItems(list) {
+  if (!project.controllers.length) return [['No controllers yet: add one…', () => { ui.dockTab = 'patch'; ui.dockCollapsed = false; renderDock(); }]];
+  if (geomDirty) rebuildGeometry();
+  ensurePatch();
+  const ids = list.map(f => f.id);
+  const outs = c => c.chains.map((chain, o) => {
+    const base = c.startUniverse + o * c.upo;
+    const here = ids.every(id => chain.includes(id));
+    const rest = chain.filter(id => !ids.includes(id));
+    const fits = simulateChannels(c, rest.concat(ids)) <= c.upo * 512;
+    const used = rest.reduce((a, id) => a + (fxById(id) ? pixelCount(fxById(id)) : 0), 0);
+    return [`${here ? '✓ ' : ''}OUT ${o + 1}  ·  U ${base}${c.upo > 1 ? '–' + (base + c.upo - 1) : ''}`, () => patchTo(ids, c, o),
+      { key: fits ? (used ? `${fmtN(used)} px on it` : 'empty') : "won't fit" }];
+  });
+  if (project.controllers.length === 1) { const c = project.controllers[0]; return [{ head: `${c.name} · ${c.ip}` }, ...outs(c)]; }
+  return project.controllers.map(c => [`${ctrlLetter(c)} · ${c.name}`, null, { sub: [{ head: c.ip }, ...outs(c)] }]);
+}
+function patchTo(ids, c, o) {
+  for (const id of ids) assign(id, c, o, -1);
+  commit(); renderRight();
+  ensurePatch();
+  const over = ids.filter(id => { const f = fxById(id); return f && f._patch && f._patch.overflow; }).length;
+  toast(`${ids.length === 1 ? fxById(ids[0]).name : ids.length + ' fixtures'} on ${c.name} OUT ${o + 1}` + (over ? `. ${over === 1 ? 'It does' : over + ' do'} not fully fit: add universes per output.` : ''), over ? 'warn' : '');
+}
 function showInPatch(f) {
   ui.dockTab = 'patch'; ui.dockCollapsed = false; ui.selCtrl = f._patch.ctrl.id;
   renderDock();
@@ -4394,6 +4523,8 @@ function canvasMenu(e, x, y) {
   };
   const z = hitZone(x, y);
   menu(at(e), [
+    ['Paste here', () => pasteFromClipboard([px, py]), { key: MOD + 'V' }],
+    '-',
     ['Add a strip here', add('line')],
     ['Add a matrix here', add('matrix')],
     ['Add a ring here', add('circle')],

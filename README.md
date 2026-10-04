@@ -48,6 +48,10 @@ On Windows, allow openLedMapper (or Python) through the firewall on private netw
 
 With **Wiring** on, the stage also draws the data cable between fixtures chained on one output: a thin dashed line with an arrow from the last pixel of one to the first pixel of the next.
 
+**Right-click** anything for its options: a fixture (patch it to an output, group, lock, reverse, bring to front…), the empty stage (add a fixture there, paste there), a zone, a layer, a scene, a source, a controller or a patched fixture in the Patch panel. A right-drag on the stage still pans.
+
+**Ctrl C** / **Ctrl X** / **Ctrl V** copy, cut and paste fixtures, with their groups. They go through the system clipboard, so they also paste into another project or another openLedMapper window. A paste lands where the copies were, moved down and right if that place is taken; **Paste here** (right-click on the stage) puts them where you clicked. Pasted fixtures aren't patched: right-click → **Patch to**.
+
 **Ctrl D** duplicates. A copy goes on the same output as the fixture it copies, after the fixtures already there, if all its pixels fit; otherwise it stays unpatched.
 
 The Inspector / Content / Settings panel on the right can be hidden for a bigger stage: **»** in its tabs, the panel button at the right of the stage bar, or `H`. Double-clicking a fixture to rename it brings it back.

@@ -56,7 +56,7 @@ With **Wiring** on, the stage also draws the data cable between fixtures chained
 
 **Lock** (the padlock beside the Group button above the fixture list, or **Ctrl L**) locks everything selected: one fixture, several, or a whole group. Locked fixtures can't be moved, nudged, aligned or deleted, and the stage and Ctrl A skip them; a locked group shows a padlock on its row. With everything selected already locked, the same button (amber then) unlocks.
 
-**Ctrl D** duplicates. A copy goes on the same output as the fixture it copies, after the fixtures already there, if all its pixels fit; otherwise it stays unpatched.
+**Ctrl D** duplicates. Copies are numbered on from the original: Matrix 1 becomes Matrix 2, Matrix 10 becomes Matrix 11, skipping numbers already used; a name without a number gets 2 (Wave → Wave 2). The same goes for pasted fixtures and duplicated groups, zones and scenes. A copy goes on the same output as the fixture it copies, after the fixtures already there, if all its pixels fit; otherwise it stays unpatched.
 
 The Inspector / Content / Settings panel on the right can be hidden for a bigger stage: **»** in its tabs, the panel button at the right of the stage bar, or `H`. Double-clicking a fixture to rename it brings it back.
 

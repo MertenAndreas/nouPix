@@ -171,9 +171,9 @@ with sync_playwright() as p:
     # ---- duplicate and delete
     demo()
     li_grp("Strips").click(); pg.keyboard.press("Control+d"); time.sleep(0.4)
-    check("Ctrl D on a group makes a new group of copies", ev("olm.project.groups.map(g => g.name).join(',')") == "Strips,Rings,Strips copy" and ev("document.querySelector('#grpName')?.value") == "Strips copy" and order().endswith("Strip 1 copy@Strips copy,Strip 2 copy@Strips copy,Strip 3 copy@Strips copy,Strip 4 copy@Strips copy"), (ev("olm.project.groups.map(g => g.name)"), order()))
+    check("Ctrl D on a group makes a new group of copies", ev("olm.project.groups.map(g => g.name).join(',')") == "Strips,Rings,Strips 2" and ev("document.querySelector('#grpName')?.value") == "Strips 2" and order().endswith("Strip 5@Strips 2,Strip 6@Strips 2,Strip 7@Strips 2,Strip 8@Strips 2"), (ev("olm.project.groups.map(g => g.name)"), order()))
     li_fx("Ring 2").click(); pg.keyboard.press("Control+d"); time.sleep(0.4)
-    check("a fixture of a group copied on its own joins that group", "Ring 3@Rings,Ring 2 copy@Rings" in order(), order())
+    check("a fixture of a group copied on its own joins that group", "Ring 3@Rings,Ring 4@Rings" in order(), order())
     demo()
     li_grp("Rings").click(); pg.keyboard.press("Delete"); time.sleep(0.3)
     check("Delete on a group deletes its fixtures and the group", order() == "Panel A,Strip 1@Strips,Strip 2@Strips,Strip 3@Strips,Strip 4@Strips,Wave" and ev("olm.project.groups.map(g => g.name).join(',')") == "Strips" and ev("olm.project.controllers[0].chains[2].length") == 0, order())

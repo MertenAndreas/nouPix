@@ -734,6 +734,17 @@ function newFixture(type, props = {}) {
   if (FIXTURE_FIELDS[type]) Object.assign(f, JSON.parse(JSON.stringify(FIXTURE_FIELDS[type])));
   return Object.assign(f, props);
 }
+// The name of a copy: a number at the end goes up to the next one not taken ("Matrix 1" → "Matrix 2",
+// "Matrix 10" → "Matrix 11", past any already used, keeping leading zeros); a name without one gets " 2".
+function nextCopyName(name, taken) {
+  const m = /^(.*?)(\d{1,15})$/.exec(name);
+  const base = m ? m[1] : (name.trim() ? name.trimEnd() + ' ' : '');
+  const width = m && m[2].length > 1 && m[2][0] === '0' ? m[2].length : 0;
+  const mk = k => base + String(k).padStart(width, '0');
+  let n = m ? parseInt(m[2], 10) + 1 : 2;
+  while (taken.has(mk(n))) n++;
+  return mk(n);
+}
 function nextName(type) {
   const label = TYPE_LABEL[type] || 'Fixture';
   const names = new Set(project.fixtures.map(f => f.name));
@@ -3183,7 +3194,7 @@ function moveZone(z, d) {
   commit(); renderRight();
 }
 function duplicateZone(z) {
-  const c = Object.assign(JSON.parse(JSON.stringify(z, replacer)), { id: uid(), name: z.name + ' copy', scene: null });
+  const c = Object.assign(JSON.parse(JSON.stringify(z, replacer)), { id: uid(), name: nextCopyName(z.name, new Set(project.zones.map(x => x.name))), scene: null });
   c.scenes.forEach(sc => { sc.id = uid(); });
   const off = Math.max(project.settings.grid, 10) * 2;
   if (c.x + c.w + off <= project.settings.compW && c.y + c.h + off <= project.settings.compH) { c.x += off; c.y += off; }
@@ -3500,13 +3511,13 @@ function deleteSel() {
 function duplicateSel() {
   ensurePatch();
   const out = [], pairs = [];
-  const off = Math.max(project.settings.grid, 10) * 2;
+  const off = Math.max(project.settings.grid, 10) * 2, names = new Set(project.fixtures.map(f => f.name));
   for (const u of selUnits()) {
-    const ng = u.g && { id: uid(), name: u.g.name + ' copy', tag: u.g.tag, open: true };
+    const ng = u.g && { id: uid(), name: nextCopyName(groupName(u.g), new Set(project.groups.map(x => groupName(x)))), tag: u.g.tag, open: true };
     if (ng) project.groups.push(ng);
     for (const f of u.list) {
       const g = JSON.parse(JSON.stringify(snapshotGeom(f)));
-      g.id = uid(); g.name = f.name + ' copy'; g.locked = false; delete g.addr;
+      g.id = uid(); g.name = nextCopyName(f.name, names); names.add(g.name); g.locked = false; delete g.addr;
       if (ng) g.group = ng.id;
       moveFixture(g, JSON.parse(JSON.stringify(g)), off, off);
       project.fixtures.push(g); out.push(g.id); pairs.push([f._patch, g]);
@@ -3719,7 +3730,7 @@ function sceneMenu(anchor, z, sc) {
     !(anchor instanceof Element) && '-',
     [`Update with ${z.name}'s current layers`, () => { sc.layers = snapshotLayers(z); z.scene = sc.id; commit(); toast(`${sc.name} updated`); }],
     ['Rename, fade time, color…', () => editScene(sc)],
-    ['Duplicate', () => { const c = Object.assign(JSON.parse(JSON.stringify(sc)), { id: uid(), name: sc.name + ' copy' }); z.scenes.splice(z.scenes.indexOf(sc) + 1, 0, c); commit(); }],
+    ['Duplicate', () => { const c = Object.assign(JSON.parse(JSON.stringify(sc)), { id: uid(), name: nextCopyName(sc.name, new Set(z.scenes.map(x => x.name))) }); z.scenes.splice(z.scenes.indexOf(sc) + 1, 0, c); commit(); }],
     '-',
     ['Delete', () => { z.scenes = z.scenes.filter(x => x !== sc); if (z.scene === sc.id) z.scene = null; commit(); toast(`${sc.name} deleted. Ctrl Z brings it back.`); }, { danger: true }],
   ]);
@@ -4582,8 +4593,9 @@ function copySel(e) {
 function pasteFixtures(d, point) {
   if (!isClip(d)) return;
   const ids = new Set(project.fixtures.map(f => f.id)), names = new Set(project.fixtures.map(f => f.name));
+  const gnames = new Set(project.groups.map(g => groupName(g)));
   const gmap = new Map((Array.isArray(d.groups) ? d.groups : []).filter(g => isObj(g) && isId(g.id)).map((g, i) => [String(g.id),
-    { id: uid(), name: typeof g.name === 'string' && g.name ? g.name : nextGroupName(), tag: typeof g.tag === 'string' ? g.tag : TAGS[(project.groups.length + 2 + i) % TAGS.length], open: true }]));
+    { id: uid(), name: typeof g.name === 'string' && g.name ? (gnames.has(g.name) ? nextCopyName(g.name, gnames) : g.name) : nextGroupName(), tag: typeof g.tag === 'string' ? g.tag : TAGS[(project.groups.length + 2 + i) % TAGS.length], open: true }]));
   const list = d.fixtures.filter(f => isObj(f) && TYPE_LABEL[f.type]).map((f0, i) => {
     const f = JSON.parse(JSON.stringify(f0));
     delete f.id; delete f.addr; f.locked = false;
@@ -4591,7 +4603,7 @@ function pasteFixtures(d, point) {
     if (g) f.group = g.id; else delete f.group;
     fixFixture(f, i, ids);
     let n = f.name;
-    if (names.has(n)) { n = f.name + ' copy'; for (let k = 2; names.has(n); k++) n = `${f.name} copy ${k}`; }
+    if (names.has(n)) n = nextCopyName(f.name, names);
     f.name = n; names.add(n);
     return f;
   });

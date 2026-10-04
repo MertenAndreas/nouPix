@@ -1,0 +1,107 @@
+# Builds the openLedMapper apps (Windows, macOS Apple silicon, macOS Intel) with PyInstaller.
+#   - Push a tag named after the version in openledmapper.py (git tag v0.5.3 && git push origin v0.5.3):
+#     the apps are built, tested and attached to a new GitHub release.
+#   - Or run it by hand from the Actions tab: the apps are built and kept as run artifacts, no release.
+name: Build apps
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: windows-2025,   label: Windows,             suffix: windows }
+          - { runner: macos-15,       label: macOS Apple silicon, suffix: macos-apple-silicon }
+          - { runner: macos-15-intel, label: macOS Intel,         suffix: macos-intel }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Read the version
+        id: version
+        run: |
+          version=$(python -c "import re; print(re.search(r'^VERSION = \"(.+)\"', open('openledmapper.py', encoding='utf-8').read(), re.M).group(1))")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match VERSION = \"$version\" in openledmapper.py"
+            exit 1
+          fi
+
+      - name: Build
+        run: |
+          pip install "pyinstaller==6.*"
+          pyinstaller --noconfirm openledmapper.spec
+
+      - name: Check the app starts and serves the interface
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then app=dist/openLedMapper.exe; else app=dist/openLedMapper.app/Contents/MacOS/openLedMapper; fi
+          "$app" --no-browser &
+          pid=$!
+          ok=
+          for i in $(seq 1 30); do
+            if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html; then ok=1; break; fi
+            sleep 1
+          done
+          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openLedMapper.exe //F; else kill "$pid"; fi
+          cat ~/.openledmapper/openledmapper.log || true
+          [ -n "$ok" ] || { echo "::error::The app did not serve the interface"; exit 1; }
+
+      - name: Package
+        run: |
+          name="openLedMapper-${{ steps.version.outputs.version }}-${{ matrix.suffix }}"
+          mkdir out
+          if [ "$RUNNER_OS" = Windows ]; then
+            cp dist/openLedMapper.exe "out/$name.exe"
+          else
+            # ditto keeps the bundle's symlinks and signature intact, unlike zip
+            ditto -c -k --keepParent dist/openLedMapper.app "out/$name.zip"
+          fi
+          ls -l out
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.suffix }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: out
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: out/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          body: |
+            **Download** the file for your computer:
+            - **Windows:** `…-windows.exe`
+            - **Mac with Apple silicon (M1 or newer):** `…-macos-apple-silicon.zip`
+            - **Mac with an Intel processor:** `…-macos-intel.zip`
+            - **Linux, or any computer with Python 3.8+:** the source code below, then `python3 openledmapper.py`
+
+            The apps aren't signed yet, so Windows and macOS warn the first time you open them. See *Start* in the README.

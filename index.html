@@ -194,6 +194,8 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .ctrl-edit { overflow: auto; display: flex; flex-direction: column; min-width: 0; }
 .ctrl-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--bg1); position: sticky; top: 0; z-index: 1; }
 .ctrl-fields .f { display: grid; gap: 3px; }
+.discovered { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--text2); }
+.discovered b { color: var(--text); font-weight: 600; }
 .ctrl-fields .f > span { font-size: 10.5px; color: var(--muted); letter-spacing: .04em; }
 .outs { padding: 6px 0; }
 .outrow { display: grid; grid-template-columns: 64px 92px minmax(0,1fr) 170px; align-items: center; gap: 10px; padding: 5px 12px; min-height: 38px; border-bottom: 1px solid var(--line); }
@@ -815,6 +817,11 @@ function fixController(c, i, ids) {
   if (typeof c.ip !== 'string') c.ip = c.ip != null ? String(c.ip) : '';
   if (!('enabled' in c)) c.enabled = true;
   if (!('split' in c)) c.split = false;
+  // the universes the device reported to discovery: a reminder for setting outputs and universes per output
+  if ('discovered' in c) {
+    const u = Array.isArray(c.discovered) ? [...new Set(c.discovered.map(v => Math.round(numOr(v, -1))).filter(v => v >= 0 && v <= 32767))].sort((a, b) => a - b) : [];
+    if (u.length) c.discovered = u; else delete c.discovered;
+  }
   if (Array.isArray(c.chains)) c.chains = c.chains.map(ch => (Array.isArray(ch) ? ch.filter(isId).map(String) : []));
   ensureChains(c);
   return c;
@@ -3819,6 +3826,8 @@ function renderCtrlEditor(edit, c) {
     f('Pixel packing', small(selectEl([['0', 'Whole pixels (170 RGB / 128 RGBW)'], ['1', 'Split across universes (512 ch)']], c.split ? '1' : '0', v => { c.split = v === '1'; markPatch(); commit(); }, { aria: 'Pixel packing' }), 220)),
     h('label', { class: 'checkrow', for: 'ctrlEn', style: { alignSelf: 'center' } }, en, 'Output enabled'),
     h('span', { style: { flex: 1 } }), del));
+  const found = discoveredNote(c);
+  if (found) edit.append(found);
   if (patchConflicts.length) edit.append(h('div', { class: 'conflict' }, 'Universe clash: ' + patchConflicts[0] + (patchConflicts.length > 1 ? ` (+${patchConflicts.length - 1} more)` : '')));
   const outs = h('div', { class: 'outs' });
   c.chains.forEach((chain, o) => {
@@ -3912,8 +3921,8 @@ function renderNodes(body) {
           h('td', { class: 'mono' }, n.universes.length ? n.universes.join(', ') : '—'),
           h('td', { class: 'mono' }, n.mac || '—'),
           h('td', { class: 'muted', style: { fontSize: '11px', maxWidth: '260px' } }, n.report || ''),
-          h('td', null, h('button', { class: 'btn sm', type: 'button', disabled: !n.universes.length, title: n.universes.length ? (known ? `Set ${known.name}'s outputs and universes from this device` : '') : 'This device reports no output ports',
-            onclick: () => addNodeAsController(n) }, known ? 'Update controller' : 'Add as controller'))), e => nodeMenu(e, n));
+          h('td', null, h('button', { class: 'btn sm', type: 'button', disabled: !n.universes.length, title: n.universes.length ? (known ? `Refresh the universes ${known.name} shows as reported by the device, in the Patch tab` : '') : 'This device reports no output ports',
+            onclick: () => addNodeAsController(n) }, known ? 'Refresh universes' : 'Add as controller'))), e => nodeMenu(e, n));
       }))));
   }
   body.append(h('div', { class: 'nodes' }, bar, scroll));
@@ -3930,38 +3939,53 @@ function nodeDevices() {
     return { ip, replies: list.length, universes, shortName: pick(list, 'shortName'), longName: pick(list, 'longName'), mac: pick(list, 'mac'), report: pick(list, 'report') };
   }).sort((a, b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }));
 }
-// A controller's outputs start at evenly spaced universes (first universe + output × universes per output).
-// Evenly spaced ports map straight onto that: one output per port, the spacing as universes per output.
-// Uneven ones get outputs at the common step, so every port's universe is the start of an output.
-function deviceLayout(universes) {
-  const u = universes.length ? universes : [0];
-  const gcd = (a, b) => b ? gcd(b, a % b) : a;
-  const step = u.slice(1).reduce((g, v, i) => gcd(g, v - u[i]), 0) || 1;
-  const outputs = (u[u.length - 1] - u[0]) / step + 1;
-  if (step > 64 || outputs > 128) return { outputs: Math.min(u.length, 128), upo: 1, startUniverse: u[0], exact: u.length === 1 };
-  return { outputs, upo: step, startUniverse: u[0], exact: outputs === u.length };
-}
+// ArtPoll says which universes a device listens on, not how they are split over its physical outputs (2 outputs
+// of 3 universes, 3 of 2…): only the operator knows. So a device becomes a controller with its IP, its name and
+// the universes it reported, kept as a reminder in the Patch tab; one output from its first universe is just a
+// starting point. Adding a device that is already a controller only refreshes that reminder.
 function addNodeAsController(n) {
-  const L = deviceLayout(n.universes);
+  const u = n.universes;
+  if (!u.length) return;
+  const range = universeList(u);
   const same = project.controllers.find(c => c.ip === n.ip);
-  let c, lost = 0;
-  if (same) {   // already a controller: bring its outputs and universes in line with the device, keep its name and patch
-    c = same;
-    const before = c.chains.flat().length;
-    Object.assign(c, { outputs: L.outputs, upo: L.upo, startUniverse: L.startUniverse });
-    ensureChains(c);
-    lost = before - c.chains.flat().length;
-  } else {
-    c = newController({ name: n.shortName || n.ip, ip: n.ip, outputs: L.outputs, upo: L.upo, startUniverse: L.startUniverse });
-    project.controllers.push(c);
+  if (same) {
+    same.discovered = u.slice();
+    ui.selCtrl = same.id; ui.dockTab = 'patch';
+    commit();
+    toast(`${same.name}: the device reports ${u.length} universe${u.length === 1 ? '' : 's'} (${range}). Its outputs and universes per output are as you set them.`);
+    return;
   }
+  const c = newController({ name: n.shortName || n.ip, ip: n.ip, outputs: 1, upo: Math.min(u[u.length - 1] - u[0] + 1, 64), startUniverse: u[0], discovered: u.slice() });
+  project.controllers.push(c);
   ui.selCtrl = c.id; ui.dockTab = 'patch';
   markPatch(); commit();
-  const last = c.startUniverse + c.outputs * c.upo - 1;
-  toast(`${same ? 'Updated' : 'Added'} ${c.name}: ${c.outputs} output${c.outputs === 1 ? '' : 's'}, universe${last > c.startUniverse ? 's ' + c.startUniverse + '–' + last : ' ' + c.startUniverse}.` +
-    (L.exact ? '' : ` Its ports aren't evenly spaced (${n.universes.join(', ')}), so some outputs have no port on the device.`) +
-    (lost > 0 ? ` ${lost} fixture${lost > 1 ? 's were' : ' was'} unpatched because ${lost > 1 ? 'their' : 'its'} output went.` : '') +
-    ' Check universes per output against the controller\'s own setup.', L.exact && !lost ? '' : 'warn');
+  toast(`Added ${c.name}. It reports ${u.length} universe${u.length === 1 ? '' : 's'} (${range}): set its outputs and universes per output to match how the device is set up.`);
+}
+// 0, 1, 2, 3, 7 → "0–3, 7"
+function universeList(u) {
+  const parts = [];
+  for (let i = 0; i < u.length; i++) {
+    let j = i;
+    while (j + 1 < u.length && u[j + 1] === u[j] + 1) j++;
+    parts.push(j > i ? `${u[i]}–${u[j]}` : String(u[i]));
+    i = j;
+  }
+  return parts.join(', ');
+}
+// The Patch tab's reminder: what the device reported, against what this controller covers
+function discoveredNote(c) {
+  const u = c.discovered;
+  if (!u || !u.length) return null;
+  const first = c.startUniverse, last = first + c.outputs * c.upo - 1;
+  const missing = u.filter(v => v < first || v > last), extra = c.outputs * c.upo - (u.length - missing.length);
+  const ours = `This controller covers ${last > first ? `universes ${first}–${last}` : `universe ${first}`} (${c.outputs} output${c.outputs === 1 ? '' : 's'} × ${c.upo})`;
+  const status = missing.length ? h('span', { class: 'badge warn' }, `not covered: ${universeList(missing)}`)
+    : extra > 0 ? h('span', { class: 'badge', title: 'Many devices report only the first universe of each port, so this can be right.' }, `${extra} not reported by the device`)
+    : h('span', { class: 'badge ok' }, 'matches');
+  return h('div', { class: 'discovered' },
+    h('span', null, h('b', null, 'Discovery: '), `the device reports ${u.length} universe${u.length === 1 ? '' : 's'}: ${universeList(u)}. ${ours}. `),
+    status,
+    h('span', { class: 'muted' }, ' Set Outputs and Universes / output to how the device is set up.'));
 }
 
 /* ---------- DMX monitor ---------- */
@@ -4660,7 +4684,7 @@ function chipMenu(e, fid, c, o) {
 function nodeMenu(e, n) {
   menu(at(e), [
     { head: n.shortName || n.ip },
-    [project.controllers.some(c => c.ip === n.ip) ? 'Update controller' : 'Add as controller', () => addNodeAsController(n), { disabled: !n.universes.length }],
+    [project.controllers.some(c => c.ip === n.ip) ? 'Refresh reported universes' : 'Add as controller', () => addNodeAsController(n), { disabled: !n.universes.length }],
     ['Copy IP address', () => { navigator.clipboard.writeText(n.ip).then(() => toast('Copied ' + n.ip), () => toast(n.ip)); }],
   ]);
 }

@@ -356,6 +356,10 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
 .menu button { display: flex; width: 100%; align-items: center; gap: 8px; border: 0; background: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; text-align: left; font-size: 12.5px; }
 .menu button:hover { background: var(--bg4); }
 .menu hr { border: 0; height: 1px; background: var(--line2); margin: 4px 0; }
+.menu button:disabled { opacity: .4; cursor: default; background: none; }
+.menu button.danger { color: var(--danger); }
+.menu button .mk { margin-left: auto; padding-left: 18px; color: var(--muted); font-family: var(--mono); font-size: 10.5px; }
+.menu .mh { padding: 4px 10px 5px; color: var(--muted); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hide-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 /* ---------- narrow screens ---------- */
@@ -2303,7 +2307,7 @@ cv.addEventListener('pointerdown', e => {
   cv.focus({ preventScroll: true });
   const [sx, sy] = evPos(e), [x, y] = toC(sx, sy);
   cv.setPointerCapture(e.pointerId);
-  if (e.button === 1 || e.button === 2 || spaceHeld) { drag = { kind: 'pan', sx, sy, vx: ui.view.x, vy: ui.view.y }; cv.style.cursor = 'grabbing'; return; }
+  if (e.button === 1 || e.button === 2 || spaceHeld) { drag = { kind: 'pan', sx, sy, vx: ui.view.x, vy: ui.view.y, button: e.button, space: spaceHeld }; cv.style.cursor = 'grabbing'; return; }
   if (e.button !== 0) return;
   const tool = ui.tool;
   if (tool === 'zone') {
@@ -2429,7 +2433,19 @@ function endDrag(e) {
     else if (!r && d.pick) selectZone(d.pick);
   } else if (d.kind === 'marquee') {
     marquee = null; onSelection();
+  } else if (d.kind === 'pan' && d.button === 2 && !d.space && e.type === 'pointerup') {
+    const [sx, sy] = evPos(e);
+    if (Math.hypot(sx - d.sx, sy - d.sy) < 4) stageMenu(e, sx, sy);   // a right-click, not a right-drag
   }
+}
+// What was right-clicked on the stage: a zone (with the Zone tool), a fixture, or empty canvas
+function stageMenu(e, sx, sy) {
+  const [x, y] = toC(sx, sy);
+  if (pathDraft) return;
+  if (ui.tool === 'zone') { const z = hitZoneLabel(sx, sy) || hitZone(x, y); return z ? zoneMenu(e, z) : canvasMenu(e, x, y); }
+  const f = hitFixture(x, y);
+  if (f) return fixtureMenu(e, f, stagePick(f));
+  canvasMenu(e, x, y);
 }
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
@@ -2652,6 +2668,7 @@ function groupRow(g, m, whole) {
     onSelection();
   });
   li.addEventListener('dblclick', e => { if (e.target.closest('.chev')) return; focusName('grpName'); });
+  onRightClick(li, e => groupMenu(e, g, m));
   li.addEventListener('mouseenter', () => { ui.hoverGroup = g.id; });
   li.addEventListener('mouseleave', () => { if (ui.hoverGroup === g.id) ui.hoverGroup = null; });
   listDraggable(li, () => membersOf(g).map(f => f.id), g.id);
@@ -2714,6 +2731,7 @@ function fixtureRow(f) {
     onSelection();
   });
   li.addEventListener('dblclick', () => focusName('fxName'));
+  onRightClick(li, e => fixtureMenu(e, f, [f.id]));
   li.addEventListener('mouseenter', () => { ui.hoverFx = f.id; });
   li.addEventListener('mouseleave', () => { if (ui.hoverFx === f.id) ui.hoverFx = null; });
   // the selection moves together; but with its whole group selected, a fixture's row takes just that fixture (out of the group)
@@ -2845,6 +2863,7 @@ function renderSrcList() {
     const go = () => { loadSource(s.id); renderSrcList(); ui.rightTab = 'content'; renderRight(); commitSoft(); };
     tile.addEventListener('click', go);
     tile.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    onRightClick(tile, e => sourceMenu(e, s, go));
     tile.addEventListener('mouseenter', () => { ui.hoverSrc = s.id; });
     tile.addEventListener('mouseleave', () => { if (ui.hoverSrc === s.id) ui.hoverSrc = null; markThumb(s); });
     return tile;
@@ -3148,7 +3167,7 @@ function renderZoneInspector(body) {
   const sw = h('div', { class: 'swatches' }, TAGS.map(c => h('button', { type: 'button', class: z.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Zone color ' + c, onclick: () => { z.tag = c; commit(); renderRight(); } })));
   body.append(sec(null,
     h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon('zone')), 'Zone', h('span', { class: 'fill' }), sizeTxt),
-    row('Name', textInput(z, 'name', { aria: 'Zone name', onInput: () => refreshScenes(), onCommit: () => { commit(); renderSrcList(); } })),
+    row('Name', textInput(z, 'name', { id: 'zoneName', aria: 'Zone name', onInput: () => refreshScenes(), onCommit: () => { commit(); renderSrcList(); } })),
     row('Color', sw),
     row('Opacity', h('div', { class: 'slider' }, zoneOpacityInput(z, 150), h('span', { class: 'mono', 'data-zone-pct': z.id }, pct(z.opacity))))));
   body.append(sec('Area',
@@ -3183,6 +3202,7 @@ function zonesSection() {
       zoneTag(z), h('span', { class: 'zn' }, h('span', { class: 'nm' }, z.name), h('span', { class: 'sub' }, names.join(' · ') || 'Empty')),
       zoneOpacityInput(z, 64));
     reorderable(li, li, 'zone', () => [z.id], ([id], after) => moveZoneTo(id, z, after));
+    onRightClick(li, e => zoneMenu(e, z));
     list.append(li);
   }
   if (!project.zones.length) list.append(h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, 'No zones, so the output is black. Add one to play content.'));
@@ -3201,9 +3221,11 @@ function layersSection(z) {
     binders.push(() => { if (document.activeElement !== op) op.value = L.opacity; });
     const eye = h('button', { class: 'x eye', type: 'button', title: L.on ? 'Hide layer' : 'Show layer', 'aria-label': (L.on ? 'Hide' : 'Show') + ' layer ' + i,
       onclick: e => { e.stopPropagation(); L.on = !L.on; syncMedia(); commit(); renderRight(); renderSrcList(); } }, icon(L.on ? 'eye' : 'eyeOff'));
-    list.append(h('li', { class: (L === cur ? 'sel ' : '') + (L.on ? '' : 'off ') + (src ? '' : 'nosrc'), onclick: () => { ui.layer = L.id; renderRight(); renderSrcList(); } },
+    const li = h('li', { class: (L === cur ? 'sel ' : '') + (L.on ? '' : 'off ') + (src ? '' : 'nosrc'), onclick: () => { ui.layer = L.id; renderRight(); renderSrcList(); } },
       eye, h('span', { class: 'meta' }, i), h('span', { class: 'nm' }, src ? src.name : 'Empty'),
-      h('span', { class: 'meta' }, L.blend === 'alpha' ? '' : BLENDS[BLEND_IDX[L.blend]][1]), op));
+      h('span', { class: 'meta' }, L.blend === 'alpha' ? '' : BLENDS[BLEND_IDX[L.blend]][1]), op);
+    onRightClick(li, e => layerMenu(e, z, L));
+    list.append(li);
   }
   if (!z.layers.length) list.append(h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, 'No layers, so this zone is black. Add a layer, or click a source.'));
   return sec(null, h('h3', null, 'Layers', h('span', { style: { color: z.tag, letterSpacing: '.06em' } }, '· ' + z.name), h('span', { class: 'fill' }),
@@ -3617,11 +3639,15 @@ function storeScene(z) {
 }
 function sceneMenu(anchor, z, sc) {
   menu(anchor, [
+    !(anchor instanceof Element) && { head: `${sc.name} · ${z.name}` },
+    !(anchor instanceof Element) && ['Go to it' + (sc.fade > 0 ? ` (fade ${fmtV(sc.fade)} s)` : ''), () => goScene(z, sc)],
+    !(anchor instanceof Element) && sc.fade > 0 && ['Cut to it', () => goScene(z, sc, true), { key: '⇧click' }],
+    !(anchor instanceof Element) && '-',
     [`Update with ${z.name}'s current layers`, () => { sc.layers = snapshotLayers(z); z.scene = sc.id; commit(); toast(`${sc.name} updated`); }],
     ['Rename, fade time, color…', () => editScene(sc)],
     ['Duplicate', () => { const c = Object.assign(JSON.parse(JSON.stringify(sc)), { id: uid(), name: sc.name + ' copy' }); z.scenes.splice(z.scenes.indexOf(sc) + 1, 0, c); commit(); }],
     '-',
-    ['Delete', () => { z.scenes = z.scenes.filter(x => x !== sc); if (z.scene === sc.id) z.scene = null; commit(); toast(`${sc.name} deleted. Ctrl Z brings it back.`); }],
+    ['Delete', () => { z.scenes = z.scenes.filter(x => x !== sc); if (z.scene === sc.id) z.scene = null; commit(); toast(`${sc.name} deleted. Ctrl Z brings it back.`); }, { danger: true }],
   ]);
 }
 function editScene(sc) {
@@ -3659,6 +3685,7 @@ function sceneTile(z, sc, i, keys, look) {
     h('i', { class: 'prog' }));
   tile.style.setProperty('--tag', sc.tag);
   tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));
+  onRightClick(tile, e => sceneMenu(at(e), z, sc));
   tile.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); goScene(z, sc, e.shiftKey); } });
   tile.addEventListener('dragstart', e => { e.dataTransfer.setData(dragType('scene'), z.id + ':' + sc.id); e.dataTransfer.effectAllowed = 'move'; tile.classList.add('dragging'); });
   tile.addEventListener('dragend', () => tile.classList.remove('dragging'));
@@ -3701,6 +3728,7 @@ function renderScenes(body) {
     const r = h('div', { class: 'scenerow' + (z === sel ? ' sel' : '') }, head);
     head.title += '\nDrag it to change the order of the zones.';
     reorderable(head, r, 'zone', () => [z.id], ([id], after) => moveZoneTo(id, z, after));
+    onRightClick(head, e => zoneMenu(e, z));
     // a scene dropped on the row, but not on a scene, goes to the end of this zone's scenes
     r.addEventListener('dragover', e => {
       if (!e.dataTransfer.types.includes(dragType('scene'))) return;
@@ -3741,9 +3769,11 @@ function renderPatch(body) {
     const s = ctrlSummary(c);
     const ipOk = !!parseIP(c.ip);
     const badge = !ipOk ? h('span', { class: 'badge err' }, 'IP?') : !c.enabled ? h('span', { class: 'badge' }, 'OFF') : s.ovf ? h('span', { class: 'badge err' }, 'OVERFLOW') : h('span', { class: 'badge ok' }, 'ON');
-    items.append(h('div', { class: 'ctrl' + (c.id === ui.selCtrl ? ' sel' : ''), onclick: () => { ui.selCtrl = c.id; renderDock(); } },
+    const item = h('div', { class: 'ctrl' + (c.id === ui.selCtrl ? ' sel' : ''), onclick: () => { ui.selCtrl = c.id; renderDock(); } },
       h('div', { class: 't' }, h('span', { class: 'badge' }, ctrlLetter(c)), h('span', { class: 'nm' }, c.name), badge),
-      h('div', { class: 's mono' }, h('span', null, c.ip), h('span', null, `${s.used}/${s.cap} U · ${fmtN(s.px)} px`))));
+      h('div', { class: 's mono' }, h('span', null, c.ip), h('span', null, `${s.used}/${s.cap} U · ${fmtN(s.px)} px`)));
+    onRightClick(item, e => controllerMenu(e, c));
+    items.append(item);
   }
   if (!project.controllers.length) items.append(h('div', { class: 'empty' }, 'No controllers yet. Add one for each Art-Net node or pixel controller on your network.'));
   const list = h('div', { class: 'ctrl-list' }, items, h('div', { class: 'foot' },
@@ -3799,6 +3829,7 @@ function renderCtrlEditor(edit, c) {
         h('span', { class: 'tag', style: { background: fx.tag } }), h('span', { class: 'nm' }, fx.name), h('span', { class: 'px' }, pixelCount(fx)),
         h('button', { class: 'x', type: 'button', title: 'Unpatch', 'aria-label': 'Unpatch ' + fx.name, onclick: e => { e.stopPropagation(); unassign(fid); markPatch(); commit(); renderRight(); } }, icon('x')));
       chip.addEventListener('click', e => { if (e.shiftKey) ui.sel.add(fid); else ui.sel = new Set([fid]); onSelection(); });
+      onRightClick(chip, e => chipMenu(e, fid, c, o));
       chip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'fx:' + fid); e.dataTransfer.effectAllowed = 'move'; chip.classList.add('dragging'); });
       chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
       chips.append(chip);
@@ -3868,13 +3899,13 @@ function renderNodes(body) {
   } else {
     scroll.append(h('table', { class: 'table' },
       h('thead', null, h('tr', null, ['IP', 'Name', 'Output universes', 'MAC', 'Status', ''].map(t => h('th', null, t)))),
-      h('tbody', null, nodes.map(n => h('tr', null,
+      h('tbody', null, nodes.map(n => withRightClick(h('tr', null,
         h('td', { class: 'mono' }, n.ip),
         h('td', null, h('div', null, n.shortName || '—'), h('div', { class: 'muted', style: { fontSize: '11px' } }, n.longName)),
         h('td', { class: 'mono' }, n.outUniverses && n.outUniverses.length ? n.outUniverses.join(', ') : '—'),
         h('td', { class: 'mono' }, n.mac || '—'),
         h('td', { class: 'muted', style: { fontSize: '11px', maxWidth: '260px' } }, n.report || ''),
-        h('td', null, h('button', { class: 'btn sm', type: 'button', onclick: () => addNodeAsController(n) }, project.controllers.some(c => c.ip === n.ip) ? 'Add again' : 'Add as controller')))))));
+        h('td', null, h('button', { class: 'btn sm', type: 'button', onclick: () => addNodeAsController(n) }, project.controllers.some(c => c.ip === n.ip) ? 'Add again' : 'Add as controller'))), e => nodeMenu(e, n))))));
   }
   body.append(h('div', { class: 'nodes' }, bar, scroll));
 }
@@ -4255,15 +4286,209 @@ function classifyShape(P, pitch, label) {
 }
 
 /* ============================================================ menus */
+// A menu under an element (a button), or at a point (a right-click: { x, y } in window pixels).
+// Items: [label, action, { key, danger, disabled }], '-' for a line, { head: text } for a title; false is left out.
 function menu(anchor, items) {
   $$('.menu').forEach(m => m.remove());
-  const r = anchor.getBoundingClientRect();
-  const m = h('div', { class: 'menu', role: 'menu' }, items.map(it => it === '-' ? h('hr') : h('button', { type: 'button', role: 'menuitem', onclick: () => { m.remove(); it[1](); } }, it[0])));
+  const at = anchor instanceof Element ? null : anchor, r = at ? null : anchor.getBoundingClientRect();
+  const list = items.filter(Boolean).filter((it, i, a) => it !== '-' || (i > 0 && i < a.length - 1 && a[i - 1] !== '-' && !a[i - 1].head));
+  const close = () => { m.remove(); document.removeEventListener('pointerdown', off, true); removeEventListener('keydown', esc, true); removeEventListener('blur', close); removeEventListener('resize', close); };
+  const off = e => { if (!m.contains(e.target)) close(); };
+  const esc = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+  const m = h('div', { class: 'menu', role: 'menu' }, list.map(it => it === '-' ? h('hr') : it.head ? h('div', { class: 'mh' }, it.head)
+    : h('button', { type: 'button', role: 'menuitem', class: it[2] && it[2].danger ? 'danger' : '', disabled: !!(it[2] && it[2].disabled), onclick: () => { close(); it[1](); } },
+      it[0], it[2] && it[2].key ? h('span', { class: 'mk' }, it[2].key) : null)));
   document.body.append(m);
-  const w = m.offsetWidth;
-  m.style.left = Math.min(r.left, innerWidth - w - 8) + 'px';
-  m.style.top = (r.bottom + 4 + m.offsetHeight > innerHeight - 8 ? Math.max(8, r.top - m.offsetHeight - 4) : r.bottom + 4) + 'px';
-  setTimeout(() => document.addEventListener('pointerdown', function off(e) { if (!m.contains(e.target)) { m.remove(); document.removeEventListener('pointerdown', off); } }), 0);
+  const w = m.offsetWidth, ht = m.offsetHeight;
+  if (at) {
+    m.style.left = Math.max(8, Math.min(at.x, innerWidth - w - 8)) + 'px';
+    m.style.top = Math.max(8, at.y + ht > innerHeight - 8 ? at.y - ht : at.y) + 'px';
+  } else {
+    m.style.left = Math.min(r.left, innerWidth - w - 8) + 'px';
+    m.style.top = (r.bottom + 4 + ht > innerHeight - 8 ? Math.max(8, r.top - ht - 4) : r.bottom + 4) + 'px';
+  }
+  setTimeout(() => { document.addEventListener('pointerdown', off, true); addEventListener('keydown', esc, true); addEventListener('blur', close); addEventListener('resize', close); }, 0);
+}
+// Right-click on el opens the menu fn(e) builds
+function onRightClick(el, fn) {
+  el.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); fn(e); });
+}
+const withRightClick = (el, fn) => { onRightClick(el, fn); return el; };
+// Elsewhere, no browser menu (Back, Reload, Inspect…); text fields keep theirs for copy and paste
+document.addEventListener('contextmenu', e => { if (!e.target.closest('input, textarea, select, [contenteditable="true"]')) e.preventDefault(); });
+const at = e => ({ x: e.clientX, y: e.clientY });
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl ';
+
+/* ---------- right-click menus ---------- */
+function fixtureMenu(e, f, pick) {
+  if (!ui.sel.has(f.id)) { ui.sel = new Set(pick); onSelection(); }
+  const sel = selected(), one = sel.length === 1 ? sel[0] : null, ga = groupAction(sel);
+  const allOn = sel.every(x => x.enabled), allLocked = sel.every(x => x.locked);
+  const patched = sel.filter(x => x._patch), lines = sel.filter(x => x.type !== 'matrix'), g = wholeGroup(sel);
+  menu(at(e), [
+    { head: one ? one.name : g ? `${groupName(g)} · ${sel.length} fixtures` : `${sel.length} fixtures` },
+    one && ['Rename…', () => focusName('fxName'), { key: 'double-click' }],
+    g && ['Rename group…', () => focusName('grpName')],
+    ['Duplicate', duplicateSel, { key: MOD + 'D' }],
+    ga === 'group' && ['Group', groupSel, { key: MOD + 'G' }],
+    ga === 'ungroup' && ['Ungroup', ungroupSel, { key: MOD + '⇧G' }],
+    '-',
+    [allOn ? 'Disable' : 'Enable', () => { sel.forEach(x => { x.enabled = !allOn; }); commit(); renderRight(); }],
+    [allLocked ? 'Unlock' : 'Lock', () => { sel.forEach(x => { x.locked = !allLocked; }); commit(); renderRight(); }],
+    lines.length && ['Reverse direction', () => { lines.forEach(x => { x.reverse = !x.reverse; }); markGeom(); commit(); renderRight(); }],
+    [ui.outputMode === 'identify' ? 'Stop identify' : 'Identify', toggleIdentify, { key: 'I' }],
+    '-',
+    ['Bring to front', () => restackSel(true)],
+    ['Send to back', () => restackSel(false)],
+    [one ? 'New zone around it' : 'New zone around them', () => addZone(fixtureRect(sel, 6))],
+    '-',
+    patched.length && ['Show in Patch', () => showInPatch(patched[0])],
+    patched.length && [patched.length === 1 ? 'Unpatch' : `Unpatch ${patched.length} fixtures`, () => { patched.forEach(x => unassign(x.id)); markPatch(); commit(); renderRight(); }],
+    '-',
+    ['Delete', deleteSel, { key: 'Del', danger: true, disabled: allLocked }],
+  ]);
+}
+function groupMenu(e, g, m) {
+  const ids = m.map(f => f.id);
+  if (!ids.every(id => ui.sel.has(id)) || ui.sel.size !== ids.length) { ui.sel = new Set(ids); onSelection(); }
+  menu(at(e), [
+    { head: `${groupName(g)} · ${m.length} fixtures` },
+    ['Rename…', () => focusName('grpName'), { key: 'double-click' }],
+    ['Duplicate group', duplicateSel, { key: MOD + 'D' }],
+    ['Ungroup', ungroupSel, { key: MOD + '⇧G' }],
+    [g.open ? 'Fold' : 'Unfold', () => { g.open = !g.open; renderFxList(); saveSoon(); }],
+    '-',
+    ['Bring to front', () => restackSel(true)],
+    ['Send to back', () => restackSel(false)],
+    ['New zone around it', () => addZone(fixtureRect(m, 6))],
+    '-',
+    ['Delete group and its fixtures', deleteSel, { key: 'Del', danger: true, disabled: m.every(f => f.locked) }],
+  ]);
+}
+// The fixtures are drawn in list order, the last on top. A whole group moves as one; fixtures picked out of a
+// group move to the top or bottom of their group.
+function restackSel(front) {
+  const ids = new Set(ui.sel), units = selUnits();
+  const move = (arr, pick) => { const a = arr.filter(pick), b = arr.filter(f => !pick(f)); return front ? b.concat(a) : a.concat(b); };
+  let F = project.fixtures.slice();
+  for (const gid of new Set(units.filter(u => !u.g && u.list[0].group != null).map(u => u.list[0].group))) {
+    const at0 = F.findIndex(f => f.group === gid), members = F.filter(f => f.group === gid);
+    F.splice(at0, members.length, ...move(members, f => ids.has(f.id)));
+  }
+  const whole = new Set(units.filter(u => u.g || u.list[0].group == null).flatMap(u => u.list.map(f => f.id)));
+  if (whole.size) F = move(F, f => whole.has(f.id));
+  project.fixtures = F;
+  normalizeGroups(); markGeom(); commit(); renderRight();
+}
+function showInPatch(f) {
+  ui.dockTab = 'patch'; ui.dockCollapsed = false; ui.selCtrl = f._patch.ctrl.id;
+  renderDock();
+}
+function canvasMenu(e, x, y) {
+  const W = project.settings.compW, H = project.settings.compH;
+  const px = clamp(Math.round(snapV(x)), 0, W), py = clamp(Math.round(snapV(y)), 0, H);
+  const add = type => () => {
+    const f = type === 'line' ? draftFrom('line', px - 100, py, px + 100, py) : type === 'circle' ? draftFrom('circle', px, py, px + 60, py) : draftFrom('matrix', px - 80, py - 80, px + 80, py + 80);
+    f.name = nextName(type);
+    addFixture(f);
+  };
+  const z = hitZone(x, y);
+  menu(at(e), [
+    ['Add a strip here', add('line')],
+    ['Add a matrix here', add('matrix')],
+    ['Add a ring here', add('circle')],
+    ['Draw a path', () => setTool('path'), { key: 'P' }],
+    ['Draw with the pen', () => setTool('pen'), { key: 'N' }],
+    '-',
+    ['Select all', () => { ui.sel = new Set(project.fixtures.filter(f => !f.locked).map(f => f.id)); onSelection(); }, { key: MOD + 'A' }],
+    ['Fit to view', fitView, { key: 'F' }],
+    '-',
+    z && [`Zone: ${z.name}…`, () => zoneMenu(e, z)],
+    ['Import SVG…', () => $('#fileSvg').click()],
+  ]);
+}
+function zoneMenu(e, z) {
+  if (ui.zone !== z.id) selectZone(z);
+  const i = project.zones.indexOf(z), last = project.zones.length - 1, hidden = z.opacity === 0;
+  menu(at(e), [
+    { head: z.name },
+    ['Edit layers', () => { ui.rightTab = 'content'; showRight(true); renderRight(); }],
+    ['Rename, color, area…', () => renameZone(z)],
+    ['Store a scene', () => storeScene(z)],
+    '-',
+    [hidden ? 'Show (opacity 100%)' : 'Hide (opacity 0)', () => { setZoneOpacity(z, hidden ? 1 : 0); commit(); }],
+    ['Fit to selected fixtures', () => fitZone(z), { disabled: !ui.sel.size }],
+    ['Cover the whole canvas', () => { Object.assign(z, { x: 0, y: 0, w: project.settings.compW, h: project.settings.compH }); commit(); renderRight(); }],
+    '-',
+    ['Move up', () => moveZone(z, 1), { disabled: i === last }],
+    ['Move down', () => moveZone(z, -1), { disabled: i === 0 }],
+    ['Duplicate', () => duplicateZone(z)],
+    '-',
+    ['Delete zone', () => deleteZone(z), { danger: true }],
+  ]);
+}
+function renameZone(z) {
+  ui.zone = z.id;
+  if (ui.tool !== 'zone') setTool('zone');
+  focusName('zoneName');
+}
+function layerMenu(e, z, L) {
+  if (ui.layer !== L.id) { ui.layer = L.id; renderRight(); renderSrcList(); }
+  const i = z.layers.indexOf(L), src = srcById(L.src);
+  menu(at(e), [
+    { head: `Layer ${i + 1} · ${src ? src.name : 'Empty'}` },
+    [L.on ? 'Hide' : 'Show', () => { L.on = !L.on; syncMedia(); commit(); renderRight(); renderSrcList(); }],
+    src && ['Clear its source', () => { L.src = null; syncMedia(); commit(); renderRight(); renderSrcList(); }],
+    ['Add a layer above', () => addLayer(z)],
+    ['Duplicate', () => duplicateLayer(z, L)],
+    '-',
+    ['Move up', () => moveLayer(z, L, 1), { disabled: i === z.layers.length - 1 }],
+    ['Move down', () => moveLayer(z, L, -1), { disabled: i === 0 }],
+    '-',
+    ['Delete layer', () => removeLayer(z, L), { danger: true }],
+  ]);
+}
+function sourceMenu(e, s, play) {
+  const z = selZone(), L = selLayer(), n = z && L ? z.layers.indexOf(L) + 1 : 1;
+  const media = s.kind === 'image' || s.kind === 'video';
+  menu(at(e), [
+    { head: s.name },
+    ['Play in ' + (z ? `${z.name} layer ${n}` : 'a new layer'), play],
+    z && ['Play in a new layer', () => { addLayer(z); play(); }],
+    media && ['Relink file…', () => pickMedia(s)],
+    !s.builtin && '-',
+    !s.builtin && ['Remove source', () => removeSource(s), { danger: true }],
+  ]);
+}
+function controllerMenu(e, c) {
+  if (ui.selCtrl !== c.id) { ui.selCtrl = c.id; renderDock(); }
+  const n = c.chains.flat().length;
+  menu(at(e), [
+    { head: `${ctrlLetter(c)} · ${c.name} · ${c.ip}` },
+    ['Auto-patch onto it', autoPatch],
+    [c.enabled ? 'Turn its output off' : 'Turn its output on', () => { c.enabled = !c.enabled; markPatch(); commit(); }],
+    ['Unpatch all its fixtures', () => { c.chains = c.chains.map(() => []); markPatch(); commit(); renderRight(); toast(`${n} fixtures unpatched from ${c.name}. ${MOD}Z brings them back.`); }, { disabled: !n }],
+    '-',
+    ['Delete controller', () => { project.controllers = project.controllers.filter(x => x !== c); ui.selCtrl = null; markPatch(); commit(); renderRight(); toast(`${c.name} deleted. ${MOD}Z brings it back.`); }, { danger: true }],
+  ]);
+}
+function chipMenu(e, fid, c, o) {
+  const fx = fxById(fid), chain = c.chains[o], k = chain.indexOf(fid);
+  menu(at(e), [
+    { head: `${fx.name} · OUT ${o + 1}` },
+    ['Select it', () => { ui.sel = new Set([fid]); onSelection(); }],
+    ['Move to the start of the output', () => { assign(fid, c, o, 0); commit(); renderRight(); }, { disabled: k === 0 }],
+    ['Move to the end of the output', () => { assign(fid, c, o, -1); commit(); renderRight(); }, { disabled: k === chain.length - 1 }],
+    '-',
+    ['Unpatch', () => { unassign(fid); markPatch(); commit(); renderRight(); }, { danger: true }],
+  ]);
+}
+function nodeMenu(e, n) {
+  menu(at(e), [
+    { head: n.shortName || n.ip },
+    ['Add as controller', () => addNodeAsController(n)],
+    ['Copy IP address', () => { navigator.clipboard.writeText(n.ip).then(() => toast('Copied ' + n.ip), () => toast(n.ip)); }],
+  ]);
 }
 function projectMenu(anchor) {
   menu(anchor, [

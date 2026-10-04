@@ -126,6 +126,14 @@ async function start() {
     });
     if (choice === 0) e.preventDefault();  // preventDefault here means: close anyway
   });
+  // Right-click in a text field: cut, copy and paste. The interface has its own menus for everything else.
+  wc.on('context-menu', (e, params) => {
+    if (!params.isEditable) return;
+    Menu.buildFromTemplate([
+      { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
+      { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { type: 'separator' }, { role: 'selectAll' },
+    ]).popup({ window: win });
+  });
   // Project files and the patch list are downloads: ask where to save them.
   session.defaultSession.on('will-download', (e, item) => {
     item.setSaveDialogOptions({ defaultPath: path.join(app.getPath('documents'), item.getFilename()) });

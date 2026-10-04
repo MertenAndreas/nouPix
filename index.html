@@ -729,7 +729,7 @@ const FIXTURE_FIELDS = {
 function newFixture(type, props = {}) {
   const f = {
     id: uid(), type, name: nextName(type), enabled: true, locked: false,
-    tag: TAGS[project.fixtures.length % TAGS.length], order: 'RGB', reverse: false, dimmer: 1, trim: [1, 1, 1, 1],
+    tag: TAGS[project.fixtures.length % TAGS.length], order: 'RGB', reverse: false, dimmer: 1, trim: [1, 1, 1, 1], gamma: clampGamma(project.settings.gamma),
   };
   if (FIXTURE_FIELDS[type]) Object.assign(f, JSON.parse(JSON.stringify(FIXTURE_FIELDS[type])));
   return Object.assign(f, props);
@@ -794,6 +794,9 @@ function fixSettings(given) {
   return s;
 }
 let legacyTrim = [1, 1, 1, 1];
+// Gamma is set per fixture (LED types differ). Files from before had one gamma for all: each fixture starts from it.
+let legacyGamma = 1;
+const clampGamma = v => clamp(numOr(v, 1), 1, 3);
 function fixFixture(f, i, ids) {
   const fields = FIXTURE_FIELDS[f.type];
   for (const [k, d] of Object.entries(fields)) {
@@ -822,6 +825,7 @@ function fixFixture(f, i, ids) {
   f.dimmer = numOr(f.dimmer, 1);
   if (isObj(f.addr)) f.addr = { u: clamp(Math.round(numOr(f.addr.u, 0)), 0, 32767), ch: clamp(Math.round(numOr(f.addr.ch, 1)), 1, 512) }; else delete f.addr;
   f.trim = [0, 1, 2, 3].map(i => clamp(numOr(Array.isArray(f.trim) ? f.trim[i] : undefined, legacyTrim[i]), 0, 1));
+  f.gamma = clampGamma(numOr(f.gamma, legacyGamma));
   if (!('enabled' in f)) f.enabled = true;
   if (!('locked' in f)) f.locked = false;
   if (!('reverse' in f)) f.reverse = false;
@@ -853,6 +857,7 @@ function hydrate(p) {
   // up to 0.4 the red, green and blue trims were one setting for all fixtures: each fixture starts from it
   const gt = isObj(p.settings) && Array.isArray(p.settings.trim) ? p.settings.trim : [];
   legacyTrim = [0, 1, 2].map(i => clamp(numOr(gt[i], 1), 0, 1)).concat(1);
+  legacyGamma = clampGamma(out.settings.gamma);
   const fxIds = new Set(), ctrlIds = new Set();
   out.fixtures = (Array.isArray(p.fixtures) ? p.fixtures : []).filter(f => isObj(f) && TYPE_LABEL[f.type]).map((f, i) => fixFixture(f, i, fxIds));
   out.controllers = (Array.isArray(p.controllers) ? p.controllers : []).filter(isObj).map((c, i) => fixController(c, i, ctrlIds));
@@ -1723,14 +1728,20 @@ function testPattern(mode) {
 }
 
 /* ============================================================ output */
-const gammaLUT = new Uint8Array(256);
-let lutGamma = -1;
+// One lookup table per gamma value in use (fixtures have their own)
+const gammaLUTs = new Map();
+function gammaLUT(g) {
+  let t = gammaLUTs.get(g);
+  if (!t) {
+    if (gammaLUTs.size > 64) gammaLUTs.clear();   // dragging a slider makes many values
+    t = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) t[i] = Math.round(255 * Math.pow(i / 255, g));
+    gammaLUTs.set(g, t);
+  }
+  return t;
+}
 function buildOutput() {
   const s = project.settings;
-  if (lutGamma !== s.gamma) {
-    for (let i = 0; i < 256; i++) gammaLUT[i] = Math.round(255 * Math.pow(i / 255, s.gamma));
-    lutGamma = s.gamma;
-  }
   for (const U of universes) U.data.fill(0);
   const m = ui.blackout ? 0 : s.master;
   const wm = s.whiteMode;
@@ -1740,13 +1751,13 @@ function buildOutput() {
     const kr = dim * tr[0], kg = dim * tr[1], kb = dim * tr[2], kw = tr[3];
     const o = f._out;
     if (!o) { for (let j = 0; j < 3 * n; j += 3) { disp[j] = col[j] * kr; disp[j + 1] = col[j + 1] * kg; disp[j + 2] = col[j + 2] * kb; } continue; }
-    const lins = o.lin, oi = o.oi, nc = oi.length, unis = o.unis;
+    const lins = o.lin, oi = o.oi, nc = oi.length, unis = o.unis, lut = gammaLUT(f.gamma);
     const white = nc === 4 && wm !== 'off', sub = wm === 'sub';
     for (let i = 0, j = 0; i < n; i++, j += 3) {
       disp[j] = col[j] * kr; disp[j + 1] = col[j + 1] * kg; disp[j + 2] = col[j + 2] * kb;
       const lin = lins[i];
       if (lin < 0) continue;
-      let R = gammaLUT[disp[j]], G = gammaLUT[disp[j + 1]], B = gammaLUT[disp[j + 2]], W = 0;
+      let R = lut[disp[j]], G = lut[disp[j + 1]], B = lut[disp[j + 2]], W = 0;
       if (white) { W = Math.min(R, G, B); if (sub) { R -= W; G -= W; B -= W; } }
       for (let k = 0; k < nc; k++) {
         const c = oi[k], L = lin + k;
@@ -3034,6 +3045,7 @@ function renderInspector(body) {
   if (f.type !== 'matrix') P.push(numRow('Pixels', f, 'pixels', geo({ int: true, min: 1, max: 20000 })));
   P.push(row('Color order', selectEl(ORDERS.map(o => [o, o + (o.length === 4 ? '  (RGBW)' : o === 'W' ? '  (mono)' : '')]), f.order, v => { f.order = v; markPatch(); commit(); renderRight(); }, { aria: 'Color order' })));
   P.push(...trimRows([f]));
+  P.push(gammaRow([f]));
   if (f.type !== 'matrix') P.push(checkRow('Reverse direction', f, 'reverse', () => { markGeom(); commit(); }));
   P.push(sliderRow('Dimmer', f, 'dimmer', { min: 0, max: 1, step: 0.01, fmt: v => Math.round(v * 100) + '%', onCommit: commit }));
   body.append(sec('Pixels', P));
@@ -3046,6 +3058,13 @@ function renderInspector(body) {
 }
 // Red, green and blue trims (and white, for colour orders with W) scale that colour of the fixture's output, to
 // match fixtures that look different. With several fixtures, moving a slider sets it for all of them.
+// Gamma suits the LED type: about 2.2 to 2.8 for most addressable pixels, 1 for none. With several fixtures the
+// slider sets it for all of them.
+function gammaRow(list) {
+  const one = list.length === 1, tmp = { gamma: list[0].gamma }, mixed = !one && list.some(f => f.gamma !== list[0].gamma);
+  return sliderRow('Gamma', one ? list[0] : tmp, 'gamma', { min: 1, max: 3, step: 0.05, fmt: v => v.toFixed(2) + (mixed && v === list[0].gamma ? ' (mixed)' : ''),
+    onInput: v => { if (!one) list.forEach(f => { f.gamma = v; }); }, onCommit: commit });
+}
 function trimRows(list) {
   const hasW = list.some(f => f.order.includes('W')), one = list.length === 1, tmp = list[0].trim.slice();
   return [['Red trim', 0], ['Green trim', 1], ['Blue trim', 2], ['White trim', 3]].filter(([, i]) => i < 3 || hasW).map(([label, i]) =>
@@ -3138,6 +3157,7 @@ function renderMulti(body, sel) {
       sel.some(f => f.type !== 'matrix') ? row('Pixels each', pxIn) : null,
       row('Color order', selectEl([['', 'Mixed / keep'], ...ORDERS.map(o => [o, o])], sel.every(f => f.order === sel[0].order) ? sel[0].order : '', v => { if (!v) return; sel.forEach(f => { f.order = v; }); markPatch(); commit(); renderRight(); }, { aria: 'Color order for all' })),
       ...trimRows(sel),
+      gammaRow(sel),
       h('div', { class: 'actions' },
         h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { f.enabled = true; }); commit(); } }, 'Enable all'),
         h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { f.enabled = false; }); commit(); } }, 'Disable all'),
@@ -3445,9 +3465,12 @@ function renderSettings(body) {
   body.append(sec('Output',
     sliderRow('Frame rate', s, 'fps', { min: 1, max: 100, step: 1, fmt: v => v + ' fps', onCommit: () => { startClock(); commit(); } }),
     h('p', { class: 'note' }, 'Up to 100 frames a second; 40 is the default. Above 44, frames come faster than a DMX line can refresh: pixel controllers take them, but some DMX nodes skip frames.'),
-    sliderRow('Gamma', s, 'gamma', { min: 1, max: 3, step: 0.05, fmt: v => v.toFixed(2), onCommit: commit }),
+    sliderRow('Gamma for new fixtures', s, 'gamma', { min: 1, max: 3, step: 0.05, fmt: v => v.toFixed(2), onCommit: commit }),
+    h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', disabled: !project.fixtures.length, onclick: () => {
+      project.fixtures.forEach(f => { f.gamma = s.gamma; }); commit(); toast(`Gamma ${s.gamma.toFixed(2)} set on all ${project.fixtures.length} fixtures. ${MOD}Z undoes.`); } }, 'Apply to all fixtures')),
+    h('p', { class: 'note' }, 'Each fixture has its own gamma (Inspector → Pixels), as LED types differ. New fixtures start from this value.'),
     row('White (RGBW)', selectEl([['off', 'Off: W stays 0'], ['sub', 'W = min(RGB), subtract'], ['add', 'W = min(RGB), keep RGB']], s.whiteMode, v => { s.whiteMode = v; commit(); }, { aria: 'White channel mode' })),
-    h('p', { class: 'note' }, 'Colour trims are set per fixture, in the Inspector under Pixels.'),
+    h('p', { class: 'note' }, 'Colour trims and gamma are set per fixture, in the Inspector under Pixels.'),
     checkRow('Send ArtSync after each frame', s, 'artSync', commit),
     h('p', { class: 'note' }, 'ArtSync makes nodes that support it update all universes at the same moment. Leave it off if your controllers do not support it: some stop outputting while they wait for a sync.')));
   body.append(sec('Stage',
@@ -4599,6 +4622,7 @@ function pasteFixtures(d, point) {
   const list = d.fixtures.filter(f => isObj(f) && TYPE_LABEL[f.type]).map((f0, i) => {
     const f = JSON.parse(JSON.stringify(f0));
     delete f.id; delete f.addr; f.locked = false;
+    if (typeof f.gamma !== 'number') f.gamma = project.settings.gamma;
     const g = isId(f.group) && gmap.get(String(f.group));
     if (g) f.group = g.id; else delete f.group;
     fixFixture(f, i, ids);

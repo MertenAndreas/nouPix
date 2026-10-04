@@ -89,6 +89,8 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .btn.grpbtn:disabled { opacity: .3; }
 .btn.grpbtn.ready { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px rgba(60,200,255,.2), 0 0 10px rgba(60,200,255,.25); }
 .btn.grpbtn svg { width: 15px; height: 15px; }
+#fxList .glock svg { width: 10px; height: 10px; margin-left: 6px; vertical-align: -1px; }
+.btn.grpbtn.locked { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
 .btn.rev.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .btn svg { width: 15px; height: 15px; flex: none; }
 .btn-out { min-width: 118px; font-weight: 600; letter-spacing: 0.03em; }
@@ -428,6 +430,7 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
           <button class="btn sm" id="btnImportSvg" type="button" title="Import an SVG as fixtures and/or guide">SVG…</button>
           <button class="btn sm" id="btnAddFx" type="button">+ Add</button>
           <button class="btn sm grpbtn" id="btnGroup" type="button" disabled></button>
+          <button class="btn sm grpbtn" id="btnLock" type="button" disabled></button>
         </div>
         <div class="pbody"><ul class="list" id="fxList"></ul></div>
       </section>
@@ -588,6 +591,7 @@ const ICONS = {
   screen: '<svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 14h4M8 11v3" stroke="currentColor" stroke-width="1.4"/></svg>',
   eye: '<svg viewBox="0 0 16 16"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>',
   eyeOff: '<svg viewBox="0 0 16 16"><path d="M2 2l12 12M6.2 4A7 7 0 018 3.5C12 3.5 14.5 8 14.5 8a12 12 0 01-2 2.6M9.9 12.2A6 6 0 018 12.5C4 12.5 1.5 8 1.5 8a12 12 0 012.4-3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
+  unlock: '<svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 014.9-.7" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
   lock: '<svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
   zone: '<svg viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.5 1.8"/><rect x="1" y="2" width="3" height="3" fill="currentColor"/><rect x="12" y="11" width="3" height="3" fill="currentColor"/></svg>',
   x: '<svg viewBox="0 0 12 12" width="11" height="11"><path d="M3 3l6 6M9 3L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
@@ -2665,7 +2669,7 @@ function groupRow(g, m, whole) {
   const li = h('li', { class: 'grp' + (whole ? ' sel' : '') + (g.open ? '' : ' shut'), draggable: true, 'data-group': g.id,
     title: `${groupName(g)} · group of ${m.length} · ${fmtN(px)} px\nClick to select all of it. Drag it to move it, or onto a patch output. Drop fixtures on it to add them.` },
     chev, h('span', { class: 'ty' }, icon('group')),
-    h('span', { class: 'nm' }, groupName(g), h('span', { class: 'cnt' }, m.length)),
+    h('span', { class: 'nm' }, groupName(g), h('span', { class: 'cnt' }, m.length), m.every(f => f.locked) ? h('span', { class: 'muted glock', title: 'Locked' }, icon('lock')) : null),
     h('span', { class: 'meta' }, fmtN(px) + 'px'), groupBadge(m));
   li.style.setProperty('--gtag', g.tag);
   li.addEventListener('click', e => {
@@ -2705,6 +2709,7 @@ function renderFxList() {
   });
   ul.replaceChildren(...rows);
   updateGroupButton();
+  updateLockButton();
 }
 // The Group button in the Fixtures header: Group with two or more fixtures selected, Ungroup when the selection is
 // a group or one fixture inside a group, dimmed otherwise
@@ -2718,6 +2723,26 @@ function updateGroupButton() {
   b.disabled = !a; b.classList.toggle('ready', !!a);
   b.title = a === 'ungroup' ? 'Ungroup: keep the fixtures, remove the group (Ctrl Shift G)' : a === 'group' ? 'Group the selected fixtures (Ctrl G)' : 'Group: select two or more fixtures (Ctrl G)';
   b.setAttribute('aria-label', a === 'ungroup' ? 'Ungroup' : 'Group');
+}
+// The Lock button beside Group: locks the selection (fixtures, or whole groups), or unlocks it when all of it is
+// locked already. Locked fixtures can't be moved, nudged, aligned or deleted.
+function lockAction(sel = selected()) { return !sel.length ? null : sel.every(f => f.locked) ? 'unlock' : 'lock'; }
+function updateLockButton() {
+  const b = $('#btnLock'), a = lockAction(), g = wholeGroup();
+  const what = g ? 'the group' : 'the selected fixtures';
+  b.replaceChildren(icon(a === 'unlock' ? 'lock' : 'unlock'));
+  b.disabled = !a; b.classList.toggle('locked', a === 'unlock');
+  b.title = a === 'unlock' ? `Locked. Click to unlock ${what} (${MOD}L)` : a === 'lock' ? `Lock ${what} so ${g ? 'it' : 'they'} can't be moved or deleted (${MOD}L)` : `Lock: select fixtures or a group first (${MOD}L)`;
+  b.setAttribute('aria-label', a === 'unlock' ? 'Unlock' : 'Lock');
+  b.setAttribute('aria-pressed', String(a === 'unlock'));
+}
+function toggleLockSel() {
+  const sel = selected(), a = lockAction(sel), g = wholeGroup(sel);
+  if (!a) return;
+  sel.forEach(f => { f.locked = a === 'lock'; });
+  commit(); renderRight();
+  const what = g ? groupName(g) : sel.length === 1 ? sel[0].name : `${sel.length} fixtures`;
+  toast(a === 'lock' ? `${what} locked: ${g || sel.length > 1 ? 'they' : 'it'} can't be moved or deleted until unlocked.` : `${what} unlocked.`);
 }
 function fixtureRow(f) {
   const li = h('li', { class: (ui.sel.has(f.id) ? 'sel ' : '') + (f.enabled ? '' : 'off'), draggable: true, 'data-id': f.id, title: `${f.name} · ${TYPE_LABEL[f.type]} · ${pixelCount(f)} px · ${f.order}\nDrag to change the order, into or out of a group, or onto a patch output` },
@@ -2913,7 +2938,7 @@ function renderInspector(body) {
         '<code>Alt</code> while dragging turns snapping off · <code>Shift</code> constrains<br>' +
         '<code>Ctrl C</code> / <code>Ctrl X</code> / <code>Ctrl V</code> copy, cut, paste fixtures (also into another project) · <code>Ctrl D</code> duplicate · <code>Del</code> delete · arrows nudge (<code>Shift</code> ×10)<br>' +
         'Right-click anything for its options: patch to an output, paste here, delete a zone or a scene…<br>' +
-        '<code>H</code> hides this panel · <code>Ctrl G</code> group · <code>Ctrl Shift G</code> ungroup · double-click a fixture of a group to select just it<br>' +
+        '<code>H</code> hides this panel · <code>Ctrl G</code> group · <code>Ctrl Shift G</code> ungroup · <code>Ctrl L</code> lock or unlock · double-click a fixture of a group to select just it<br>' +
         '<code>Ctrl Z</code> undo · <code>Ctrl S</code> save · <code>B</code> blackout · <code>I</code> identify<br>' +
         '<code>Z</code> zones · <code>1</code>–<code>9</code> scenes of the selected zone (<code>Shift</code> cuts)' })));
     return;
@@ -3071,7 +3096,8 @@ function renderMulti(body, sel) {
       h('div', { class: 'actions' },
         h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { f.enabled = true; }); commit(); } }, 'Enable all'),
         h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { f.enabled = false; }); commit(); } }, 'Disable all'),
-        h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { if (f.type !== 'matrix') f.reverse = !f.reverse; }); markGeom(); commit(); } }, 'Flip direction'))),
+        h('button', { class: 'btn', type: 'button', onclick: () => { sel.forEach(f => { if (f.type !== 'matrix') f.reverse = !f.reverse; }); markGeom(); commit(); } }, 'Flip direction'),
+        h('button', { class: 'btn', type: 'button', title: `${MOD}L, or the lock button above the fixture list`, onclick: toggleLockSel }, lockAction(sel) === 'unlock' ? (g ? 'Unlock group' : 'Unlock all') : (g ? 'Lock group' : 'Lock all')))),
     arrangeSection(sel),
     outputSection(sel),
     sec(null, h('div', { class: 'actions' },
@@ -3424,6 +3450,9 @@ function unfoldForSelection() {
 function deleteSel() {
   const ids = new Set(ui.sel);
   if (!ids.size) return;
+  const keep = selected().filter(f => f.locked).length;
+  if (keep === ids.size) { toast(`Locked, so not deleted. Unlock ${keep === 1 ? 'it' : 'them'} first (${MOD}L).`, 'warn'); return; }
+  if (keep) toast(`${keep} locked fixture${keep === 1 ? '' : 's'} kept. Unlock ${keep === 1 ? 'it' : 'them'} to delete ${keep === 1 ? 'it' : 'them'} too.`, 'warn');
   project.fixtures = project.fixtures.filter(f => !ids.has(f.id) || f.locked);
   normalizeGroups();   // a group with nothing left goes too
   for (const id of ids) if (!fxById(id)) unassign(id);
@@ -4425,7 +4454,7 @@ function fixtureMenu(e, f, pick) {
     ga === 'ungroup' && ['Ungroup', ungroupSel, { key: MOD + '⇧G' }],
     '-',
     [allOn ? 'Disable' : 'Enable', () => { sel.forEach(x => { x.enabled = !allOn; }); commit(); renderRight(); }],
-    [allLocked ? 'Unlock' : 'Lock', () => { sel.forEach(x => { x.locked = !allLocked; }); commit(); renderRight(); }],
+    [allLocked ? 'Unlock' : 'Lock', toggleLockSel, { key: MOD + 'L' }],
     lines.length && ['Reverse direction', () => { lines.forEach(x => { x.reverse = !x.reverse; }); markGeom(); commit(); renderRight(); }],
     [ui.outputMode === 'identify' ? 'Stop identify' : 'Identify', toggleIdentify, { key: 'I' }],
     '-',
@@ -4450,6 +4479,7 @@ function groupMenu(e, g, m) {
     ['Duplicate group', duplicateSel, { key: MOD + 'D' }],
     ['Ungroup', ungroupSel, { key: MOD + '⇧G' }],
     [g.open ? 'Fold' : 'Unfold', () => { g.open = !g.open; renderFxList(); saveSoon(); }],
+    [m.every(f => f.locked) ? 'Unlock group' : 'Lock group', toggleLockSel, { key: MOD + 'L' }],
     '-',
     ['Bring to front', () => restackSel(true)],
     ['Send to back', () => restackSel(false)],
@@ -4861,6 +4891,7 @@ function initUI() {
   $$('#rightTabs button').forEach(b => b.addEventListener('click', () => { ui.rightTab = b.dataset.tab; savePrefs(); renderRight(); }));
   $$('#dockTabs button[data-tab]').forEach(b => b.addEventListener('click', () => { ui.dockTab = b.dataset.tab; ui.dockCollapsed = false; savePrefs(); renderDock(); }));
   $('#btnGroup').addEventListener('click', () => { groupAction() === 'ungroup' ? ungroupSel() : groupSel(); });
+  $('#btnLock').addEventListener('click', toggleLockSel);
   $('#btnRight').replaceChildren(icon('panel'));
   $('#btnRight').addEventListener('click', () => showRight(ui.rightHidden));
   $('#btnHideRight').addEventListener('click', () => showRight(false));
@@ -4914,6 +4945,7 @@ function onKey(e) {
   if (mod && k === 'y') { e.preventDefault(); redo(); return; }
   if (mod && k === 'd') { e.preventDefault(); duplicateSel(); return; }
   if (mod && k === 'g') { e.preventDefault(); e.shiftKey ? ungroupSel() : groupSel(); return; }
+  if (mod && k === 'l') { e.preventDefault(); toggleLockSel(); return; }
   if (mod && k === 'a') { e.preventDefault(); ui.sel = new Set(project.fixtures.filter(f => !f.locked).map(f => f.id)); onSelection(); return; }
   if (mod) return;
   const digit = /^Digit([1-9])$/.exec(e.code);

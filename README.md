@@ -163,6 +163,8 @@ To work on the app: `cd desktop && npm install && npm start` runs it from the so
 
 The logo is `icons/openledmapper.svg`. The app icons made from it are `openledmapper.ico` (Windows, and the browser tab icon), `openledmapper.icns` (macOS) and `openledmapper-256.png`. If you change the SVG, export these again.
 
+The logo is `icons/openledmapper.svg`. The app icons made from it are `openledmapper.ico` (Windows, and the browser tab icon), `openledmapper.icns` (macOS) and `openledmapper-256.png`. If you change the SVG, export these again.
+
 ## Credits
 
 The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence), bundled inside `index.html`.

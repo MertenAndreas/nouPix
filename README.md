@@ -44,6 +44,8 @@ On Windows, allow openLedMapper (or Python) through the firewall on private netw
 5. **Scenes.** When a zone's look is right, press **+ Store** on its row in the Scenes panel.
 6. **Art-Net ON.**
 
+**Ovals.** A circle stretches into an oval: drag its top handle on the stage to change its height and its side handle to change its width, or set **Radius X** and **Y** in the Inspector (**Make it round** brings it back). Its pixels are spaced evenly along the curve, as on a real strip. Ellipses in an imported SVG become ovals.
+
 **Pen** (`N`) draws curved strips as in Illustrator: click for a corner point, click and drag to pull out the handles of a smooth point, click the first point to close the shape, double-click or `Enter` to finish (`Backspace` removes the last point, `Esc` cancels). Pixels are spaced evenly along the curve. On a selected path, drag a handle to reshape the curve (the point's other handle turns with it; hold `Alt` to move one handle on its own), and double-click a point to switch it between smooth and corner.
 
 With **Wiring** on, the stage also draws the data cable between fixtures chained on one output: a thin dashed line with an arrow from the last pixel of one to the first pixel of the next.

@@ -1,32 +1,10 @@
-# PyInstaller recipe for the openLedMapper apps:  pip install pyinstaller && pyinstaller openledmapper.spec
-# Windows: dist/openLedMapper.exe (one file). macOS: dist/openLedMapper.app, for the processor of the Mac that
-# builds it. Neither opens a terminal window: the packed server runs in background mode (see openledmapper.py).
-# .github/workflows/release.yml builds them on GitHub for every version tag.
-import re
-import sys
-
-VERSION = re.search(r'^VERSION = "(.+)"', open("openledmapper.py", encoding="utf-8").read(), re.M).group(1)
+# PyInstaller recipe for the Art-Net bridge inside the desktop app:  pip install pyinstaller && pyinstaller openledmapper.spec
+# Builds dist/openledmapper-bridge/ (a folder: it starts faster than a one-file build and isn't unpacked on every
+# launch). The Electron app in desktop/ bundles that folder and runs it with --embedded.
+# .github/workflows/release.yml builds it, then the app, on GitHub for every version tag.
 
 a = Analysis(["openledmapper.py"], datas=[("index.html", "."), ("icons/openledmapper.ico", "icons")])
 pyz = PYZ(a.pure)
-
-if sys.platform == "darwin":
-    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="openLedMapper", console=False,
-              icon="icons/openledmapper.icns")
-    coll = COLLECT(exe, a.binaries, a.datas, name="openLedMapper")
-    app = BUNDLE(
-        coll,
-        name="openLedMapper.app",
-        icon="icons/openledmapper.icns",
-        bundle_identifier="studio.nouled.openledmapper",
-        version=VERSION,
-        info_plist={
-            "CFBundleShortVersionString": VERSION,
-            "CFBundleVersion": VERSION,
-            "LSUIElement": True,  # no Dock icon of its own: the openLedMapper window is the app
-            "NSHumanReadableCopyright": "GPL-3.0",
-        },
-    )
-else:
-    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="openLedMapper", console=False,
-              icon="icons/openledmapper.ico")
+# A console program, so the app can read its output; the app starts it without a console window.
+exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="openledmapper-bridge", console=True)
+coll = COLLECT(exe, a.binaries, a.datas, name="openledmapper-bridge")

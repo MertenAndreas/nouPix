@@ -16,11 +16,16 @@ Python 3.8+ and the standard library only. No installs needed.
     python3 openledmapper.py --bind-ip 2.0.0.10 # send Art-Net from a specific network card
     python3 openledmapper.py --default-browser  # use your normal browser instead of its own window
     python3 openledmapper.py --no-browser
+    python3 openledmapper.py --background       # no terminal needed: see BACKGROUND below
+
+The downloadable apps (openLedMapper.exe, openLedMapper.app) are this script packed with
+PyInstaller (openledmapper.spec) and always run in background mode.
 """
 
 import argparse
 import base64
 import hashlib
+import http.client
 import http.server
 import json
 import os
@@ -35,7 +40,8 @@ import urllib.parse
 import webbrowser
 
 VERSION = "0.5.2"
-HERE = os.path.dirname(os.path.abspath(__file__))
+FROZEN = getattr(sys, "frozen", False)  # running as the packed app, not as a script
+HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 ARTNET_PORT = 6454
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 ARTNET_ID = b"Art-Net\x00"
@@ -370,6 +376,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         art = self.server.artnet
         ws = WebSocket(self.rfile, self.wfile)
+        self.server.window_count(+1)
         on_node = lambda node: ws.send_json({"t": "node", "node": node})
         art.listeners.add(on_node)
         ws.send_json({
@@ -400,6 +407,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             pass
         finally:
             ws.alive = False
+            self.server.window_count(-1)
             art.listeners.discard(on_node)
             if art.owner is ws:
                 art.owner = None
@@ -429,6 +437,77 @@ class Server(http.server.ThreadingHTTPServer):
     # Lets it restart on the same port right after it stops. Not on Windows, where it would let a second
     # copy open the same port instead of moving to the next one.
     allow_reuse_address = os.name != "nt"
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.windows, self.seen_window, self.windows_changed = 0, False, time.monotonic()
+        self.windows_lock = threading.Lock()
+
+    def window_count(self, delta):
+        """Counts the interface pages connected over the WebSocket."""
+        with self.windows_lock:
+            self.windows += delta
+            self.seen_window = True
+            self.windows_changed = time.monotonic()
+
+
+# --------------------------------------------------------------------------- background mode
+# BACKGROUND: the apps have no terminal window, so there is nothing to close to stop the server. Instead it
+# stops by itself a few seconds after the last openLedMapper window closes; starting it again while it runs
+# only opens another window to the running copy; and what it would print goes to a log file.
+
+LOG_FILE = os.path.join(os.path.expanduser("~"), ".openledmapper", "openledmapper.log")
+QUIT_AFTER_CLOSE = 10.0     # seconds with no window before it stops (a page reload takes far less)
+QUIT_IF_NO_WINDOW = 120.0   # ...or after starting, if no window ever connects
+
+
+def log_to_file():
+    """Sends print() and errors to LOG_FILE, started afresh each run."""
+    try:
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        sys.stdout = sys.stderr = open(LOG_FILE, "w", buffering=1, encoding="utf-8", errors="replace")
+    except OSError:
+        sys.stdout = sys.stderr = open(os.devnull, "w")
+
+
+def alert(msg):
+    """Shows an error where the user sees it, since there is no terminal to print it in."""
+    try:
+        if sys.platform == "win32":
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, msg, "openLedMapper", 0x10)  # MB_ICONERROR
+        elif sys.platform == "darwin":
+            text = msg.replace("\\", "\\\\").replace('"', '\\"')
+            subprocess.run(["osascript", "-e", 'display alert "openLedMapper" message "%s" as critical' % text],
+                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+    except Exception:
+        pass
+
+
+def running_copy(host, first_port):
+    """The address of an openLedMapper already running on one of the ports this one would try, or None."""
+    for port in range(first_port, first_port + 10):
+        conn = http.client.HTTPConnection(host, port, timeout=0.5)
+        try:
+            conn.request("GET", "/favicon.ico")
+            if conn.getresponse().getheader("Server", "").startswith("openLedMapper/"):
+                return "http://%s:%d/" % (host, port)
+        except (OSError, http.client.HTTPException):
+            pass
+        finally:
+            conn.close()
+    return None
+
+
+def quit_when_closed(server):
+    while True:
+        time.sleep(1.0)
+        with server.windows_lock:
+            windows, seen, idle = server.windows, server.seen_window, time.monotonic() - server.windows_changed
+        if windows <= 0 and idle > (QUIT_AFTER_CLOSE if seen else QUIT_IF_NO_WINDOW):
+            log("No openLedMapper window open%s. Stopping." % ("" if seen else " since it started"))
+            server.shutdown()
+            return
 
 
 # --------------------------------------------------------------------------- app window
@@ -497,8 +576,52 @@ def main():
     ap.add_argument("--default-browser", action="store_true", help="open the interface in your default browser instead of its own window")
     ap.add_argument("--browser-path", help="Chrome, Edge or Chromium executable for its window (found automatically)")
     ap.add_argument("--no-browser", action="store_true", help="don't open any window")
-    args = ap.parse_args()
+    ap.add_argument("--background", action="store_true", help="run without a terminal: log to %s and stop when the "
+                    "last window closes (always on in the apps)" % LOG_FILE.replace("%", "%%"))
+    # macOS used to pass -psn_... to apps opened from the Finder
+    args = ap.parse_args([a for a in sys.argv[1:] if not a.startswith("-psn_")])
+    background = args.background or FROZEN
+    if background and not args.no_browser and show_running_copy(args):
+        return
+    if background:
+        log_to_file()
+        try:
+            run(args, background)
+        except SystemExit as e:
+            if e.code not in (None, 0):
+                alert(str(e.code))
+            raise
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            alert("openLedMapper stopped because of an error. Details are in %s" % LOG_FILE)
+            sys.exit(1)
+    else:
+        run(args, background)
 
+
+def show_running_copy(args):
+    """If openLedMapper is already running, opens another window to it (instead of starting a second copy
+    with its own port, without discovery) and returns True. Leaves the running copy's log alone."""
+    url = running_copy(shown_host(args), args.port)
+    if not url:
+        return False
+    exe = None if args.default_browser else (args.browser_path or find_browser())
+    if exe:
+        try:
+            open_window(exe, url)
+            return True
+        except OSError:
+            pass
+    webbrowser.open(url)
+    return True
+
+
+def shown_host(args):
+    return "127.0.0.1" if args.host in ("0.0.0.0", "") else args.host
+
+
+def run(args, background):
     art = ArtNet(args.bind_ip, args.bind_port)
     server = None
     for port in range(args.port, args.port + 10):
@@ -510,8 +633,7 @@ def main():
     if server is None:
         sys.exit("Could not open a web port between %d and %d." % (args.port, args.port + 9))
     server.artnet = art
-    shown = "127.0.0.1" if args.host in ("0.0.0.0", "") else args.host
-    url = "http://%s:%d/" % (shown, server.server_address[1])
+    url = "http://%s:%d/" % (shown_host(args), server.server_address[1])
 
     exe = None if args.no_browser or args.default_browser else (args.browser_path or find_browser())
     print("")
@@ -528,7 +650,10 @@ def main():
     else:
         print("  Discovery   off - %s" % art.discovery_note)
     print("  This PC     %s" % ", ".join(local_ips()))
-    print("  Press Ctrl+C to stop.")
+    if background and not args.no_browser:
+        print("  Stops       %d s after the last openLedMapper window closes" % QUIT_AFTER_CLOSE)
+    else:
+        print("  Press Ctrl+C to stop.")
     print("")
 
     def open_ui():
@@ -540,6 +665,8 @@ def main():
         webbrowser.open(url)
     if not args.no_browser:
         threading.Timer(0.6, open_ui).start()
+        if background:
+            threading.Thread(target=quit_when_closed, args=(server,), daemon=True).start()
     try:
         server.serve_forever(poll_interval=0.25)
     except KeyboardInterrupt:

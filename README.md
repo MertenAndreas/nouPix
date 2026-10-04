@@ -6,20 +6,29 @@ The interface runs in your browser. `openledmapper.py` is a small local server t
 
 ## Start
 
-You need Python 3.8 or newer. Nothing else to install.
+**The app (Windows and macOS).** Download it from the [Releases](https://github.com/nouled-studio/openLEDmapper/releases) page: `…-windows.exe`, `…-macos-apple-silicon.zip` (Macs with an M1 or newer) or `…-macos-intel.zip`. Nothing else to install. On a Mac, unzip it and move `openLedMapper.app` to Applications.
+
+The apps aren't signed yet, so the first time you open one:
+
+- **Windows:** SmartScreen says it protected your PC. Click **More info → Run anyway**.
+- **macOS:** it says the app can't be checked. Click **Done**, then open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to openLedMapper.
+
+The app has no terminal window: it starts in the background and opens the openLedMapper window. To stop it, close that window; it quits about 10 seconds later. Opening the app again while it runs just opens another window. What it would print goes to `~/.openledmapper/openledmapper.log` (on Windows, `C:\Users\<you>\.openledmapper\openledmapper.log`).
+
+**From the source (any system, including Linux).** You need Python 3.8 or newer. Nothing else to install.
 
 - **Windows:** double-click `start-openledmapper.bat`
 - **macOS:** double-click `start-openledmapper.command` (the first time, right-click → Open)
-- **Any system:** `python3 openledmapper.py`
+- **Any system:** `python3 openledmapper.py` (add `--background` to run it without a terminal, as the apps do)
 
-openLedMapper opens in its own window at `http://127.0.0.1:8080/`, using Chrome or Edge (or Chromium or Brave) started with the switches that stop the browser from slowing down or pausing a hidden window. You can minimise it or cover it with other windows and the output keeps running. Keep the terminal window open: closing it stops the Art-Net output. Closing the openLedMapper window stops it too, which is why it asks before it closes while Art-Net is on.
+openLedMapper opens in its own window at `http://127.0.0.1:8080/`, using Chrome or Edge (or Chromium or Brave) started with the switches that stop the browser from slowing down or pausing a hidden window. You can minimise it or cover it with other windows and the output keeps running. Run from the source, keep the terminal window open: closing it stops the Art-Net output. Closing the openLedMapper window stops it too, which is why it asks before it closes while Art-Net is on.
 
 The openLedMapper window has its own browser profile (in `~/.openledmapper/browser-profile`), so it doesn't share settings or storage with your normal browser. The project kept by Weft, as this app was called before, carries over: the first time, its profile folder `~/.weft` is renamed to `~/.openledmapper`. If you have a project from an earlier version open in your normal browser, save it there with **Project → Save project file** and open that file in the openLedMapper window.
 
 - `--default-browser` opens your normal browser instead (output can then slow down when that window is hidden).
 - `--browser-path PATH` picks the browser if it isn't found automatically.
 
-On Windows, allow Python through the firewall on private networks when asked, otherwise node discovery won't receive replies.
+On Windows, allow openLedMapper (or Python) through the firewall on private networks when asked, otherwise node discovery won't receive replies.
 
 ## Workflow
 
@@ -98,7 +107,7 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 ## Keeping the output running
 
 - The openLedMapper window keeps rendering when minimised or covered (see Start). While Art-Net is on, the page also holds a browser lock that stops Chrome from freezing it, and videos the browser pauses in the background are restarted.
-- If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal prints when that starts and when frames come back.
+- If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal (or the app's log file) shows when that starts and when frames come back.
 - Only one openLedMapper window sends at a time. Switching Art-Net on in a second window switches it off in the first.
 - If the graphics driver resets (after a driver update, or when a laptop switches graphics chips), the output holds its last colours until the browser restores the GPU, then openLedMapper carries on by itself.
 - On very large projects, or with a slow GPU, the stage preview is redrawn less often than the output is sent, so the Art-Net frame rate holds. The status bar shows the output frame rate.
@@ -135,6 +144,15 @@ Circles, arcs, lines and paths become fixtures, fitted into the composition. Cir
 ## Limits of this version
 
 Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture instead. Rendering lives in the openLedMapper window, so closing it stops the output. It's been tested in Chromium; Firefox and Safari should work but are less tested and don't get the keep-running switches.
+
+## Building the apps
+
+GitHub builds the apps (`.github/workflows/release.yml`, using PyInstaller and `openledmapper.spec`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
+
+1. Set `VERSION` in `openledmapper.py` (and the README title), and commit.
+2. Tag it with the same version and push the tag: `git tag v0.5.3 && git push origin v0.5.3`.
+
+The three apps are built, started once to check they serve the interface, and attached to a new release on the Releases page, in about 5 minutes. A tag that doesn't match `VERSION` fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run. To build one yourself: `pip install pyinstaller && pyinstaller openledmapper.spec` (it lands in `dist/`).
 
 ## Credits
 

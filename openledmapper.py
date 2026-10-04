@@ -334,10 +334,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == "/ws" and self.headers.get("Upgrade", "").lower() == "websocket":
             return self.websocket()
         if path == "/favicon.ico":
-            self.send_response(204)
-            self.send_header("Content-Length", "0")
-            self.end_headers()
-            return
+            return self.send_file(os.path.join(HERE, "icons", "openledmapper.ico"), "image/x-icon")
         if path in ("/", "/index.html"):
             return self.send_file(os.path.join(HERE, "index.html"), "text/html; charset=utf-8")
         self.send_error(404)
@@ -347,7 +344,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with open(fn, "rb") as f:
                 body = f.read()
         except OSError:
-            return self.send_error(404, "index.html not found next to openledmapper.py")
+            return self.send_error(404, "%s not found next to openledmapper.py" % os.path.relpath(fn, HERE))
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))

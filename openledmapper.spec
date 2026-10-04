@@ -7,15 +7,17 @@ import sys
 
 VERSION = re.search(r'^VERSION = "(.+)"', open("openledmapper.py", encoding="utf-8").read(), re.M).group(1)
 
-a = Analysis(["openledmapper.py"], datas=[("index.html", ".")])
+a = Analysis(["openledmapper.py"], datas=[("index.html", "."), ("icons/openledmapper.ico", "icons")])
 pyz = PYZ(a.pure)
 
 if sys.platform == "darwin":
-    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="openLedMapper", console=False)
+    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="openLedMapper", console=False,
+              icon="icons/openledmapper.icns")
     coll = COLLECT(exe, a.binaries, a.datas, name="openLedMapper")
     app = BUNDLE(
         coll,
         name="openLedMapper.app",
+        icon="icons/openledmapper.icns",
         bundle_identifier="studio.nouled.openledmapper",
         version=VERSION,
         info_plist={
@@ -26,4 +28,5 @@ if sys.platform == "darwin":
         },
     )
 else:
-    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="openLedMapper", console=False)
+    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="openLedMapper", console=False,
+              icon="icons/openledmapper.ico")

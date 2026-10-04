@@ -154,6 +154,8 @@ GitHub builds the apps (`.github/workflows/release.yml`, using PyInstaller and `
 
 The three apps are built, started once to check they serve the interface, and attached to a new release on the Releases page, in about 5 minutes. A tag that doesn't match `VERSION` fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run. To build one yourself: `pip install pyinstaller && pyinstaller openledmapper.spec` (it lands in `dist/`).
 
+The logo is `icons/openledmapper.svg`. The app icons made from it are `openledmapper.ico` (Windows, and the browser tab icon), `openledmapper.icns` (macOS) and `openledmapper-256.png`. If you change the SVG, export these again.
+
 ## Credits
 
 The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence), bundled inside `index.html`.

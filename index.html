@@ -796,6 +796,7 @@ function fixFixture(f, i, ids) {
     if (!['TL', 'TR', 'BL', 'BR'].includes(f.start)) f.start = 'TL';
     if (f.dir !== 'H' && f.dir !== 'V') f.dir = 'H';
   } else f.pixels = Math.min(f.pixels, 1e6);
+  if (f.type === 'circle' && 'ry' in f) { const ry = numOr(f.ry, NaN); if (ry > 0) f.ry = ry; else delete f.ry; }
   if (f.type === 'path') {
     const P = Array.isArray(f.pts) && f.pts.every(v => typeof v === 'number' && isFinite(v)) ? f.pts : (Array.isArray(f.pts) ? f.pts : []).map(v => numOr(v, NaN)).filter(isFinite);
     if (P.length % 2) P.pop();
@@ -969,9 +970,26 @@ function pathLength(f) {
   if (f.closed && P.length >= 4) L += Math.hypot(P[0] - P[P.length - 2], P[1] - P[P.length - 1]);
   return L;
 }
+// Circles can be stretched into ovals: r is the horizontal radius, ry the vertical one. A circle has no ry (it
+// follows r), so projects from before ovals open unchanged.
+const ryOf = f => typeof f.ry === 'number' ? f.ry : f.r;
+const isOval = f => f.type === 'circle' && typeof f.ry === 'number' && Math.abs(f.ry - f.r) > 1e-6;
+// Fine points along an oval's arc with their running length, to space pixels evenly along it as on a real strip
+// (equal angles would bunch them up at the narrow ends)
+function ovalSamples(f) {
+  const sweep = clamp(f.sweep, 1, 360), dir = f.ccw ? -1 : 1, rx = f.r, ry = ryOf(f);
+  const M = Math.max(64, Math.ceil(sweep * 4));
+  const xs = new Float64Array(M + 1), ys = new Float64Array(M + 1), L = new Float64Array(M + 1);
+  for (let k = 0; k <= M; k++) {
+    const a = rad(f.start + dir * sweep * k / M);
+    xs[k] = f.cx + rx * Math.sin(a); ys[k] = f.cy - ry * Math.cos(a);
+    if (k) L[k] = L[k - 1] + Math.hypot(xs[k] - xs[k - 1], ys[k] - ys[k - 1]);
+  }
+  return { xs, ys, L, M };
+}
 function fixtureLength(f) {
   if (f.type === 'line') return Math.hypot(f.x2 - f.x1, f.y2 - f.y1);
-  if (f.type === 'circle') return 2 * Math.PI * f.r * Math.min(360, f.sweep) / 360;
+  if (f.type === 'circle') { if (isOval(f)) { const o = ovalSamples(f); return o.L[o.M]; } return 2 * Math.PI * f.r * Math.min(360, f.sweep) / 360; }
   if (f.type === 'path') return pathLength(f);
   return 0;
 }
@@ -985,6 +1003,15 @@ function computePoints(f) {
     for (let i = 0; i < n; i++) {
       const t = n === 1 ? 0.5 : i / (n - 1);
       pts[2 * i] = f.x1 + (f.x2 - f.x1) * t; pts[2 * i + 1] = f.y1 + (f.y2 - f.y1) * t;
+    }
+  } else if (isOval(f)) {
+    const o = ovalSamples(f), T = o.L[o.M], full = clamp(f.sweep, 1, 360) >= 359.99;
+    const gap = full ? T / n : (n > 1 ? T / (n - 1) : 0);
+    for (let i = 0, k = 1; i < n; i++) {
+      const d = i * gap;
+      while (k < o.M && o.L[k] < d) k++;
+      const t = o.L[k] > o.L[k - 1] ? clamp((d - o.L[k - 1]) / (o.L[k] - o.L[k - 1]), 0, 1) : 0;
+      pts[2 * i] = o.xs[k - 1] + (o.xs[k] - o.xs[k - 1]) * t; pts[2 * i + 1] = o.ys[k - 1] + (o.ys[k] - o.ys[k - 1]) * t;
     }
   } else if (f.type === 'circle') {
     const sweep = clamp(f.sweep, 1, 360), full = sweep >= 359.99;
@@ -1022,7 +1049,7 @@ function fixturePitch(f) {
 function fixtureBounds(f) {
   let xs, ys;
   if (f.type === 'line') { xs = [f.x1, f.x2]; ys = [f.y1, f.y2]; }
-  else if (f.type === 'circle') { xs = [f.cx - f.r, f.cx + f.r]; ys = [f.cy - f.r, f.cy + f.r]; }
+  else if (f.type === 'circle') { xs = [f.cx - f.r, f.cx + f.r]; ys = [f.cy - ryOf(f), f.cy + ryOf(f)]; }
   else if (f.type === 'matrix') { const c = matrixCorners(f); xs = c.map(p => p[0]); ys = c.map(p => p[1]); }
   else { const P = pathPoly(f); xs = P.filter((_, i) => i % 2 === 0); ys = P.filter((_, i) => i % 2 === 1); }
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
@@ -1868,9 +1895,9 @@ function outlinePath(f, c) {
   c.beginPath();
   if (f.type === 'line') { c.moveTo(...toS(f.x1, f.y1)); c.lineTo(...toS(f.x2, f.y2)); }
   else if (f.type === 'circle') {
-    const [sx, sy] = toS(f.cx, f.cy), r = f.r * ui.view.zoom;
-    if (f.sweep >= 359.99) c.arc(sx, sy, r, 0, Math.PI * 2);
-    else { const a0 = rad(f.start - 90), a1 = rad(f.start - 90 + (f.ccw ? -f.sweep : f.sweep)); c.arc(sx, sy, r, a0, a1, !!f.ccw); }
+    const [sx, sy] = toS(f.cx, f.cy), rx = f.r * ui.view.zoom, ry = ryOf(f) * ui.view.zoom;
+    if (f.sweep >= 359.99) c.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
+    else { const a0 = rad(f.start - 90), a1 = rad(f.start - 90 + (f.ccw ? -f.sweep : f.sweep)); c.ellipse(sx, sy, rx, ry, 0, a0, a1, !!f.ccw); }
   } else if (f.type === 'matrix') {
     matrixCorners(f).forEach((p, i) => (i ? c.lineTo : c.moveTo).call(c, ...toS(p[0], p[1])));
     c.closePath();
@@ -1949,7 +1976,7 @@ function drawDataLinks() {
 }
 function handlesOf(f) {
   if (f.type === 'line') return [{ id: 'p1', x: f.x1, y: f.y1 }, { id: 'p2', x: f.x2, y: f.y2 }];
-  if (f.type === 'circle') return [{ id: 'c', x: f.cx, y: f.cy, round: true }, { id: 'r', x: f.cx + f.r, y: f.cy }];
+  if (f.type === 'circle') return [{ id: 'c', x: f.cx, y: f.cy, round: true }, { id: 'r', x: f.cx + f.r, y: f.cy }, { id: 'ry', x: f.cx, y: f.cy - ryOf(f) }];
   if (f.type === 'matrix') {
     const hs = matrixCorners(f).map((p, i) => ({ id: 'k' + i, x: p[0], y: p[1] }));
     const up = 22 / ui.view.zoom, a = rad(f.rot);
@@ -2203,7 +2230,7 @@ function distSeg(px, py, ax, ay, bx, by) {
 function distFixture(f, x, y, tol) {
   if (f.type === 'line') return distSeg(x, y, f.x1, f.y1, f.x2, f.y2);
   if (f.type === 'circle') {
-    const d = Math.abs(Math.hypot(x - f.cx, y - f.cy) - f.r);
+    const rx = f.r, ry = ryOf(f), d = Math.abs(Math.hypot((x - f.cx) / rx, (y - f.cy) / ry) - 1) * Math.min(rx, ry);
     if (f.sweep >= 359.99) return d;
     let best = Infinity; const P = f._pts;
     for (let i = 0; i < P.length; i += 2) best = Math.min(best, Math.hypot(x - P[i], y - P[i + 1]));
@@ -2263,6 +2290,8 @@ function dragHandle(f, o, hd, x, y, e) {
     if (hd.id === 'p1') { f.x1 = px; f.y1 = py; } else { f.x2 = px; f.y2 = py; }
   } else if (f.type === 'circle') {
     if (hd.id === 'c') { f.cx = snapV(x, e); f.cy = snapV(y, e); }
+    else if (hd.id === 'ry') f.ry = Math.max(1, snapV(Math.abs(y - f.cy), e));   // the top handle stretches it into an oval
+    else if (isOval(f)) f.r = Math.max(1, snapV(Math.abs(x - f.cx), e));        // an oval's side handle: its width only
     else f.r = Math.max(1, snapV(Math.hypot(x - f.cx, y - f.cy), e));
   } else if (f.type === 'matrix') {
     if (hd.rot) {
@@ -2949,7 +2978,7 @@ function renderInspector(body) {
   const nameIn = textInput(f, 'name', { id: 'fxName', aria: 'Fixture name', onInput: () => renderFxList(), onCommit: commit });
   const sw = h('div', { class: 'swatches' }, TAGS.map(c => h('button', { type: 'button', class: f.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Tag colour ' + c, onclick: () => { f.tag = c; commit(); renderRight(); } })));
   body.append(sec(null,
-    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon(f.type)), TYPE_LABEL[f.type], h('span', { class: 'fill' }), h('span', { class: 'mono muted', style: { letterSpacing: 0, textTransform: 'none' } }, pixelCount(f) + ' px')),
+    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon(f.type)), isOval(f) ? 'Oval' : TYPE_LABEL[f.type], h('span', { class: 'fill' }), h('span', { class: 'mono muted', style: { letterSpacing: 0, textTransform: 'none' } }, pixelCount(f) + ' px')),
     row('Name', nameIn), row('Tag', sw),
     project.groups.length ? row('Group', selectEl([['', 'None'], ...project.groups.map(g => [g.id, groupName(g)])], f.group ?? '', v => setFixtureGroup(f, v), { aria: 'Group' })) : null,
     h('div', { style: { display: 'flex', gap: '16px' } }, checkRow('Enabled', f, 'enabled', () => { commit(); }), checkRow('Locked', f, 'locked', () => { commit(); renderRight(); }))));
@@ -2961,7 +2990,12 @@ function renderInspector(body) {
     G.push(row('End', numInput(f, 'x2', geo({ prefix: 'X' })), numInput(f, 'y2', geo({ prefix: 'Y' }))));
   } else if (f.type === 'circle') {
     G.push(row('Centre', numInput(f, 'cx', geo({ prefix: 'X' })), numInput(f, 'cy', geo({ prefix: 'Y' }))));
-    G.push(numRow('Radius', f, 'r', geo({ min: 1, step: 0.5 })));
+    const oval = isOval(f), R = { get ry() { return ryOf(f); }, set ry(v) { f.ry = v; } };
+    const live = () => { markGeom(); syncInspector(); };   // a circle's Y follows its X
+    G.push(row('Radius', numInput(f, 'r', geo({ prefix: 'X', min: 1, step: 0.5, aria: 'Horizontal radius', onInput: live })),
+      numInput(R, 'ry', geo({ prefix: 'Y', min: 1, step: 0.5, aria: 'Vertical radius', onInput: live, onCommit: () => { commit(); renderRight(); } }))));
+    G.push(oval ? h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: () => { delete f.ry; markGeom(); commit(); renderRight(); } }, 'Make it round'))
+      : h('p', { class: 'note' }, 'Give Y a different value, or drag the top handle on the stage, to stretch it into an oval.'));
     G.push(numRow('Start °', f, 'start', geo({ min: -360, max: 360, step: 1 })));
     G.push(numRow('Sweep °', f, 'sweep', geo({ min: 1, max: 360, step: 1 })));
     G.push(row('Direction', seg([[false, 'Clockwise'], [true, 'Counter-CW']], f.ccw, v => { f.ccw = v === true || v === 'true'; markGeom(); commit(); })));
@@ -4321,7 +4355,7 @@ async function importSvg(file, opt) {
 function sameShape(a, b) {
   if (a.type !== b.type) return false;
   const e = 0.5;
-  if (a.type === 'circle') return Math.abs(a.cx - b.cx) < e && Math.abs(a.cy - b.cy) < e && Math.abs(a.r - b.r) < e && Math.abs(a.sweep - b.sweep) < 1;
+  if (a.type === 'circle') return Math.abs(a.cx - b.cx) < e && Math.abs(a.cy - b.cy) < e && Math.abs(a.r - b.r) < e && Math.abs(ryOf(a) - ryOf(b)) < e && Math.abs(a.sweep - b.sweep) < 1;
   if (a.type === 'line') {
     const same = (x1, y1, x2, y2) => Math.hypot(a.x1 - x1, a.y1 - y1) < e && Math.hypot(a.x2 - x2, a.y2 - y2) < e;
     return same(b.x1, b.y1, b.x2, b.y2) || same(b.x2, b.y2, b.x1, b.y1);
@@ -4359,6 +4393,23 @@ function classifyShape(P, pitch, label) {
       f.pixels = Math.max(3, Math.round(fixtureLength(f) / pitch) + (full ? 0 : 1));
       if (label) f.name = label;
       return f;
+    }
+    // a closed oval, upright (its axes horizontal and vertical): the half width and half height of its box
+    if (closed) {
+      let x0b = Infinity, x1b = -Infinity, y0b = Infinity, y1b = -Infinity;
+      for (let i = 0; i < n; i++) { x0b = Math.min(x0b, P[2 * i]); x1b = Math.max(x1b, P[2 * i]); y0b = Math.min(y0b, P[2 * i + 1]); y1b = Math.max(y1b, P[2 * i + 1]); }
+      const ox = (x0b + x1b) / 2, oy = (y0b + y1b) / 2, rx = (x1b - x0b) / 2, ry = (y1b - y0b) / 2;
+      let worst = 0;
+      if (rx > 0.5 && ry > 0.5) for (let i = 0; i < n; i++) worst = Math.max(worst, Math.abs(Math.hypot((P[2 * i] - ox) / rx, (P[2 * i + 1] - oy) / ry) - 1));
+      if (rx > 0.5 && ry > 0.5 && worst < 0.03) {
+        const ang = i => Math.atan2((P[2 * i] - ox) / rx, -(P[2 * i + 1] - oy) / ry) * 180 / Math.PI;
+        let turn = 0;
+        for (let i = 1; i < n; i++) { let d = ang(i) - ang(i - 1); d = ((d + 540) % 360) - 180; turn += d; }
+        const f = newFixture('circle', { cx: ox, cy: oy, r: rx, ry, start: ((ang(0) % 360) + 360) % 360, sweep: 360, ccw: turn < 0 });
+        f.pixels = Math.max(3, Math.round(fixtureLength(f) / pitch));
+        if (label) f.name = label;
+        return f;
+      }
     }
   }
   // straight line

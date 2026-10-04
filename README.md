@@ -6,7 +6,7 @@ The interface runs in your browser. `openledmapper.py` is a small local server t
 
 ## Start
 
-**The app (Windows and macOS).** Download it from the [Releases](https://github.com/nouled-studio/openLEDmapper/releases) page. Nothing else to install, and you don't need Chrome.
+**The app (Windows and macOS).** Download it from the [Releases](https://github.com/nouled-studio/openLEDmapper/releases) page. Nothing else to install, and you don't need Chrome. It needs Windows 10 or newer, or macOS 12 (Monterey) or newer.
 
 - **Windows:** `…-windows-setup.exe`. Run it: it installs openLedMapper and adds it to the Start menu and the desktop.
 - **Mac:** `…-macos-apple-silicon.dmg` (Macs with an M1 or newer) or `…-macos-intel.dmg`. Open it and drag openLedMapper onto Applications.

@@ -140,6 +140,7 @@ Circles, arcs, lines and paths become fixtures, fitted into the composition. Cir
 
 - To send from a specific network card (for example a 2.x.x.x Art-Net network), use `python3 openledmapper.py --bind-ip 2.0.0.10`.
 - Discovery listens on UDP 6454. If another Art-Net program is running, openLedMapper still sends, but discovery is off. The Nodes tab says so.
+- **Nodes → Discover** lists one row per device (one IP), with all its output ports and universes, even when the device answers once per port. **Add as controller** makes one controller for it: one output per port, the first universe and the universes per output taken from its ports. For a device that is already a controller (same IP) the button is **Update controller**: it sets that controller's outputs and universes from the device and keeps its name and patch.
 - To reach the interface from a tablet on the same network: `python3 openledmapper.py --host 0.0.0.0`.
 - Other options: `--port 9000` (web port), `--no-browser`, `--bind-port 0`.
 

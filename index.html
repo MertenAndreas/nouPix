@@ -3894,7 +3894,7 @@ function renderNodes(body) {
     h('button', { class: 'btn primary', type: 'button', disabled: !bridge.connected, onclick: () => { bridgeSend({ t: 'poll', broadcast: s.broadcast }); toast('ArtPoll sent to ' + s.broadcast); } }, 'Discover'),
     h('span', null, 'Broadcast'), bc, info,
     hello ? h('span', { class: 'mono muted' }, 'This computer: ' + (hello.interfaces || []).join(', ')) : null);
-  const nodes = [...bridge.nodes.values()].sort((a, b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }));
+  const nodes = nodeDevices();
   const scroll = h('div', { class: 'scroll' });
   if (!nodes.length) {
     scroll.append(h('div', { class: 'empty' }, bridge.connected
@@ -3902,24 +3902,66 @@ function renderNodes(body) {
       : 'Node discovery needs openLedMapper running on this computer (the app, or openledmapper.py): a web page on its own cannot send or receive Art-Net.'));
   } else {
     scroll.append(h('table', { class: 'table' },
-      h('thead', null, h('tr', null, ['IP', 'Name', 'Output universes', 'MAC', 'Status', ''].map(t => h('th', null, t)))),
-      h('tbody', null, nodes.map(n => withRightClick(h('tr', null,
-        h('td', { class: 'mono' }, n.ip),
-        h('td', null, h('div', null, n.shortName || '—'), h('div', { class: 'muted', style: { fontSize: '11px' } }, n.longName)),
-        h('td', { class: 'mono' }, n.outUniverses && n.outUniverses.length ? n.outUniverses.join(', ') : '—'),
-        h('td', { class: 'mono' }, n.mac || '—'),
-        h('td', { class: 'muted', style: { fontSize: '11px', maxWidth: '260px' } }, n.report || ''),
-        h('td', null, h('button', { class: 'btn sm', type: 'button', onclick: () => addNodeAsController(n) }, project.controllers.some(c => c.ip === n.ip) ? 'Add again' : 'Add as controller'))), e => nodeMenu(e, n))))));
+      h('thead', null, h('tr', null, ['IP', 'Name', 'Output ports', 'Universes', 'MAC', 'Status', ''].map(t => h('th', null, t)))),
+      h('tbody', null, nodes.map(n => {
+        const known = project.controllers.find(c => c.ip === n.ip);
+        return withRightClick(h('tr', null,
+          h('td', { class: 'mono' }, n.ip),
+          h('td', null, h('div', null, n.shortName || '—'), h('div', { class: 'muted', style: { fontSize: '11px' } }, n.longName)),
+          h('td', { class: 'mono' }, n.universes.length || '—'),
+          h('td', { class: 'mono' }, n.universes.length ? n.universes.join(', ') : '—'),
+          h('td', { class: 'mono' }, n.mac || '—'),
+          h('td', { class: 'muted', style: { fontSize: '11px', maxWidth: '260px' } }, n.report || ''),
+          h('td', null, h('button', { class: 'btn sm', type: 'button', disabled: !n.universes.length, title: n.universes.length ? (known ? `Set ${known.name}'s outputs and universes from this device` : '') : 'This device reports no output ports',
+            onclick: () => addNodeAsController(n) }, known ? 'Update controller' : 'Add as controller'))), e => nodeMenu(e, n));
+      }))));
   }
   body.append(h('div', { class: 'nodes' }, bar, scroll));
 }
+// One device per IP. A node with several ports answers ArtPoll once per port (or per group of ports), each reply
+// with its own bind index; together they are one device: one IP, all their output universes.
+function nodeDevices() {
+  const byIp = new Map();
+  for (const n of bridge.nodes.values()) { if (!byIp.has(n.ip)) byIp.set(n.ip, []); byIp.get(n.ip).push(n); }
+  const pick = (list, k) => (list.find(n => n[k]) || {})[k] || '';
+  return [...byIp].map(([ip, list]) => {
+    list.sort((a, b) => (a.bindIndex || 0) - (b.bindIndex || 0));
+    const universes = [...new Set(list.flatMap(n => Array.isArray(n.outUniverses) ? n.outUniverses : []))].sort((a, b) => a - b);
+    return { ip, replies: list.length, universes, shortName: pick(list, 'shortName'), longName: pick(list, 'longName'), mac: pick(list, 'mac'), report: pick(list, 'report') };
+  }).sort((a, b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }));
+}
+// A controller's outputs start at evenly spaced universes (first universe + output × universes per output).
+// Evenly spaced ports map straight onto that: one output per port, the spacing as universes per output.
+// Uneven ones get outputs at the common step, so every port's universe is the start of an output.
+function deviceLayout(universes) {
+  const u = universes.length ? universes : [0];
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const step = u.slice(1).reduce((g, v, i) => gcd(g, v - u[i]), 0) || 1;
+  const outputs = (u[u.length - 1] - u[0]) / step + 1;
+  if (step > 64 || outputs > 128) return { outputs: Math.min(u.length, 128), upo: 1, startUniverse: u[0], exact: u.length === 1 };
+  return { outputs, upo: step, startUniverse: u[0], exact: outputs === u.length };
+}
 function addNodeAsController(n) {
-  const outs = n.outUniverses && n.outUniverses.length ? n.outUniverses : [0];
-  const c = newController({ name: n.shortName || n.ip, ip: n.ip, outputs: outs.length, upo: 1, startUniverse: Math.min(...outs) });
-  project.controllers.push(c);
+  const L = deviceLayout(n.universes);
+  const same = project.controllers.find(c => c.ip === n.ip);
+  let c, lost = 0;
+  if (same) {   // already a controller: bring its outputs and universes in line with the device, keep its name and patch
+    c = same;
+    const before = c.chains.flat().length;
+    Object.assign(c, { outputs: L.outputs, upo: L.upo, startUniverse: L.startUniverse });
+    ensureChains(c);
+    lost = before - c.chains.flat().length;
+  } else {
+    c = newController({ name: n.shortName || n.ip, ip: n.ip, outputs: L.outputs, upo: L.upo, startUniverse: L.startUniverse });
+    project.controllers.push(c);
+  }
   ui.selCtrl = c.id; ui.dockTab = 'patch';
   markPatch(); commit();
-  toast(`Added ${c.name}. Check outputs and universes per output against the controller's own setup.`);
+  const last = c.startUniverse + c.outputs * c.upo - 1;
+  toast(`${same ? 'Updated' : 'Added'} ${c.name}: ${c.outputs} output${c.outputs === 1 ? '' : 's'}, universe${last > c.startUniverse ? 's ' + c.startUniverse + '–' + last : ' ' + c.startUniverse}.` +
+    (L.exact ? '' : ` Its ports aren't evenly spaced (${n.universes.join(', ')}), so some outputs have no port on the device.`) +
+    (lost > 0 ? ` ${lost} fixture${lost > 1 ? 's were' : ' was'} unpatched because ${lost > 1 ? 'their' : 'its'} output went.` : '') +
+    ' Check universes per output against the controller\'s own setup.', L.exact && !lost ? '' : 'warn');
 }
 
 /* ---------- DMX monitor ---------- */
@@ -4618,7 +4660,7 @@ function chipMenu(e, fid, c, o) {
 function nodeMenu(e, n) {
   menu(at(e), [
     { head: n.shortName || n.ip },
-    ['Add as controller', () => addNodeAsController(n)],
+    [project.controllers.some(c => c.ip === n.ip) ? 'Update controller' : 'Add as controller', () => addNodeAsController(n), { disabled: !n.universes.length }],
     ['Copy IP address', () => { navigator.clipboard.writeText(n.ip).then(() => toast('Copied ' + n.ip), () => toast(n.ip)); }],
   ]);
 }

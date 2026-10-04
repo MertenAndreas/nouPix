@@ -2,3 +2,5 @@ __pycache__/
 .DS_Store
 build/
 dist/
+node_modules/
+page.html

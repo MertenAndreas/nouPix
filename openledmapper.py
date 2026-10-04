@@ -18,8 +18,8 @@ Python 3.8+ and the standard library only. No installs needed.
     python3 openledmapper.py --no-browser
     python3 openledmapper.py --background       # no terminal needed: see BACKGROUND below
 
-The downloadable apps (openLedMapper.exe, openLedMapper.app) are this script packed with
-PyInstaller (openledmapper.spec) and always run in background mode.
+The downloadable apps (desktop/) are an Electron window around the interface. They run this script,
+packed with PyInstaller (openledmapper.spec), with --embedded.
 """
 
 import argparse
@@ -40,7 +40,6 @@ import urllib.parse
 import webbrowser
 
 VERSION = "0.5.2"
-FROZEN = getattr(sys, "frozen", False)  # running as the packed app, not as a script
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 ARTNET_PORT = 6454
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -51,7 +50,10 @@ HOLD_EVERY = 0.5   # how often the held frame is repeated, so controllers don't 
 
 
 def log(msg):
-    print("  %s  %s" % (time.strftime("%H:%M:%S"), msg), flush=True)
+    try:
+        print("  %s  %s" % (time.strftime("%H:%M:%S"), msg), flush=True)
+    except (OSError, ValueError):  # the terminal or the app that read the output is gone
+        pass
 
 
 # --------------------------------------------------------------------------- Art-Net
@@ -496,6 +498,47 @@ def running_copy(host, first_port):
     return None
 
 
+def stop_when_input_closes(server):
+    """--embedded: the desktop app holds this process's stdin open and closes it when it quits,
+    and the bridge stops with it instead of being left running without a window."""
+    try:
+        while sys.stdin.buffer.read(4096):
+            pass
+    except (OSError, ValueError):
+        pass
+    log("The openLedMapper app closed. Stopping.")
+    server.shutdown()
+
+
+def stop_when_parent_ends(server, pid):
+    """--parent-pid: if the app is killed, its stdin pipe may stay open (on macOS and Linux the bridge inherits other
+    copies of it), so the bridge also checks every second that the app is still there."""
+    while process_alive(pid) and (os.name == "nt" or os.getppid() == pid):
+        time.sleep(1.0)
+    log("The openLedMapper app is gone. Stopping.")
+    server.shutdown()
+
+
+def process_alive(pid):
+    if os.name == "nt":
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        code = ctypes.c_ulong()
+        ok = kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+        kernel32.CloseHandle(handle)
+        return bool(ok) and code.value == 259  # STILL_ACTIVE
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
 def quit_when_closed(server):
     while True:
         time.sleep(1.0)
@@ -574,10 +617,14 @@ def main():
     ap.add_argument("--browser-path", help="Chrome, Edge or Chromium executable for its window (found automatically)")
     ap.add_argument("--no-browser", action="store_true", help="don't open any window")
     ap.add_argument("--background", action="store_true", help="run without a terminal: log to %s and stop when the "
-                    "last window closes (always on in the apps)" % LOG_FILE.replace("%", "%%"))
-    # macOS used to pass -psn_... to apps opened from the Finder
-    args = ap.parse_args([a for a in sys.argv[1:] if not a.startswith("-psn_")])
-    background = args.background or FROZEN
+                    "last window closes" % LOG_FILE.replace("%", "%%"))
+    ap.add_argument("--embedded", action="store_true", help="run inside the desktop app: no window, prints 'READY <address>' "
+                    "once listening, and stops when its input closes (when the app quits)")
+    ap.add_argument("--parent-pid", type=int, help="with --embedded: also stop if this process (the app) disappears")
+    args = ap.parse_args()
+    if args.embedded:
+        args.no_browser, args.background = True, False
+    background = args.background
     if background and not args.no_browser and show_running_copy(args):
         return
     if background:
@@ -647,7 +694,9 @@ def run(args, background):
     else:
         print("  Discovery   off - %s" % art.discovery_note)
     print("  This PC     %s" % ", ".join(local_ips()))
-    if background and not args.no_browser:
+    if args.embedded:
+        print("  Stops       when the openLedMapper app quits")
+    elif background and not args.no_browser:
         print("  Stops       %d s after the last openLedMapper window closes" % QUIT_AFTER_CLOSE)
     else:
         print("  Press Ctrl+C to stop.")
@@ -660,6 +709,11 @@ def run(args, background):
             except OSError as e:
                 log("Could not start %s (%s). Opening the default browser instead." % (exe, e.strerror or e))
         webbrowser.open(url)
+    if args.embedded:
+        print("READY %s" % url, flush=True)
+        threading.Thread(target=stop_when_input_closes, args=(server,), daemon=True).start()
+        if args.parent_pid:
+            threading.Thread(target=stop_when_parent_ends, args=(server, args.parent_pid), daemon=True).start()
     if not args.no_browser:
         threading.Timer(0.6, open_ui).start()
         if background:

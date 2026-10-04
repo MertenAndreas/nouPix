@@ -6,20 +6,25 @@ The interface runs in your browser. `openledmapper.py` is a small local server t
 
 ## Start
 
-**The app (Windows and macOS).** Download it from the [Releases](https://github.com/nouled-studio/openLEDmapper/releases) page: `…-windows.exe`, `…-macos-apple-silicon.zip` (Macs with an M1 or newer) or `…-macos-intel.zip`. Nothing else to install. On a Mac, unzip it and move `openLedMapper.app` to Applications.
+**The app (Windows and macOS).** Download it from the [Releases](https://github.com/nouled-studio/openLEDmapper/releases) page. Nothing else to install, and you don't need Chrome.
+
+- **Windows:** `…-windows-setup.exe`. Run it: it installs openLedMapper and adds it to the Start menu and the desktop.
+- **Mac:** `…-macos-apple-silicon.dmg` (Macs with an M1 or newer) or `…-macos-intel.dmg`. Open it and drag openLedMapper onto Applications.
 
 The apps aren't signed yet, so the first time you open one:
 
 - **Windows:** SmartScreen says it protected your PC. Click **More info → Run anyway**.
 - **macOS:** it says the app can't be checked. Click **Done**, then open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to openLedMapper.
 
-The app has no terminal window: it starts in the background and opens the openLedMapper window. To stop it, close that window; it quits about 10 seconds later. Opening the app again while it runs just opens another window. What it would print goes to `~/.openledmapper/openledmapper.log` (on Windows, `C:\Users\<you>\.openledmapper\openledmapper.log`).
+The app is one window with the Art-Net bridge inside it. It keeps running when you minimise or cover it. Closing the window quits it (it asks first while Art-Net is on), and opening the app again while it runs brings its window to the front. The bridge's messages go to `~/.openledmapper/openledmapper.log` (on Windows, `C:\Users\<you>\.openledmapper\openledmapper.log`); **Help → Show log file** opens its folder. To send from a specific network card, start the app with `--bind-ip=2.0.0.10` (the other bridge options work the same way: `--port=`, `--bind-port=`, `--host=`).
+
+The app keeps its own copy of the current project, separate from the browser window used when running from the source. To move a project between them, use **Project → Save project file** in one and open that file in the other.
 
 **From the source (any system, including Linux).** You need Python 3.8 or newer. Nothing else to install.
 
 - **Windows:** double-click `start-openledmapper.bat`
 - **macOS:** double-click `start-openledmapper.command` (the first time, right-click → Open)
-- **Any system:** `python3 openledmapper.py` (add `--background` to run it without a terminal, as the apps do)
+- **Any system:** `python3 openledmapper.py` (add `--background` to run it without a terminal: it then stops by itself about 10 seconds after its window closes, and logs to the file above)
 
 openLedMapper opens in its own window at `http://127.0.0.1:8080/`, using Chrome or Edge (or Chromium or Brave) started with the switches that stop the browser from slowing down or pausing a hidden window. You can minimise it or cover it with other windows and the output keeps running. Run from the source, keep the terminal window open: closing it stops the Art-Net output. Closing the openLedMapper window stops it too, which is why it asks before it closes while Art-Net is on.
 
@@ -147,12 +152,14 @@ Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture in
 
 ## Building the apps
 
-GitHub builds the apps (`.github/workflows/release.yml`, using PyInstaller and `openledmapper.spec`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
+The apps are an [Electron](https://www.electronjs.org/) window (`desktop/`) around the interface, with the Art-Net bridge (`openledmapper.py`, packed with PyInstaller by `openledmapper.spec`) running inside: the app starts it with `--embedded` and it stops when the app quits. GitHub builds them (`.github/workflows/release.yml`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
 
 1. Set `VERSION` in `openledmapper.py` (and the README title), and commit.
 2. Tag it with the same version and push the tag: `git tag v0.5.3 && git push origin v0.5.3`.
 
-The three apps are built, started once to check they serve the interface, and attached to a new release on the Releases page, in about 5 minutes. A tag that doesn't match `VERSION` fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run. To build one yourself: `pip install pyinstaller && pyinstaller openledmapper.spec` (it lands in `dist/`).
+The three apps are built, started once to check that they start the bridge and stop it again, and attached to a new release on the Releases page, in about 10 minutes. The app's version comes from `VERSION`; a tag that doesn't match it fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run.
+
+To work on the app: `cd desktop && npm install && npm start` runs it from the source, with `python3 ../openledmapper.py` as the bridge. To build it yourself: `pyinstaller openledmapper.spec` in the top folder, then `npm run dist` in `desktop/` (it lands in `desktop/dist/`).
 
 The logo is `icons/openledmapper.svg`. The app icons made from it are `openledmapper.ico` (Windows, and the browser tab icon), `openledmapper.icns` (macOS) and `openledmapper-256.png`. If you change the SVG, export these again.
 

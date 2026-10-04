@@ -1,4 +1,5 @@
-# Builds the openLedMapper apps (Windows, macOS Apple silicon, macOS Intel) with PyInstaller.
+# Builds the openLedMapper desktop apps (Windows, macOS Apple silicon, macOS Intel): the Art-Net bridge is packed
+# with PyInstaller (openledmapper.spec), then wrapped with the interface window in an Electron app (desktop/).
 #   - Push a tag named after the version in openledmapper.py (git tag v0.5.3 && git push origin v0.5.3):
 #     the apps are built, tested and attached to a new GitHub release.
 #   - Or run it by hand from the Actions tab: the apps are built and kept as run artifacts, no release.
@@ -33,6 +34,12 @@ jobs:
         with:
           python-version: "3.13"
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
       - name: Read the version
         id: version
         run: |
@@ -43,34 +50,83 @@ jobs:
             exit 1
           fi
 
-      - name: Build
+      - name: Build the Art-Net bridge
         run: |
           pip install "pyinstaller==6.*"
           pyinstaller --noconfirm openledmapper.spec
 
-      - name: Check the app starts and serves the interface
+      - name: Check the bridge starts and serves the interface
         run: |
-          if [ "$RUNNER_OS" = Windows ]; then app=dist/openLedMapper.exe; else app=dist/openLedMapper.app/Contents/MacOS/openLedMapper; fi
-          "$app" --no-browser &
+          dist/openledmapper-bridge/openledmapper-bridge --no-browser &
           pid=$!
           ok=
           for i in $(seq 1 30); do
             if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html; then ok=1; break; fi
             sleep 1
           done
-          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openLedMapper.exe //F; else kill "$pid"; fi
+          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openledmapper-bridge.exe //F; else kill "$pid"; fi
+          [ -n "$ok" ] || { echo "::error::The bridge did not serve the interface"; exit 1; }
+          sleep 2
+
+      - name: Build the app
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          npm ci
+          npm version "${{ steps.version.outputs.version }}" --no-git-tag-version --allow-same-version
+          if [ "$RUNNER_OS" = Windows ]; then npx electron-builder --win --publish never; else npx electron-builder --mac --publish never; fi
+
+      - name: Sign the Mac app (ad hoc)
+        if: runner.os == 'macOS'
+        working-directory: desktop
+        run: |
+          # Without a Developer ID certificate the app still needs an ad hoc signature: Apple silicon Macs
+          # don't run unsigned code at all. The bridge's files first, then the whole app.
+          app=$(ls -d dist/mac*/openLedMapper.app)
+          find "$app/Contents/Resources/bridge" -type f | while read -r f; do
+            if file -b "$f" | grep -q Mach-O; then codesign --force --sign - "$f"; fi
+          done
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --verbose=1 "$app"
+
+      - name: Check the app starts its bridge, and stops it when killed
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then app=desktop/dist/win-unpacked/openLedMapper.exe
+          else app="$(ls -d desktop/dist/mac*/openLedMapper.app)/Contents/MacOS/openLedMapper"; fi
+          "$app" &
+          pid=$!
+          up=
+          for i in $(seq 1 60); do
+            if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html; then up=1; break; fi
+            sleep 1
+          done
+          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openLedMapper.exe //F || true; else kill -9 "$pid" || true; fi
+          stopped=
+          for i in $(seq 1 15); do
+            sleep 1
+            if ! curl -fsS -o /dev/null http://127.0.0.1:8080/; then stopped=1; break; fi
+          done
           cat ~/.openledmapper/openledmapper.log || true
-          [ -n "$ok" ] || { echo "::error::The app did not serve the interface"; exit 1; }
+          [ -n "$up" ] || { echo "::error::The app did not start its bridge"; exit 1; }
+          [ -n "$stopped" ] || { echo "::error::The bridge kept running after the app was killed"; exit 1; }
 
       - name: Package
         run: |
           name="openLedMapper-${{ steps.version.outputs.version }}-${{ matrix.suffix }}"
           mkdir out
           if [ "$RUNNER_OS" = Windows ]; then
-            cp dist/openLedMapper.exe "out/$name.exe"
+            cp desktop/dist/openLedMapper-*-windows-setup.exe "out/$name-setup.exe"
           else
-            # ditto keeps the bundle's symlinks and signature intact, unlike zip
-            ditto -c -k --keepParent dist/openLedMapper.app "out/$name.zip"
+            # A disk image with the app and a shortcut to Applications to drag it onto
+            mkdir dmg
+            ditto "$(ls -d desktop/dist/mac*/openLedMapper.app)" dmg/openLedMapper.app
+            ln -s /Applications dmg/Applications
+            for i in 1 2 3; do  # hdiutil sometimes fails with "resource busy" on GitHub's Macs
+              hdiutil create -volname openLedMapper -srcfolder dmg -ov -format UDZO "out/$name.dmg" && break
+              sleep 5
+            done
+            [ -f "out/$name.dmg" ]
           fi
           ls -l out
 
@@ -99,9 +155,11 @@ jobs:
           generate_release_notes: true
           body: |
             **Download** the file for your computer:
-            - **Windows:** `…-windows.exe`
-            - **Mac with Apple silicon (M1 or newer):** `…-macos-apple-silicon.zip`
-            - **Mac with an Intel processor:** `…-macos-intel.zip`
+            - **Windows:** `…-windows-setup.exe`, then run it. It installs openLedMapper for you and adds it to the Start menu.
+            - **Mac with Apple silicon (M1 or newer):** `…-macos-apple-silicon.dmg`
+            - **Mac with an Intel processor:** `…-macos-intel.dmg`
+
+              Open the disk image and drag openLedMapper onto Applications.
             - **Linux, or any computer with Python 3.8+:** the source code below, then `python3 openledmapper.py`
 
             The apps aren't signed yet, so Windows and macOS warn the first time you open them. See *Start* in the README.

@@ -52,6 +52,8 @@ With **Wiring** on, the stage also draws the data cable between fixtures chained
 
 **Ctrl C** / **Ctrl X** / **Ctrl V** copy, cut and paste fixtures, with their groups. They go through the system clipboard, so they also paste into another project or another openLedMapper window. A paste lands where the copies were, moved down and right if that place is taken; **Paste here** (right-click on the stage) puts them where you clicked. Pasted fixtures aren't patched: right-click → **Patch to**.
 
+**Lock** (the padlock beside the Group button above the fixture list, or **Ctrl L**) locks everything selected: one fixture, several, or a whole group. Locked fixtures can't be moved, nudged, aligned or deleted, and the stage and Ctrl A skip them; a locked group shows a padlock on its row. With everything selected already locked, the same button (amber then) unlocks.
+
 **Ctrl D** duplicates. A copy goes on the same output as the fixture it copies, after the fixtures already there, if all its pixels fit; otherwise it stays unpatched.
 
 The Inspector / Content / Settings panel on the right can be hidden for a bigger stage: **»** in its tabs, the panel button at the right of the stage bar, or `H`. Double-clicking a fixture to rename it brings it back.

@@ -67,6 +67,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .pill > span:last-child { overflow: hidden; text-overflow: ellipsis; }
 #btnBlackout, #btnOutput { flex: none; }  /* the output controls always stay on screen; the rest gives way */
 @media (max-width: 1180px) { .brand-name { display: none; } .topbar .pill { flex-shrink: 1; } }
+.pill[hidden] { display: none; }
 .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
 .pill.ok .dot { background: var(--live); box-shadow: 0 0 6px var(--live); }
 .pill.warn .dot { background: var(--warn); }
@@ -408,7 +409,7 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
       <button class="btn ghost icon" id="btnRedo" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 16 16"><path d="M10 4l3.5 3.5L10 11M13 7.5H6.5a4 4 0 000 8H8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="spacer"></div>
-    <span class="pill" id="bridgePill" title=""><span class="dot"></span><span id="bridgeText">Bridge</span></span>
+    <span class="pill" id="bridgePill" title=""><span class="dot"></span><span id="bridgeText"></span></span>
     <div class="tb-sep"></div>
     <select id="outMode" aria-label="Output source">
       <option value="content">Output: Content</option>
@@ -1792,7 +1793,8 @@ function connectBridge() {
   bridge.connected = false;
   const url = bridgeUrl();
   if (!url) { bridge.state = 'none'; updateBridgeUI(); return; }
-  bridge.state = 'connecting'; updateBridgeUI();
+  bridge.state = 'connecting'; bridge.since = Date.now(); updateBridgeUI();
+  setTimeout(updateBridgeUI, 1600);   // only a connection that takes longer than a moment is shown
   let ws;
   try { ws = new WebSocket(url); } catch (e) { bridge.state = 'none'; updateBridgeUI(); return; }
   ws.binaryType = 'arraybuffer';
@@ -1810,7 +1812,7 @@ function connectBridge() {
   ws.onclose = () => {
     const was = bridge.connected;
     bridge.connected = false; bridge.state = 'connecting'; bridge.ws = null;
-    if (was) toast('Lost connection to the bridge. Retrying…', 'warn');
+    if (was) toast('Lost the connection to the Art-Net output. Retrying…', 'warn');
     updateBridgeUI();
     bridge.retry = setTimeout(connectBridge, 2000);
   };
@@ -3381,11 +3383,14 @@ function renderSettings(body) {
       h('button', { class: 'btn', type: 'button', onclick: () => $('#fileGuide').click() }, 'Load guide image…'),
       project.guide ? h('button', { class: 'btn', type: 'button', onclick: () => { project.guide = null; guideImg = null; commit(); renderRight(); } }, 'Remove guide') : null),
     h('p', { class: 'note' }, 'A guide image (for example your layout SVG) is drawn over the stage, fitted to the composition, so you can trace fixtures over it.')));
-  const auto = bridgeUrl();
-  body.append(sec('Bridge',
-    row('Address', textInput(s, 'bridgeUrl', { placeholder: auto || 'ws://127.0.0.1:8080/ws', aria: 'Bridge address', onCommit: () => { commit(); connectBridge(); } })),
-    h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: connectBridge }, 'Reconnect')),
-    h('p', { class: 'note', html: 'Art-Net is sent by <code>openledmapper.py</code> running on this computer. Leave the address empty to use the server this page was opened from.' })));
+  // Where the page finds openledmapper.py. The desktop app always uses its own, so there is nothing to set there.
+  if (!/Electron/.test(navigator.userAgent)) {
+    const auto = bridgeUrl();
+    body.append(sec('Art-Net connection',
+      row('Address', textInput(s, 'bridgeUrl', { placeholder: auto || 'ws://127.0.0.1:8080/ws', aria: 'Art-Net connection address', onCommit: () => { commit(); connectBridge(); } })),
+      h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: connectBridge }, 'Reconnect')),
+      h('p', { class: 'note', html: 'Art-Net is sent by <code>openledmapper.py</code> running on this computer. Leave the address empty to use the one this page was opened from.' })));
+  }
 }
 
 /* ---------- selection + actions ---------- */
@@ -3886,7 +3891,7 @@ function renderNodes(body) {
   const hello = bridge.hello;
   const bc = textInput(s, 'broadcast', { aria: 'Broadcast address', onCommit: commit });
   bc.style.width = '130px';
-  const info = !bridge.connected ? h('span', { class: 'badge warn' }, 'Bridge not connected')
+  const info = !bridge.connected ? h('span', { class: 'badge warn' }, 'Not connected')
     : hello && !hello.discovery ? h('span', { class: 'badge warn', title: hello.discoveryNote || '' }, 'Discovery off: ' + (hello.discoveryNote || 'UDP 6454 in use'))
     : h('span', { class: 'badge ok' }, 'Listening on 6454');
   const bar = h('div', { class: 'bar' },
@@ -3898,7 +3903,7 @@ function renderNodes(body) {
   if (!nodes.length) {
     scroll.append(h('div', { class: 'empty' }, bridge.connected
       ? 'No nodes found yet. Press Discover. Nodes reply to ArtPoll on the broadcast address of their network: 2.255.255.255 for a 2.x.x.x Art-Net network, 10.255.255.255 for 10.x.x.x, or 255.255.255.255 for the local subnet.'
-      : 'Node discovery needs the openLedMapper bridge (openledmapper.py) running on this computer, because browsers cannot send or receive UDP.'));
+      : 'Node discovery needs openLedMapper running on this computer (the app, or openledmapper.py): a web page on its own cannot send or receive Art-Net.'));
   } else {
     scroll.append(h('table', { class: 'table' },
       h('thead', null, h('tr', null, ['IP', 'Name', 'Output universes', 'MAC', 'Status', ''].map(t => h('th', null, t)))),
@@ -4693,19 +4698,23 @@ function demoProject() {
 }
 
 /* ============================================================ top bar + status */
+// The status pill only shows what matters: Art-Net going out, or something wrong. With everything fine and
+// Art-Net off it is hidden.
 function updateBridgeUI() {
   const pill = $('#bridgePill'), txt = $('#bridgeText');
   pill.className = 'pill';
-  const st = bridge.stats;
-  if (bridge.state === 'none') { pill.classList.add('warn'); txt.textContent = 'Preview only'; pill.title = 'No Art-Net bridge. Run openledmapper.py on this computer and open the address it prints to send Art-Net.'; }
-  else if (!bridge.connected) { txt.textContent = 'Connecting to bridge…'; pill.title = bridgeUrl() || ''; }
-  else if (st && st.errors && st.lastError) { pill.classList.add('warn'); txt.textContent = `Bridge · ${fmtN(st.pps)} pkt/s`; pill.title = 'Last send error: ' + st.lastError; }
-  else {
-    pill.classList.add('ok');
-    txt.textContent = ui.outputOn ? `Bridge · ${fmtN(st ? st.pps : 0)} pkt/s` : 'Bridge connected';
-    const hl = bridge.hello;
-    pill.title = hl ? `openLedMapper bridge ${hl.version} · sending from ${hl.bindIp}:${hl.bindPort}${hl.discovery ? '' : ' · discovery off: ' + (hl.discoveryNote || '')}` : '';
+  const st = bridge.stats, hl = bridge.hello;
+  const from = hl ? `Sending from ${hl.bindIp === '0.0.0.0' ? 'all network cards' : hl.bindIp}, port ${hl.bindPort}${hl.discovery ? '' : ' · node discovery off: ' + (hl.discoveryNote || '')}` : '';
+  let show = true;
+  if (bridge.state === 'none') { pill.classList.add('warn'); txt.textContent = 'Preview only'; pill.title = 'This page can\'t send Art-Net on its own. Start openLedMapper (the app, or openledmapper.py) and use the window it opens.'; }
+  else if (!bridge.connected) {
+    show = Date.now() - (bridge.since || 0) > 1500;
+    pill.classList.add('warn'); txt.textContent = 'Output not connected'; pill.title = 'Reconnecting to the part of openLedMapper that sends Art-Net…';
   }
+  else if (st && st.errors && st.lastError) { pill.classList.add('err'); txt.textContent = ui.outputOn ? `Send error · ${fmtN(st.pps)} pkt/s` : 'Send error'; pill.title = 'Last send error: ' + st.lastError + (from ? '\n' + from : ''); }
+  else if (ui.outputOn) { pill.classList.add('ok'); txt.textContent = `Sending · ${fmtN(st ? st.pps : 0)} pkt/s`; pill.title = 'Art-Net packets sent per second. ' + from; }
+  else show = false;
+  pill.hidden = !show;
   const ob = $('#btnOutput');
   ob.classList.toggle('on', ui.outputOn);
   ob.textContent = ui.outputOn ? 'Art-Net ON' : 'Art-Net OFF';
@@ -4713,7 +4722,7 @@ function updateBridgeUI() {
 }
 function setOutput(on) {
   if (on && !bridge.connected) {
-    toast(bridge.state === 'none' ? 'Art-Net needs the bridge: run openledmapper.py on this computer and open the address it prints.' : 'The bridge is not connected yet.', 'warn');
+    toast(bridge.state === 'none' ? 'This page can\'t send Art-Net on its own: start openLedMapper (the app, or openledmapper.py) and use the window it opens.' : 'The Art-Net output isn\'t connected yet. Try again in a moment.', 'warn');
     return;
   }
   if (on) bridgeSend({ t: 'output', on: true });

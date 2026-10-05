@@ -130,6 +130,8 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 ## How addressing works
 
 - Controller output *n* (counting from 0) starts at `first universe + n × universes per output`.
+- In the Patch panel each output lists its fixtures one per row, in address order, with each one's universe and channel range. The order on an output sets the addresses: the first fixture starts at the output's first channel and each next one carries on from the previous one. To change it without dragging, use **↑ ↓** on the selected (or hovered) row, **Alt ↑ / Alt ↓**, the **Order** buttons in the Inspector's Output section (↑ Earlier, ↓ Later, To start, To end), or right-click a row. Several selected fixtures on one output move together. Dragging rows still works: drop on a row to go before it, on the output's header to go last.
+- Click an output's header to fold it to one line; **Fold all / Unfold all** and **Find** (fixtures by name, folded outputs included) sit above the outputs. Selecting a patched fixture anywhere brings its row into view.
 - **Whole pixels** mode never splits a pixel across universes: 170 RGB or 128 RGBW pixels per universe, as most pixel controllers expect. **Split** mode packs all 512 channels.
 - Pixels that don't fit in an output's universes are not sent. They show in red in the Patch panel and Inspector.
 - Universe numbers are Art-Net 15-bit port addresses, starting at 0. The DMX Monitor also shows them as net / subnet / universe.

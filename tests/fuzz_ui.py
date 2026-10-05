@@ -17,7 +17,7 @@ PICK = """(seed) => {
   e.setAttribute('data-fz', '1');
   return { tag: e.tagName, type: e.type || '', text: (e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 40), x: r.x + r.width / 2, y: r.y + r.height / 2 };
 }"""
-DND_SEL_JS = "#fxList li, .list.zones li, .scenerow .zhead, .scenerow, .scene, .chip, .outrow"
+DND_SEL_JS = "#fxList li, .list.zones li, .scenerow .zhead, .scenerow, .scene, .prow, .outrow"
 DND_SEL = DND_SEL_JS
 DND_COUNT = "document.querySelectorAll(" + repr(DND_SEL_JS) + ").length"
 log = []

@@ -194,25 +194,46 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .ctrl .s { display: flex; justify-content: space-between; color: var(--muted); }
 .ctrl-list .foot { padding: 8px; display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--line); }
 .ctrl-edit { overflow: auto; display: flex; flex-direction: column; min-width: 0; }
-.ctrl-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--bg1); position: sticky; top: 0; z-index: 1; }
+.ctrl-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--bg1); }
 .ctrl-fields .f { display: grid; gap: 3px; }
 .discovered { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--text2); }
 .discovered b { color: var(--text); font-weight: 600; }
 .ctrl-fields .f > span { font-size: 10.5px; color: var(--muted); letter-spacing: .04em; }
 .outs { padding: 6px 0; }
-.outrow { display: grid; grid-template-columns: 64px 92px minmax(0,1fr) 170px; align-items: center; gap: 10px; padding: 5px 12px; min-height: 38px; border-bottom: 1px solid var(--line); }
+/* An output: a header (fold, name, universes, totals, usage) and its fixtures, one row each, in address order */
+.outrow { border-bottom: 1px solid var(--line); }
 .outrow.drop { background: var(--accent-soft); outline: 1px dashed var(--accent); outline-offset: -2px; }
-.outrow .on { font-weight: 600; font-size: 12px; }
-.outrow .ur { font-family: var(--mono); font-size: 11px; color: var(--text2); }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; min-height: 26px; align-items: center; }
-.chips .ph { color: var(--muted); font-size: 12px; font-style: italic; }
-.chip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 4px 0 7px; border-radius: 3px; background: var(--bg3); border: 1px solid var(--line2); cursor: grab; font-size: 12px; max-width: 220px; }
-.chip.sel { border-color: var(--accent); background: var(--accent-soft); }
-.chip.ovf { border-color: var(--danger); }
-.chip .tag { width: 7px; height: 7px; border-radius: 2px; flex: none; }
-.chip .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chip .px { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-.chip.dragging { opacity: .4; }
+.outhead { display: grid; grid-template-columns: 14px 52px 92px minmax(0,1fr) 170px; align-items: center; gap: 8px; padding: 5px 12px; min-height: 34px; cursor: pointer; position: sticky; top: 33px; z-index: 1; background: var(--bg1); }
+/* stays on screen above the outputs while the controller's settings scroll away */
+.outbar { position: sticky; top: 0; z-index: 2; height: 33px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: var(--bg2); border-bottom: 1px solid var(--line); }
+.outbar .pfind { width: 170px; }
+.outhead .fold { color: var(--muted); font-size: 10px; }
+.outhead .on { font-weight: 600; font-size: 12px; }
+.outhead .ur { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+.outhead .sum { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.outrow.shut .outlist { display: none; }
+.ctrl-edit.filtering .outrow.shut .outlist { display: block; }
+.outlist { padding: 0 0 4px; }
+.outlist .ph { padding: 4px 12px 6px 34px; color: var(--muted); font-size: 12px; font-style: italic; }
+.prow { display: grid; grid-template-columns: 30px 10px minmax(80px,1fr) 56px minmax(120px,170px) 54px 22px; align-items: center; gap: 6px; height: 24px; padding: 0 12px 0 4px; font-size: 12px; cursor: pointer; }
+.prow[hidden], .outrow[hidden] { display: none; }
+.prow:hover { background: var(--bg3); }
+.prow.sel { background: var(--accent-soft); }
+.prow.ovf .ad { color: var(--danger); }
+.prow.dragging { opacity: .4; }
+.prow.dropat { box-shadow: inset 0 2px 0 var(--accent); }
+.prow .ix { font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-align: right; }
+.prow .tag { width: 8px; height: 8px; border-radius: 2px; }
+.prow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow .px, .prow .ad { font-family: var(--mono); font-size: 10.5px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow .px { color: var(--muted); text-align: right; }
+.prow .mv { display: flex; gap: 2px; visibility: hidden; }
+.prow:hover .mv, .prow.sel .mv { visibility: visible; }
+.prow .mv button, .prow .x { width: 24px; height: 20px; border: 1px solid var(--line2); border-radius: 3px; background: var(--bg2); color: var(--text2); cursor: pointer; font-size: 11px; padding: 0; display: grid; place-items: center; }
+.prow .mv button:disabled { opacity: .3; cursor: default; }
+.prow .mv button:not(:disabled):hover, .prow .x:hover { border-color: var(--accent); color: var(--accent); }
+.prow .x { border-color: transparent; background: none; }
+.pfind { width: 150px; }
 .usage { display: grid; gap: 3px; }
 .usage .bar { height: 5px; border-radius: 3px; background: var(--bg4); overflow: hidden; }
 .usage .bar i { display: block; height: 100%; background: var(--live); }
@@ -383,8 +404,10 @@ input[type=color] { width: 40px; height: 24px; padding: 0 2px; border: 1px solid
   .right .pbody { max-height: 70vh; }
   .patch { grid-template-columns: 1fr; }
   .ctrl-list { border-right: 0; border-bottom: 1px solid var(--line); max-height: 180px; }
-  .outrow { grid-template-columns: 56px 1fr; }
-  .outrow .chips, .outrow .usage { grid-column: 1 / -1; }
+  .outhead { grid-template-columns: 14px 52px 1fr; }
+  .outhead .sum, .outhead .usage { grid-column: 2 / -1; }
+  .prow { grid-template-columns: 26px 10px minmax(60px,1fr) 56px 54px 22px; }
+  .prow .ad { display: none; }
   .monitor .mbody { grid-template-columns: 1fr; }
   .monitor .ulist { max-height: 120px; border-right: 0; border-bottom: 1px solid var(--line); }
   .statusbar { flex-wrap: wrap; height: auto; padding: 4px 16px; }
@@ -3094,6 +3117,16 @@ function outputSection(list) {
   fillOuts();
   outSel.addEventListener('change', () => { if (list.length === 1) apply(); });
   const kids = [row('Controller', cs), row('Output', outSel)];
+  if (cur) {   // the order on the output sets the addresses: move without dragging
+    const chain = cur.ctrl.chains[cur.out], ids = list.map(x => x.id), pos = ids.map(id => chain.indexOf(id)).sort((a, b) => a - b);
+    const first = pos[0], last = pos[pos.length - 1], b = (txt, title, fn, off) => h('button', { class: 'btn', type: 'button', title, disabled: off, onclick: fn }, txt);
+    kids.push(row('Order', h('span', { class: 'readonly' }, list.length === 1 ? `#${first + 1} of ${chain.length} on OUT ${cur.out + 1}` : `#${first + 1}–${last + 1} of ${chain.length} on OUT ${cur.out + 1}`)),
+      h('div', { class: 'actions' },
+        b('↑ Earlier', 'One place earlier on the output (Alt ↑)', () => moveOnOutput(ids, -1), first === 0),
+        b('↓ Later', 'One place later on the output (Alt ↓)', () => moveOnOutput(ids, 1), last === chain.length - 1),
+        b('To start', 'First on the output', () => moveToOutputEdge(ids, false), first === 0 && last === ids.length - 1),
+        b('To end', 'Last on the output', () => moveToOutputEdge(ids, true), last === chain.length - 1 && first === chain.length - ids.length)));
+  }
   if (list.length > 1) kids.push(h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: apply }, `Patch ${list.length} fixtures in list order`)));
   if (list.length === 1) {
     const box = h('div', { class: 'addr' });
@@ -3506,7 +3539,7 @@ function onSelection() {
   renderFxList();
   if (ui.sel.size && ui.rightTab !== 'inspector') ui.rightTab = 'inspector';
   renderRight();
-  if (ui.dockTab === 'patch') renderDock();
+  if (ui.dockTab === 'patch') { renderDock(); revealInPatch(); }
 }
 // A fixture selected on its own inside a folded group: unfold the group, so that its row shows
 function unfoldForSelection() {
@@ -3703,6 +3736,7 @@ function renderDock() {
   $('#btnDock').title = ui.dockCollapsed ? 'Expand panel' : 'Collapse panel';
   const body = $('#dockBody');
   const keep = body.firstElementChild && body.querySelector('.ctrl-edit') ? body.querySelector('.ctrl-edit').scrollTop : 0;
+  const refind = document.activeElement && document.activeElement.classList.contains('pfind');
   body.replaceChildren();
   if (ui.dockCollapsed) return;
   if (ui.dockTab === 'scenes') renderScenes(body);
@@ -3710,6 +3744,7 @@ function renderDock() {
   else if (ui.dockTab === 'nodes') renderNodes(body);
   else renderMonitor(body);
   const ce = body.querySelector('.ctrl-edit'); if (ce) ce.scrollTop = keep;
+  if (refind) { const fb = body.querySelector('.pfind'); if (fb) { fb.focus(); fb.setSelectionRange(fb.value.length, fb.value.length); } }
 }
 function onPatchChanged() { schedulePanels(); }
 let panelsQueued = false;
@@ -3896,6 +3931,12 @@ function renderPatch(body) {
   else edit.append(h('div', { class: 'empty' }, 'Controllers are the Art-Net devices your LEDs are wired to. Each controller has an IP address and a number of physical outputs; every output gets a block of universes, and the fixtures you chain on it are addressed automatically in order.'));
   body.append(h('div', { class: 'patch' }, list, edit));
 }
+function findBox() {
+  const inp = h('input', { type: 'search', class: 'pfind', placeholder: 'Find a fixture…', value: ui.patchFilter || '', 'aria-label': 'Find a fixture on the outputs' });
+  inp.addEventListener('input', () => { ui.patchFilter = inp.value; applyPatchFilter(inp.closest('.ctrl-edit')); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Escape') { inp.value = ''; ui.patchFilter = ''; applyPatchFilter(inp.closest('.ctrl-edit')); } });
+  return inp;
+}
 function renderCtrlEditor(edit, c) {
   const f = (label, el) => h('label', { class: 'f' }, h('span', null, label), el);
   const small = (el, w) => { el.style.width = w + 'px'; return el; };
@@ -3929,41 +3970,62 @@ function renderCtrlEditor(edit, c) {
   const found = discoveredNote(c);
   if (found) edit.append(found);
   if (patchConflicts.length) edit.append(h('div', { class: 'conflict' }, 'Universe clash: ' + patchConflicts[0] + (patchConflicts.length > 1 ? ` (+${patchConflicts.length - 1} more)` : '')));
+  const folds = ui.foldOuts || (ui.foldOuts = new Set());
+  const foldAll = shut => { c.chains.forEach((_, o) => { const k = c.id + ':' + o; shut ? folds.add(k) : folds.delete(k); }); renderDock(); };
+  edit.append(h('div', { class: 'outbar' }, findBox(),
+    h('span', { style: { flex: 1 } }),
+    h('button', { class: 'btn sm', type: 'button', onclick: () => foldAll(true) }, 'Fold all'),
+    h('button', { class: 'btn sm', type: 'button', onclick: () => foldAll(false) }, 'Unfold all')));
   const outs = h('div', { class: 'outs' });
   c.chains.forEach((chain, o) => {
     const info = (c._outs && c._outs[o]) || { base: c.startUniverse + o * c.upo, pixels: 0, overflow: 0, ch: 0 };
-    const usedU = Math.ceil(info.ch / 512);
-    const chips = h('div', { class: 'chips' });
-    for (const fid of chain) {
-      const fx = fxById(fid);
-      if (!fx) continue;
-      const p = fx._patch;
-      const chip = h('span', { class: 'chip' + (ui.sel.has(fid) ? ' sel' : '') + (p && p.overflow ? ' ovf' : ''), draggable: true, 'data-id': fid, title: `${fx.name} · ${pixelCount(fx)} px ${fx.order}${p && p.first >= 0 ? '\n' + addrText(p) : ''}${p && p.overflow ? `\n${p.overflow} pixels overflow` : ''}` },
-        h('span', { class: 'tag', style: { background: fx.tag } }), h('span', { class: 'nm' }, fx.name), h('span', { class: 'px' }, pixelCount(fx)),
-        h('button', { class: 'x', type: 'button', title: 'Unpatch', 'aria-label': 'Unpatch ' + fx.name, onclick: e => { e.stopPropagation(); unassign(fid); markPatch(); commit(); renderRight(); } }, icon('x')));
-      chip.addEventListener('click', e => { if (e.shiftKey) ui.sel.add(fid); else ui.sel = new Set([fid]); onSelection(); });
-      onRightClick(chip, e => chipMenu(e, fid, c, o));
-      chip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'fx:' + fid); e.dataTransfer.effectAllowed = 'move'; chip.classList.add('dragging'); });
-      chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
-      chips.append(chip);
-    }
-    if (!chain.length) chips.append(h('span', { class: 'ph' }, 'Drop fixtures here'));
+    const usedU = Math.ceil(info.ch / 512), key = c.id + ':' + o, n = chain.filter(fxById).length;
     const pct = Math.min(100, info.ch / (c.upo * 512) * 100);
     const usage = h('div', { class: 'usage' + (info.overflow ? ' ovf' : pct > 92 ? ' full' : '') },
       h('div', { class: 'bar' }, h('i', { style: { width: (info.overflow ? 100 : pct) + '%' } })),
       h('div', { class: 'lbl' }, h('span', null, `${fmtN(info.pixels)} px`), h('span', null, info.overflow ? `${info.overflow} px over` : `${usedU}/${c.upo} U`)));
-    const rowEl = h('div', { class: 'outrow' },
+    const head = h('div', { class: 'outhead', title: 'Click to fold or unfold. Drop fixtures here to add them at the end.' },
+      h('span', { class: 'fold' }, folds.has(key) ? '▸' : '▾'),
       h('span', { class: 'on' }, 'OUT ' + (o + 1)),
       h('span', { class: 'ur' }, c.upo > 1 ? `U ${info.base}–${info.base + c.upo - 1}` : `U ${info.base}`),
-      chips, usage);
+      h('span', { class: 'sum' }, n ? `${n} fixture${n === 1 ? '' : 's'} · ${fmtN(info.ch)} ch` : 'empty'),
+      usage);
+    head.addEventListener('click', () => { folds.has(key) ? folds.delete(key) : folds.add(key); renderDock(); });
+    const list = h('div', { class: 'outlist' });
+    chain.forEach((fid, k) => {
+      const fx = fxById(fid);
+      if (!fx) return;
+      const p = fx._patch;
+      let ad = '—';
+      if (p && p.first >= 0) {
+        const a = addrOf(p.base, p.first), b = addrOf(p.base, p.last);
+        ad = a.u === b.u ? `U${a.u} · ch ${a.ch}–${b.ch}` : `U${a.u}.${a.ch} – U${b.u}.${b.ch}`;
+      }
+      if (p && p.overflow) ad = p.first >= 0 ? `${ad} · ${p.overflow} px over` : `${p.overflow} px don't fit`;
+      const mv = (txt, d, off, label) => h('button', { type: 'button', disabled: off, title: label, 'aria-label': `${label}: ${fx.name}`, onclick: e => { e.stopPropagation(); moveOnOutput([fid], d); } }, txt);
+      const row = h('div', { class: 'prow' + (ui.sel.has(fid) ? ' sel' : '') + (p && p.overflow ? ' ovf' : ''), draggable: true, 'data-id': fid, 'data-name': fx.name.toLowerCase(),
+        title: `${fx.name} · ${pixelCount(fx)} px ${fx.order}${p && p.first >= 0 ? '\n' + addrText(p) : ''}${p && p.overflow ? `\n${p.overflow} pixels overflow` : ''}\n↑ ↓ or Alt ↑ ↓ move it on the output; drag to reorder` },
+        h('span', { class: 'ix' }, k + 1), h('span', { class: 'tag', style: { background: fx.tag } }), h('span', { class: 'nm' }, fx.name),
+        h('span', { class: 'px' }, pixelCount(fx) + ' px'), h('span', { class: 'ad' }, ad),
+        h('span', { class: 'mv' }, mv('↑', -1, k === 0, 'Move earlier'), mv('↓', 1, k === chain.length - 1, 'Move later')),
+        h('button', { class: 'x', type: 'button', title: 'Unpatch', 'aria-label': 'Unpatch ' + fx.name, onclick: e => { e.stopPropagation(); unassign(fid); markPatch(); commit(); renderRight(); } }, icon('x')));
+      row.addEventListener('click', e => { if (e.shiftKey || e.metaKey || e.ctrlKey) ui.sel.has(fid) ? ui.sel.delete(fid) : ui.sel.add(fid); else ui.sel = new Set([fid]); onSelection(); });
+      onRightClick(row, e => chipMenu(e, fid, c, o));
+      row.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', 'fx:' + (ui.sel.has(fid) ? chain.filter(id => ui.sel.has(id)) : [fid]).join(',')); e.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging'); });
+      row.addEventListener('dragend', () => row.classList.remove('dragging'));
+      row.addEventListener('dragover', () => { $$('.prow.dropat', outs).forEach(x => x.classList.remove('dropat')); row.classList.add('dropat'); });
+      list.append(row);
+    });
+    if (!n) list.append(h('div', { class: 'ph' }, 'Drop fixtures here, or right-click a fixture → Patch to'));
+    const rowEl = h('div', { class: 'outrow' + (folds.has(key) ? ' shut' : ''), 'data-key': key }, head, list);
     rowEl.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; rowEl.classList.add('drop'); });
-    rowEl.addEventListener('dragleave', e => { if (!rowEl.contains(e.relatedTarget)) rowEl.classList.remove('drop'); });
-    rowEl.addEventListener('drop', e => {
-      e.preventDefault(); rowEl.classList.remove('drop');
+    rowEl.addEventListener('dragleave', e => { if (!rowEl.contains(e.relatedTarget)) { rowEl.classList.remove('drop'); $$('.prow.dropat', rowEl).forEach(x => x.classList.remove('dropat')); } });
+    rowEl.addEventListener('drop', e => {   // onto a fixture: before it; anywhere else on the output: at the end
+      e.preventDefault(); rowEl.classList.remove('drop'); $$('.prow.dropat', rowEl).forEach(x => x.classList.remove('dropat'));
       const d = e.dataTransfer.getData('text/plain');
       if (!d.startsWith('fx:')) return;
       const ids = d.slice(3).split(',').filter(fxById);
-      const target = e.target.closest('.chip');
+      const target = e.target.closest('.prow');
       let idx = target ? chain.indexOf(target.dataset.id) : -1;
       for (const id of ids) { if (id === (target && target.dataset.id)) continue; assign(id, c, o, idx); if (idx >= 0) idx = chain.indexOf(id) + 1; }
       commit(); renderRight();
@@ -3971,6 +4033,55 @@ function renderCtrlEditor(edit, c) {
     outs.append(rowEl);
   });
   edit.append(outs);
+  applyPatchFilter(edit);
+}
+// Find: shows only the fixtures whose name contains the text, in every output of the controller, folded ones too
+function applyPatchFilter(edit) {
+  const q = (ui.patchFilter || '').trim().toLowerCase();
+  edit.classList.toggle('filtering', !!q);
+  for (const r of $$('.prow', edit)) r.hidden = !!q && !r.dataset.name.includes(q);
+  for (const o of $$('.outrow', edit)) {
+    const rows = $$('.prow', o), shown = rows.filter(r => !r.hidden).length;
+    o.hidden = !!q && !shown;
+  }
+}
+// One place earlier (-1) or later (+1) on their outputs. Several on one output move together, keeping their order;
+// one already at the start (or end) stays.
+function moveOnOutput(ids, d) {
+  const set = new Set(ids);
+  let moved = 0;
+  for (const c of project.controllers) for (const chain of c.chains) {
+    const at = chain.map((id, i) => set.has(id) ? i : -1).filter(i => i >= 0);
+    for (const i of d < 0 ? at : at.reverse()) {
+      const j = i + d;
+      if (j < 0 || j >= chain.length || set.has(chain[j])) continue;
+      [chain[i], chain[j]] = [chain[j], chain[i]];
+      moved++;
+    }
+  }
+  if (!moved) return false;
+  markPatch(); commit(); renderRight(); revealInPatch();
+  return true;
+}
+// To the start or the end of their outputs, keeping their order
+function moveToOutputEdge(ids, end) {
+  const set = new Set(ids);
+  for (const c of project.controllers) c.chains.forEach((chain, o) => {
+    if (!chain.some(id => set.has(id))) return;
+    const mine = chain.filter(id => set.has(id)), rest = chain.filter(id => !set.has(id));
+    c.chains[o] = end ? rest.concat(mine) : mine.concat(rest);
+  });
+  markPatch(); commit(); renderRight(); revealInPatch();
+}
+// The Patch panel follows the selection: the controller of a selected fixture, its output unfolded, its row in view
+function revealInPatch() {
+  if (ui.dockTab !== 'patch' || ui.dockCollapsed || ui.sel.size !== 1) return;
+  ensurePatch();
+  const f = fxById([...ui.sel][0]), p = f && f._patch;
+  if (!p) return;
+  const key = p.ctrl.id + ':' + p.out;
+  if (ui.selCtrl !== p.ctrl.id || (ui.foldOuts && ui.foldOuts.has(key))) { ui.selCtrl = p.ctrl.id; if (ui.foldOuts) ui.foldOuts.delete(key); renderDock(); }
+  requestAnimationFrame(() => { const r = $(`#dockBody .prow[data-id="${CSS.escape(f.id)}"]`); if (r) r.scrollIntoView({ block: 'center' }); });
 }
 function autoPatch() {
   const c = ctrlById(ui.selCtrl);
@@ -4552,6 +4663,8 @@ function fixtureMenu(e, f, pick) {
     '-',
     ['Patch to', null, { sub: patchToItems(sel) }],
     patched.length && ['Show in Patch', () => showInPatch(patched[0])],
+    patched.length && ['Earlier on its output', () => moveOnOutput(patched.map(x => x.id), -1), { key: 'Alt ↑' }],
+    patched.length && ['Later on its output', () => moveOnOutput(patched.map(x => x.id), 1), { key: 'Alt ↓' }],
     patched.length && [patched.length === 1 ? 'Unpatch' : `Unpatch ${patched.length} fixtures`, () => { patched.forEach(x => unassign(x.id)); markPatch(); commit(); renderRight(); }],
     '-',
     ['Delete', deleteSel, { key: 'Del', danger: true, disabled: allLocked }],
@@ -4698,7 +4811,8 @@ function patchTo(ids, c, o) {
 }
 function showInPatch(f) {
   ui.dockTab = 'patch'; ui.dockCollapsed = false; ui.selCtrl = f._patch.ctrl.id;
-  renderDock();
+  if (ui.foldOuts) ui.foldOuts.delete(f._patch.ctrl.id + ':' + f._patch.out);
+  renderDock(); revealInPatch();
 }
 function canvasMenu(e, x, y) {
   const W = project.settings.compW, H = project.settings.compH;
@@ -4793,10 +4907,12 @@ function controllerMenu(e, c) {
 function chipMenu(e, fid, c, o) {
   const fx = fxById(fid), chain = c.chains[o], k = chain.indexOf(fid);
   menu(at(e), [
-    { head: `${fx.name} · OUT ${o + 1}` },
+    { head: `${fx.name} · OUT ${o + 1} · #${k + 1} of ${chain.length}` },
     ['Select it', () => { ui.sel = new Set([fid]); onSelection(); }],
-    ['Move to the start of the output', () => { assign(fid, c, o, 0); commit(); renderRight(); }, { disabled: k === 0 }],
-    ['Move to the end of the output', () => { assign(fid, c, o, -1); commit(); renderRight(); }, { disabled: k === chain.length - 1 }],
+    ['Move earlier', () => moveOnOutput([fid], -1), { key: 'Alt ↑', disabled: k === 0 }],
+    ['Move later', () => moveOnOutput([fid], 1), { key: 'Alt ↓', disabled: k === chain.length - 1 }],
+    ['Move to the start of the output', () => moveToOutputEdge([fid], false), { disabled: k === 0 }],
+    ['Move to the end of the output', () => moveToOutputEdge([fid], true), { disabled: k === chain.length - 1 }],
     '-',
     ['Unpatch', () => { unassign(fid); markPatch(); commit(); renderRight(); }, { danger: true }],
   ]);
@@ -5055,6 +5171,7 @@ function onKey(e) {
   if (k === 'g') { ui.snap = !ui.snap; $('#vSnap').checked = ui.snap; savePrefs(); toast('Snap ' + (ui.snap ? 'on' : 'off')); return; }
   if (k === 'b') { toggleBlackout(); return; }
   if (k === 'i') { toggleIdentify(); return; }
+  if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && ui.sel.size) { e.preventDefault(); if (!moveOnOutput([...ui.sel], e.key === 'ArrowUp' ? -1 : 1)) toast('Not moved: patch it first, or it is already first or last on its output.'); return; }
   const step = e.shiftKey ? 10 : 1;
   const arrows = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
   if (arrows[e.key] && ui.sel.size) { e.preventDefault(); nudge(...arrows[e.key]); }

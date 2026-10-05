@@ -36,7 +36,7 @@ On Windows or macOS you can also double-click `start-openledmapper.bat` or `star
 ## Quick start
 
 1. **Fixtures:** draw them on the stage with `L` line, `M` matrix, `C` circle/oval, `P` path or `N` pen, or import an SVG. Set pixel count, colour order and direction in the Inspector.
-2. **Patch:** add your controller in the Patch panel (IP, outputs, universes per output), or find it with **Nodes → Discover**. Drag fixtures onto its outputs.
+2. **Patch:** add your controller in the Patch panel (IP, outputs, universes per output), or find it with **Nodes → Discover**. Drag fixtures onto its outputs; ↑ ↓ (or Alt ↑ ↓) change their order, which sets their addresses.
 3. **Content:** click a source to play it. Use zones and layers (Content tab) to play different things on different parts.
 4. **Scenes:** press **+ Store** to save a look, and click it to fade back to it.
 5. Press **Art-Net ON**.

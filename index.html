@@ -3529,8 +3529,9 @@ function deleteSel() {
   commit(); renderRight();
 }
 // A whole group is copied as a new group. A fixture of a group copied on its own joins that group.
-// A copy goes on the output of the fixture it copies, after the fixtures already there, if all its pixels fit;
-// otherwise it is left unpatched.
+// When the originals are on one output, the copies go on it after the fixtures already there, while they fit
+// (one that doesn't fit is left unpatched). When the originals are spread over several outputs, the copies are
+// left unpatched: there is no telling which outputs they are meant for.
 function duplicateSel() {
   ensurePatch();
   const out = [], pairs = [];
@@ -3549,8 +3550,9 @@ function duplicateSel() {
   if (!out.length) return;
   normalizeGroups(); markGeom(); rebuildGeometry();
   let placed = 0, left = 0;
+  const outs = new Set(pairs.filter(([p]) => p).map(([p]) => p.ctrl.id + ':' + p.out));
   for (const [p, g] of pairs) {
-    if (!p) continue;
+    if (!p || outs.size > 1) continue;
     const chain = p.ctrl.chains[p.out];
     chain.push(g.id); markPatch(); computePatch();
     if (g._patch && g._patch.first >= 0 && !g._patch.overflow) placed++;
@@ -3559,8 +3561,9 @@ function duplicateSel() {
   onPatchChanged();
   ui.sel = new Set(out);
   commit(); renderRight();
-  if (placed || left) toast((placed ? `${placed === 1 ? 'The copy is' : placed + ' copies are'} patched after the others on the same output.` : '') +
-    (left ? ` ${left === 1 ? 'One copy does' : left + ' copies do'} not fit on its output and ${left === 1 ? 'is' : 'are'} not patched.` : ''));
+  if (outs.size > 1) toast(`The copies aren't patched: the originals use ${outs.size} outputs. Right-click → Patch to.`);
+  else if (placed || left) toast((placed ? `${placed === 1 ? 'The copy is' : placed + ' copies are'} patched after the others on the same output.` : '') +
+    (left ? ` ${left === 1 ? 'One copy does' : left + ' copies do'} not fit on the output and ${left === 1 ? 'is' : 'are'} not patched.` : ''));
 }
 // The selected fixtures go into a new group, where the first of them is in the list
 function groupSel() {

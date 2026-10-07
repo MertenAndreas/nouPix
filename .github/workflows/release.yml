@@ -1,6 +1,6 @@
 # Builds the openLedMapper desktop apps (Windows, macOS Apple silicon, macOS Intel): the Art-Net bridge is packed
 # with PyInstaller (openledmapper.spec), then wrapped with the interface window in an Electron app (desktop/).
-#   - Push a tag named after the version in openledmapper.py (git tag v0.5.3 && git push origin v0.5.3):
+#   - Push a tag named after the version in openledmapper.py (git tag v0.6.0 && git push origin v0.6.0):
 #     the apps are built, tested and attached to a new GitHub release.
 #   - Or run it by hand from the Actions tab: the apps are built and kept as run artifacts, no release.
 name: Build apps
@@ -61,7 +61,7 @@ jobs:
           pid=$!
           ok=
           for i in $(seq 1 30); do
-            if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html; then ok=1; break; fi
+            if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html && curl -fsS -o app.js http://127.0.0.1:8080/js/app.js; then ok=1; break; fi
             sleep 1
           done
           if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openledmapper-bridge.exe //F; else kill "$pid"; fi
@@ -98,7 +98,7 @@ jobs:
           pid=$!
           up=
           for i in $(seq 1 60); do
-            if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html; then up=1; break; fi
+            if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html && curl -fsS -o app.js http://127.0.0.1:8080/js/app.js; then up=1; break; fi
             sleep 1
           done
           if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openLedMapper.exe //F || true; else kill -9 "$pid" || true; fi
@@ -150,6 +150,7 @@ jobs:
 
       - uses: softprops/action-gh-release@v3
         with:
+          name: openLedMapper ${{ github.ref_name }}
           files: out/*
           fail_on_unmatched_files: true
           generate_release_notes: true

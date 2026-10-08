@@ -99,6 +99,10 @@ SUITES = [   # name, function, part of --quick
     ("options", simple("test_options.py", 8155, 1500), True),
     ("static", simple("test_static.py", 8156, 120), True),
     ("color", simple("test_color.py", 8157, 300), True),
+    ("remote", simple("test_remote.py", 8160, 1200), True),
+    ("rapp", simple("test_remote_app.py", 8164, 400), True),
+    ("rsoak", simple("test_remote_soak.py", 8162, 2400), False),
+    ("playlist", simple("test_playlist.py", 8170, 600), True),
     ("profile", last_line("test_profile_move.py", [], 60, lambda l: "ALL PASS" in l), True),
 ]
 

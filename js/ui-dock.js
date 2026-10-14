@@ -22,6 +22,7 @@ function renderDock() {
   else renderMonitor(body);
   replayFlip();
   const ce = body.querySelector('.ctrl-edit'); if (ce) ce.scrollTop = keep;
+  updateMidiUI();
 }
 function onPatchChanged() { schedulePanels(); }
 let panelsQueued = false;
@@ -162,6 +163,7 @@ function sceneTile(z, sc, i, keys, look) {
     h('i', { class: 'prog' }));
   tile.querySelector('.s').prepend(fadeControl(tile, { name: sc.name, get: () => sc.fade, set: v => { sc.fade = v; } }));
   tile.style.setProperty('--tag', sc.tag);
+  midiButton(tile, `sc:${z.id}:${sc.id}`);   // a MIDI pad can play it
   tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));
   onRightClick(tile, e => sceneMenu(at(e), z, sc));
   tile.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target === tile) { e.preventDefault(); goScene(z, sc, e.shiftKey); } });

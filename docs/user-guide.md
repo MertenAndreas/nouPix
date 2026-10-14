@@ -1,6 +1,6 @@
 # openLedMapper: detailed reference
 
-Everything openLedMapper 0.8.3 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything openLedMapper 0.9.0 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -273,6 +273,38 @@ Phones, tablets and other computers on the same network can use openLedMapper to
 - The devices render the content too, to show it: an old phone is happier on the Remote page than with the whole interface.
 - Anyone on the network can open the Operator and Remote pages. Use it on a network you trust (the show network, not public Wi-Fi).
 
+## MIDI
+
+A MIDI controller (faders, knobs, buttons, pads: a nanoKONTROL, an APC, a Launchpad…) can play the project: the master, blackout, each zone's level, its scenes and its playlists.
+
+**Turning it on.** The MIDI button in the top bar (three faders, next to the remote button) turns MIDI on and opens the **MIDI window**: a window of its own, big, to put beside the main one or on another screen. The browser may ask once whether openLedMapper can use your MIDI devices: allow it. MIDI stays on the next time openLedMapper starts; **Turn off** in the MIDI window stops it. The MIDI window closes with openLedMapper; the MIDI button opens it again (or brings it to the front). MIDI works in Chrome, Edge and the openLedMapper app (Safari and Firefox have no MIDI).
+
+**Learning.** Press **Learn** in the MIDI window. A bar at the top of the main window says what to do, and everything a control can drive is outlined in yellow:
+
+1. Move a fader or a knob, or press a pad, on your controller.
+2. Click what it should move, in the main window: the **Master** slider, **Blackout**, a zone's level slider (in the Scenes panel, the Content tab or the Inspector), a **scene**, or a **playlist's tab**.
+
+Or the other way round: click something first, then move the control. Clicking while learning only picks: the scene doesn't play and the slider doesn't move. Once a control is learnt it is done: letting go of a button, or the rest of a fader's move, doesn't start it again, so the next click waits for a new control. Learn stays on for the next one; **Esc** or **Stop learning** ends it.
+
+A control can drive several things: to learn the same control onto a second thing, click that thing first, then move the control. Learning a control onto something another control already drives replaces that control; to have two controls on the same thing, choose it in the second one's list in the MIDI window.
+
+**What each does.**
+
+- **Master** and **a zone's level** follow a fader or knob. With **Pickup** (the default), the value waits until the fader reaches it (or passes it), so nothing jumps when you touch a fader that was somewhere else; with **Jump** it goes where the fader is at once. A pad on a level turns it full on or off.
+- **Blackout** and **a playlist** are on or off: with **Toggle**, each press turns it over (a playlist plays, then pauses); with **Hold**, it is on while the pad is held.
+- **A scene** plays on each press, with its own fade, and pauses the zone's playlist, as a click does. **Next scene** (chosen from a mapping's list) plays the zone's next scene, back to the first after the last.
+
+**The MIDI window.** Along the top: **Learn** and what to do next, how many controllers are plugged in, and **Turn off**. On the left, your controllers, each with a light that blinks with its messages and a tick to ignore it. In the middle, the mappings: each control, what it drives (a list: Master, Blackout, or a zone's level, a scene, the next scene or a playlist), Pickup or Jump (Toggle or Hold), where the control is, and **×** to remove it. On the right, the **Monitor** (click its name to open it): every message, with what it moved. **Esc** stops learning and **⌘Z** undoes, in the MIDI window too.
+
+**On the sliders.** A slider a fader drives keeps its colour and gets a thin yellow line where the fader is: faint until the slider has been picked up, bright once it follows. While the MIDI window is open, or while learning, each slider, scene, playlist and Blackout a control drives shows the control's name in yellow (CC 21, Note 36).
+
+**Good to know.**
+
+- The mappings are saved in the project, and undo works on them. Whether MIDI is on, and which controllers are ignored, belong to this computer.
+- Controllers are found by their name: plug them in or out at any time. A mapping learnt on a controller that isn't plugged in also answers the same control on another port, so a project made on a Mac works with the same controller on Windows, where its name is different.
+- A mapping to a scene, playlist or zone that has been deleted shows as **Missing** and does nothing. Point it at something else, or remove it.
+- MIDI is read on this computer only: devices logged in by remote control don't listen to it. On Windows a MIDI port works in one program at a time: close it in other programs first.
+
 ## Network notes
 
 - **Nodes → Discover** sends ArtPoll on each network of this computer, to that network's broadcast address (2.255.255.255 for a 2.0.0.10/8 card, 192.168.1.255 for 192.168.1.20/24). The networks are listed beside the button: untick one to leave it out of scans (Wi-Fi, a venue network you shouldn't flood), and its nodes are hidden from the list. The choice is kept on this computer. **Also** takes one more address to send ArtPoll to. The table shows which network each node answered on.
@@ -310,7 +342,7 @@ Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture in
 The apps are an [Electron](https://www.electronjs.org/) window (`desktop/`) around the interface, with the Art-Net bridge (`openledmapper.py`, packed with PyInstaller by `openledmapper.spec`) running inside: the app starts it with `--embedded` and it stops when the app quits. GitHub builds them (`.github/workflows/release.yml`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
 
 1. Set `VERSION` in `openledmapper.py` (and the README title), and commit.
-2. Tag it with the same version and push the tag: `git tag v0.8.3 && git push origin v0.8.3`.
+2. Tag it with the same version and push the tag: `git tag v0.9.0 && git push origin v0.9.0`.
 
 The three apps are built, started once to check that they start the bridge and stop it again, and attached to a new release on the Releases page, in about 10 minutes. The app's version comes from `VERSION`; a tag that doesn't match it fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run.
 

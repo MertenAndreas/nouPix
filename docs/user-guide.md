@@ -1,6 +1,6 @@
 # openLedMapper: detailed reference
 
-Everything openLedMapper 0.7.0 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything openLedMapper 0.8.3 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -107,6 +107,10 @@ The Content tab lists the zones, then the layers of the selected zone (top layer
 
 **Speed** goes from 0 to 100 % of a generator's full speed, with **Reverse** next to it. Each layer keeps its own clock for it, so dragging the slider speeds the animation up or down smoothly instead of making it jump. (Custom ISF shaders get this too when they have a float input named `speed` used as `TIME * speed`.)
 
+**Exact values.** Double-click the number next to any slider (or select it with Tab and press Enter) to type a value: Enter or a click elsewhere keeps it, Escape leaves it as it was. Percentages are typed as percentages (40 is 40 %), and a decimal comma works too. Hold **Shift** and scroll over a slider, a number box or a slider of the colour picker to change it a notch at a time, about a hundredth of its range; without Shift the panel scrolls as usual. All the notches of one scroll are one undo step. This works in every panel: parameters, opacity, dimmer, trims, gamma, settings.
+
+**Angles.** A generator's **Angle** (Bars, Rainbow, Rain, Waves, Comet, Wipe, Scanner and others) has buttons for 0°, 45°, 90°, 135°, 180°, 225°, 270° and 315° under its slider; the one it is at is lit. Its slider moves in whole degrees, Shift + scroll in steps of 5°, and it goes round: past 360° it starts again at 5°, and a typed 450° is 90°, −45° is 315°. Any angle can be typed, 22.5° too. A custom ISF shader gets this for a float input named or labelled angle or rotation, in degrees (a range of 45° to 360°); one in radians stays a plain slider.
+
 **Finding a source.** Every source is sorted along four facets, each with a dropdown under the search box:
 
 | Facet | Values |
@@ -155,20 +159,21 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 
 A playlist plays some of a zone's scenes one after another, by itself: Evening, Party, Closing… A zone can have as many as you like; one plays at a time (a zone shows one look).
 
-**Making one.** The playlist button on a zone's row (next to **+ Store**) opens **New playlist**: name it, tick the scenes you want, give them a play time, and choose the fades and what happens at the end. A zone that already has playlists shows **+ New playlist** after its tabs. A scene's **⋯ → Add to playlist** adds it to one of them, or starts a new one with it.
+**Making one.** The playlist button on a zone's row (next to its name) opens **New playlist**: name it, tick the scenes you want and put them in order with **↑ ↓** (or **Alt ↑ ↓** on a row), as with fixtures on an output. Give each a play time and, if it should fade differently in this playlist, its own fade (left empty, it fades like the scene). Then choose the fades and what happens at the end. A zone that already has playlists shows **+ New playlist** after its tabs. A scene's **⋯ → Add to playlist** adds it to one of them, or starts a new one with it.
 
 **On the Scenes panel.** Under a zone's scenes, one line holds its playlists as tabs, with the one playing and its time left. The tab playing is green (orange when paused), with a thin line that fills as the whole playlist plays.
 
 - **▶ on a tab** plays that playlist from its first step (or pauses the one playing, or carries on with the paused one). Starting another playlist fades the zone over to it.
 - **Click a tab** to open it: its steps, with the step playing filling up as it plays. **Click the tab again**, or **▴ Close**, to fold it back to one line; it keeps playing. The zone's playlist button opens and folds it too, and is green while a playlist plays.
-- In the open playlist: previous, play/pause and next; the steps; **+ Add** to add a scene at the end (or drag a scene's button onto the playlist); drag steps to reorder them.
-- **Click a step** to edit it: its scene, its **play time** (seconds, like 90, or minutes:seconds, like 1:30), its fade, **Play from here**, **Remove**.
+- In the open playlist: previous, play/pause and next; the steps; **+ Add** to add a scene at the end (or drag a scene's button onto the playlist). Drag steps to reorder them, or select one and press **Alt ← →**.
+- **A step's fade** shows on the step. Drag it sideways, click it to type one, or use **↑ ↓**, as on a scene's button: that gives the step its own fade, in this playlist only (it shows blue); the scene keeps its own. Type nothing to go back to the scene's.
+- **Click a step** to edit it: its scene, its **play time** (seconds, like 90, or minutes:seconds, like 1:30), its fade (**Auto** or **Its own**), **← Earlier** and **Later →**, **Play from here**, **Remove**.
 - Right-click a tab, or **⋯** on the open one: play or pause, rename (or double-click the tab), duplicate, what happens at the end, play when the project opens, delete.
 - The zone's right-click menu has **Playlists** too: click one to play it.
 
 **Play time.** A step's play time counts from the moment it starts, its fade in included, until the next step starts, like a follow time on a lighting desk. So the playlist lasts the sum of its play times, and changing a fade never moves what comes after. A fade longer than its step's play time is cut short (the step shows it in orange).
 
-**Fades.** A step fades in with its scene's own fade, unless the playlist is set to **One for all** (the same fade for each of its steps), unless the step has **its own** (in the step editor, for the one transition that should be different). Each step shows the fade it will use: grey when it comes from the scene or the playlist, blue when it is its own. Picking a scene by hand always uses the scene's own fade.
+**Fades.** A step fades in with its scene's own fade, unless the playlist is set to **One for all** (the same fade for each of its steps), unless the step has **its own** (set on the step, in the step editor or in the New playlist window, for the transitions that should be different). A step's own fade never changes the scene: the same scene can cut in one playlist and fade slowly in another. Each step shows the fade it will use: grey when it comes from the scene or the playlist, blue when it is its own. Picking a scene by hand always uses the scene's own fade.
 
 **At the end** a playlist loops, stops on its last step, or plays another playlist of the zone (**Then play…**): Evening, then Party, then Closing.
 
@@ -195,7 +200,7 @@ A playlist plays some of a zone's scenes one after another, by itself: Evening, 
 - Controller output *n* (counting from 0) starts at `first universe + n × universes per output`.
 - In the Patch panel each output lists its fixtures one per row, in address order, with each one's universe and channel range. The order on an output sets the addresses: the first fixture starts at the output's first channel and each next one carries on from the previous one. To change it without dragging, use **↑ ↓** on the selected (or hovered) row, **Alt ↑ / Alt ↓**, the **Order** buttons in the Inspector's Output section (↑ Earlier, ↓ Later, To start, To end), or right-click a row. Several selected fixtures on one output move together. Dragging rows still works: drop on a row to go before it, on the output's header to go last.
 - Click an output's header to fold it to one line; **Fold all / Unfold all** sit above the outputs. Selecting a patched fixture anywhere brings its row into view.
-- **Skip ch 511–512** (on by default) never splits a pixel across universes: 170 RGB pixels per universe, channels 511 and 512 left empty, as nearly every pixel controller expects (the ⓘ beside it explains). Turn it off only for a controller set to continuous addressing: then all 512 channels are used. RGBW pixels fill a universe exactly (128), so nothing is skipped either way.
+- **Skip ch 511–512** (on by default) never splits a pixel across universes: 170 RGB pixels per universe, channels 511 and 512 left empty, as nearly every pixel controller expects (the ⓘ beside it explains). Turn it off only for a controller set to continuous addressing: then all 512 channels are used. RGBW pixels fill a universe exactly (128), so nothing is skipped either way. 16-bit pixels take twice the channels (85 RGB or 64 RGBW per universe).
 - The **ON** switch beside a controller's name stops or starts sending to it. The red bin deletes it, on a double-click (Ctrl Z brings it back).
 - Pixels that don't fit in an output's universes are not sent. They show in red in the Patch panel and Inspector.
 - Universe numbers are Art-Net 15-bit port addresses, starting at 0. The DMX Monitor also shows them as net / subnet / universe.
@@ -203,6 +208,24 @@ A playlist plays some of a zone's scenes one after another, by itself: Evening, 
 - Every packet is a full 512-channel ArtDmx packet with a sequence number, sent unicast to the controller's IP. ArtSync is optional (Settings).
 - **Frame rate** (Settings): 40 frames a second by default, up to 100. Above 44, frames come faster than a DMX line refreshes; pixel controllers take them, but some DMX nodes skip frames.
 - **Master**, each fixture's **gamma** and **colour trims** (red, green, blue, and white for orders with W; Inspector → Pixels) and **RGBW white extraction** are applied to the output. Projects from before 0.5 had one trim for all fixtures: each fixture starts from it. The stage preview shows the colours before gamma. **Gamma** is per fixture (Inspector → Pixels) because LED types differ: about 2.2–2.8 suits most addressable pixels, 1 means none. Copies keep it. **Settings → Gamma for new fixtures** is the value new fixtures start from, and **Apply to all fixtures** sets it everywhere. Projects from before had one gamma for all fixtures: each fixture starts from it, so they send exactly what they did.
+
+## 16-bit fixtures and dimming curves
+
+**Resolution** (Inspector → Pixels): **8-bit** sends one channel per colour, as most pixels expect. **16-bit** sends two per colour, the coarse one (the high byte) and then its fine one (the low byte): red, red fine, green, green fine, blue, blue fine. An RGB pixel then takes 6 channels, 85 to a universe (channels 511 and 512 stay empty, or carry the next pixel's red with Skip ch 511–512 off); RGBW takes 8, 64 to a universe. Use it only for fixtures and controllers set to 16-bit colour. 8-bit and 16-bit fixtures can share a project, a controller and an output: each takes the channels it needs, one after the other.
+
+**What 16-bit adds.** The content (shaders, videos, images, the mix of layers and zones) is worked out with 8 bits per colour, 256 levels, as on any screen. What comes after it, for each pixel, is worked out exactly on a 16-bit fixture: its dimmer, trims, the master, and the dimming curve, before it is turned into 65,536 levels. That is where 8 bits fall short: with gamma 2.2, the bottom 10 % of a fade has only 3 different values at 8 bits, so slow fades and low levels step; at 16 bits it has hundreds. A fade with the master or a fixture's dimmer is smooth at 16 bits.
+
+**Dimming curve** (16-bit fixtures; 8-bit ones use gamma): how a pixel's level becomes its output.
+
+- **Gamma**: corrects the LEDs, with the gamma slider (2.2–2.8 for most pixels, 1 for none).
+- **Linear**: the output follows the level exactly.
+- **Square law**: a slow start, fine control at the low end.
+- **Inverse square**: a fast start; low levels come up quickly.
+- **S curve**: slow at both ends, quicker in the middle: smooth starts and finishes.
+
+Square law, inverse square and S curve have a **Strength** slider: 100 % is the classic curve, lower brings it closer to a straight line (0 % is linear), and up to 200 % makes it stronger (the square law towards a cube, the S curve steeper). At every strength the output still rises steadily with the level. Linear has no slider.
+
+The **graph** under the curve shows it: level in (left to right), output (bottom to top). It moves with the Gamma or Strength slider as you drag it (or type a value, or Shift + scroll), so you see the curve before you let go. **Low end** shows the first 10 %, where an 8-bit fixture draws its few steps and a 16-bit one a smooth line; under it, how many output steps that part has. A fixture saved with the tungsten curve of 0.8.0 opens with gamma. Changing a fixture back to 8-bit keeps its curve for later and uses gamma meanwhile. The DMX Monitor names each channel (R coarse, R fine…), and the patch CSV has a Bits column.
 
 ## SVG import
 
@@ -271,7 +294,7 @@ Phones, tablets and other computers on the same network can use openLedMapper to
 
 The `examples/` folder has files to try without building a layout (each is described in its [README](../examples/README.md)):
 
-- **Projects** (Project ▾ → Open project…): `01-led-bars.json` (twelve vertical bars), `02-matrix-wall.json` (four 32 × 32 panels on two controllers), `03-rings-and-arcs.json` (rings, arcs, an oval), `04-stage-mixed.json` (most options together: RGBW, a turned matrix, trims, gamma, a locked spare, an advanced patch start address, blend modes).
+- **Projects** (Project ▾ → Open project…): `01-led-bars.json` (twelve vertical bars), `02-matrix-wall.json` (four 32 × 32 panels on two controllers), `03-rings-and-arcs.json` (rings, arcs, an oval), `04-stage-mixed.json` (most options together: RGBW, a turned matrix, trims, gamma, 16-bit rings with the square-law and a steeper S curve, a locked spare, an advanced patch start address, blend modes).
 - **An SVG layout** to import: `05-facade.svg`.
 - **An ISF shader** to add as a source: `06-GradientBounce.fs` (small and commented, a starting point for your own).
 - **A test video** with sound, for trim, loop or once and sound: `07-test-clip.webm`.
@@ -287,7 +310,7 @@ Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture in
 The apps are an [Electron](https://www.electronjs.org/) window (`desktop/`) around the interface, with the Art-Net bridge (`openledmapper.py`, packed with PyInstaller by `openledmapper.spec`) running inside: the app starts it with `--embedded` and it stops when the app quits. GitHub builds them (`.github/workflows/release.yml`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
 
 1. Set `VERSION` in `openledmapper.py` (and the README title), and commit.
-2. Tag it with the same version and push the tag: `git tag v0.7.0 && git push origin v0.7.0`.
+2. Tag it with the same version and push the tag: `git tag v0.8.3 && git push origin v0.8.3`.
 
 The three apps are built, started once to check that they start the bridge and stop it again, and attached to a new release on the Releases page, in about 10 minutes. The app's version comes from `VERSION`; a tag that doesn't match it fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run.
 

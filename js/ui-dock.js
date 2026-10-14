@@ -95,18 +95,26 @@ function editScene(sc) {
   document.body.append(bg);
   nameIn.focus(); nameIn.select();
 }
-// The fade time on a scene's button: drag it sideways to change it (Shift = ×10), click it to type one, or use the
-// arrow keys. 0 cuts. It works the same on the scene playing, so a fade can be tried and changed at once.
-function fadeControl(sc, tile) {
-  const label = () => (sc.fade > 0 ? '◢ ' + fmtV(Math.round(sc.fade * 10) / 10) + ' s' : 'cut');
-  const tip = () => `Fade in: ${sc.fade > 0 ? fmtV(sc.fade) + ' s' : 'none, it cuts'}. Drag sideways to change it (Shift = ×10), click to type, or ↑ ↓.`;
-  const el = h('span', { class: 'fd' + (sc.fade > 0 ? '' : ' cut'), role: 'button', tabindex: 0, title: tip(), 'aria-label': sc.name + ' fade time' }, label());
-  const show = () => { el.textContent = label(); el.classList.toggle('cut', !(sc.fade > 0)); el.title = tip(); };
-  const set = v => { sc.fade = clamp(Math.round(v * 10) / 10, 0, 60); show(); };
+// A fade time on a button (a scene's, a playlist step's): drag it sideways to change it (Shift = ×10), click it to type
+// one, or use the arrow keys. 0 cuts. It works the same while that scene plays, so a fade can be tried and changed at
+// once. o: get() and set(v) the value; text() and tip() what it shows; clear(), if typing nothing goes back to automatic.
+function fadeControl(tile, o) {
+  const label = () => o.text ? o.text() : (o.get() > 0 ? '◢ ' + fmtV(Math.round(o.get() * 10) / 10) + ' s' : 'cut');
+  const tip = () => (o.tip ? o.tip() : `Fade in: ${o.get() > 0 ? fmtV(o.get()) + ' s' : 'none, it cuts'}`) + '. Drag sideways to change it (Shift = ×10), click to type, or ↑ ↓.';
+  const el = h('span', { class: 'fd' + (o.get() > 0 ? '' : ' cut') + (o.cls ? ' ' + o.cls() : ''), role: 'button', tabindex: 0, title: tip(), 'aria-label': o.name + ' fade time' }, label());
+  const show = () => { el.textContent = label(); el.className = 'fd' + (o.get() > 0 ? '' : ' cut') + (o.cls ? ' ' + o.cls() : '') + (el.classList.contains('scrub') ? ' scrub' : ''); el.title = tip(); };
+  const set = v => { o.set(clamp(Math.round(v * 10) / 10, 0, 60)); show(); };
   const type = () => {
     let done = false;
-    const inp = h('input', { type: 'number', class: 'fdin', min: 0, max: 60, step: 0.1, value: fmtV(sc.fade), 'aria-label': sc.name + ' fade time' });
-    const finish = ok => { if (done) return; done = true; const v = parseFloat(inp.value); if (ok && isFinite(v) && clamp(v, 0, 60) !== sc.fade) { set(v); commit(); } else renderDock(); };
+    const inp = h('input', { type: 'text', class: 'fdin', value: o.clear && o.auto && o.auto() ? '' : fmtV(o.get()), placeholder: o.clear ? 'auto' : '', 'aria-label': o.name + ' fade time',
+      title: 'Seconds; 0 cuts' + (o.clear ? '; empty: automatic' : '') });
+    const finish = ok => {
+      if (done) return; done = true;
+      const txt = inp.value.trim().replace(',', '.'), v = parseFloat(txt);
+      if (ok && txt === '' && o.clear) { o.clear(); commit(); }
+      else if (ok && isFinite(v) && (clamp(v, 0, 60) !== o.get() || (o.auto && o.auto()))) { set(v); commit(); }
+      else renderDock();
+    };
     inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
     inp.addEventListener('blur', () => finish(true));
     inp.addEventListener('click', e => e.stopPropagation());
@@ -120,7 +128,7 @@ function fadeControl(sc, tile) {
     e.stopPropagation(); e.preventDefault();
     tile.draggable = false;
     el.setPointerCapture(e.pointerId);
-    const x0 = e.clientX, v0 = sc.fade;
+    const x0 = e.clientX, v0 = o.get(), a0 = !!(o.auto && o.auto());
     let moved = false;
     const mv = ev => {
       if (!moved && Math.abs(ev.clientX - x0) < 3) return;
@@ -130,13 +138,13 @@ function fadeControl(sc, tile) {
     const up = () => {
       el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
       tile.draggable = true; el.classList.remove('scrub');
-      if (!moved) type(); else if (sc.fade !== v0) commit();
+      if (!moved) type(); else if (o.get() !== v0 || a0 !== !!(o.auto && o.auto())) commit(); else renderDock();
     };
     el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   });
   el.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); type(); }
-    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); set(sc.fade + (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 1 : 0.1)); commitSoft(); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); set(o.get() + (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 1 : 0.1)); commitSoft(); }
   });
   return el;
 }
@@ -152,7 +160,7 @@ function sceneTile(z, sc, i, keys, look) {
     h('div', { class: 's' }, null, h('span', { class: 'fill' }),
       edited ? h('span', { class: 'badge warn', title: 'The layers have changed since this scene was recalled. ⋯ → Update saves the changes into it.' }, 'edited') : null),
     h('i', { class: 'prog' }));
-  tile.querySelector('.s').prepend(fadeControl(sc, tile));
+  tile.querySelector('.s').prepend(fadeControl(tile, { name: sc.name, get: () => sc.fade, set: v => { sc.fade = v; } }));
   tile.style.setProperty('--tag', sc.tag);
   tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));
   onRightClick(tile, e => sceneMenu(at(e), z, sc));
@@ -284,7 +292,8 @@ function renderCtrlEditor(edit, c) {
     + 'On (standard): channels 511 and 512 stay empty and the 171st pixel starts at channel 1 of the next universe, so no pixel is split between two universes. This is what nearly every pixel controller expects (PixLite, Falcon, Advatek, WLED…): keep it on.\n\n'
     + 'Off: all 512 channels are used, and the 171st pixel gets red and green on 511–512 and blue on channel 1 of the next universe. Only for controllers set to continuous addressing, or for plain DMX channels.\n\n'
     + 'If colours look shifted from the second universe on, this setting does not match the controller.\n'
-    + 'RGBW pixels take 4 channels: 128 fill a universe exactly, so nothing is skipped either way.';
+    + 'RGBW pixels take 4 channels: 128 fill a universe exactly, so nothing is skipped either way.\n'
+    + '16-bit fixtures take two channels per colour (coarse, then fine): 6 for RGB, so 85 pixels fill channels 1 to 510; 8 for RGBW, so 64 fill a universe.';
   edit.append(h('div', { class: 'ctrl-fields' },
     f('Output', en),
     f('Name', small(textInput(c, 'name', { aria: 'Controller name', onInput: () => {}, onCommit: () => { commit(); renderRight(); } }), 150)),
@@ -550,7 +559,7 @@ function renderMonitor(body) {
     const U = universes.find(u => u.key === ui.monitorKey);
     if (!U) return;
     const m = monitorMap(U)[ch];
-    read.textContent = `ch ${ch + 1} = ${U.data[ch]}` + (m ? ` · ${m.f.name} · pixel ${m.i + 1} · ${m.c}` : ' · unused');
+    read.textContent = `ch ${ch + 1} = ${U.data[ch]}` + (m ? ` · ${m.f.name} · pixel ${m.i + 1} · ${m.c}${m.coarse ? ' coarse' : m.fine ? ' fine' : ''}` : ' · unused');
   });
   const U = universes.find(u => u.key === ui.monitorKey);
   const bar = h('div', { class: 'bar' }, U ? h('span', { class: 'mono' }, `${U.ip} · universe ${U.uni} (net ${U.uni >> 8}, subnet ${(U.uni >> 4) & 15}, universe ${U.uni & 15}) · ${U.ctrl.name} OUT ${U.out + 1}`) : h('span', null, 'DMX values being sent'),
@@ -566,7 +575,9 @@ function monitorMap(U) {
     const o = f._out; if (!o) continue;
     for (let i = 0; i < f._n; i++) {
       const lin = o.lin[i]; if (lin < 0) continue;
-      for (let k = 0; k < f.order.length; k++) { const L = lin + k; if (o.unis[L >> 9] === U) monMap[L & 511] = { f, i, c: f.order[k] }; }
+      // a 16-bit fixture has two channels per colour: the coarse one, then the fine one
+      const per = f.bits === 16 ? 2 : 1;
+      for (let k = 0; k < f.order.length * per; k++) { const L = lin + k; if (o.unis[L >> 9] === U) monMap[L & 511] = { f, i, c: f.order[(k / per) | 0], fine: per === 2 && k % 2 === 1, coarse: per === 2 && k % 2 === 0 }; }
     }
   }
   monMapKey = key;

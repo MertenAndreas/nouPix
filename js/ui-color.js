@@ -87,6 +87,10 @@ function openColorPicker(anchor, o) {
     r.addEventListener('change', done);
     n.addEventListener('change', () => { const v = parseFloat(n.value); if (isFinite(v)) { put(clamp(v, min, max)); done(); } });
     const el = h('div', { class: 'cpslider' }, h('span', { class: 'cpl' }, label), r, h('label', { class: 'cpn' }, n, unit ? h('span', null, unit) : null));
+    // Shift + scroll: a notch is about a hundredth of the range; hue goes round
+    const notch = Math.max(step, niceStep((max - min) / 100));
+    let moved = false;
+    shiftWheel(el, k => { const v = notchFrom(get(), k, notch); put(unit === '°' ? ((v % 360) + 360) % 360 : clamp(v, min, max)); moved = true; }, () => { if (moved) { moved = false; done(); } });
     el._sync = () => { const v = get(); if (document.activeElement !== r) r.value = v; if (document.activeElement !== n) n.value = step >= 1 ? Math.round(v) : Math.round(v * 10) / 10; r.style.background = track(); };
     return el;
   };
@@ -158,7 +162,9 @@ function openColorPicker(anchor, o) {
 
   const off = e => { if (!pop.contains(e.target) && !e.target.closest('.cswatch')) closeColorPicker(); };
   const esc = e => { if (e.key === 'Escape') { e.stopPropagation(); closeColorPicker(); } };
-  setTimeout(() => { document.addEventListener('pointerdown', off, true); addEventListener('keydown', esc, true); }, 0);
+  // Listening at once (not after a timeout) is safe: the click that opened it is past its pointerdown. A timeout could
+  // let a quick click elsewhere on a busy page go by before it is listened for, and the picker would stay open.
+  document.addEventListener('pointerdown', off, true); addEventListener('keydown', esc, true);
   anchor.classList.add('open');
   colorPop = { key: o.key, pop, close: () => {
     pop.remove(); anchor.classList.remove('open');

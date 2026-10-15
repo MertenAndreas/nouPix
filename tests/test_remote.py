@@ -199,7 +199,10 @@ try:
     pr.goto(f"http://127.0.0.1:{RP}/"); pr.click(".role[data-role=programmer]"); pr.fill("#pw", "wrong"); pr.click("#go")
     check("a wrong password says so, and stays on the login page", until(pr, "document.querySelector('#msg').textContent.includes('Wrong password')") and pr.url.endswith("/"))
     pr.fill("#pw", "open sesame"); pr.press("#pw", "Enter")
-    check("with the password: the whole interface", until(pr, "window.olm && remote.loaded && olm.project.fixtures.length === 9", 15000) and pr.locator("#rail button:visible").count() > 5)
+    # a device compiles every effect's shader in its first seconds: with four pages rendering in software on one
+    # computer that can take a while, so this gives it time (and says how long it took)
+    t0 = time.time(); ok = until(pr, "window.olm && remote.loaded && olm.project.fixtures.length === 9", 45000)
+    check("with the password: the whole interface", ok and pr.locator("#rail button:visible").count() > 5, f"{time.time() - t0:.1f} s")
     P_ = pr.evaluate
     check("no Art-Net button on a device", not pr.is_visible("#btnOutput"))
     fx = P_("(() => { const f = olm.project.fixtures[0]; const r = document.querySelector('#view').getBoundingClientRect(); const [x, y] = toS(f.cx, f.cy); return [r.left + x, r.top + y, f.cx]; })()")

@@ -688,7 +688,7 @@ body.midi-learning [data-midi].midi-pick { outline: 2px solid var(--midi); anima
 .midibar[hidden] { display: none; }
 .midibar b { font-family: var(--mono); font-weight: 500; color: var(--midi); }
 /* the MIDI window: its bar (Learn and what to do), then the controllers, the mappings and the monitor */
-body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
 .mwhead { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; background: var(--bg1); border-bottom: 1px solid var(--line); }
 .mwtitle { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; white-space: nowrap; }
 .mwtitle svg { width: 18px; height: 18px; color: var(--midi); }
@@ -742,3 +742,25 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .mmon .d.go { color: var(--accent); }
 .mmon .d.learnt { color: var(--midi); }
 .mmon .note { font-family: var(--ui); padding: 0 4px; }
+/* the virtual controller, at the bottom of the MIDI window: faders and pads; folded, its heading */
+.vc { background: var(--bg1); border-top: 1px solid var(--line); }
+.vchead { display: flex; align-items: center; gap: 14px; min-height: 36px; padding: 0 16px; }
+.vchead .mfold { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.vchead .note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.vcbody { display: flex; align-items: flex-start; gap: 28px; padding: 4px 16px 14px; overflow-x: auto; }
+.vfaders { display: flex; gap: 8px; }
+.vf { display: grid; justify-items: center; gap: 4px; width: 66px; }
+.vf .v { font-family: var(--mono); font-size: 10.5px; color: var(--text2); min-height: 13px; }
+.vtrack { position: relative; width: 30px; height: 120px; border-radius: 4px; background: var(--bg0); border: 1px solid var(--line2); cursor: ns-resize; touch-action: none; }
+.vtrack::before { content: ''; position: absolute; left: 50%; top: 8px; bottom: 8px; width: 2px; margin-left: -1px; background: var(--line2); border-radius: 1px; }
+.vtrack:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.vfill { position: absolute; left: 50%; bottom: 8px; width: 2px; margin-left: -1px; height: 0; background: var(--midi); border-radius: 1px; }
+.vcap { position: absolute; left: 3px; right: 3px; bottom: 8px; height: 13px; margin-bottom: -6px; border-radius: 3px; background: linear-gradient(#cfd5de, #8c94a1); box-shadow: 0 2px 4px rgba(0, 0, 0, .5); }
+.vf .nm { font-family: var(--mono); font-size: 10.5px; color: var(--text); }
+.vf .tg, .vpad .tg { max-width: 100%; font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; min-height: 13px; }
+.vpads { display: grid; grid-template-columns: repeat(4, 96px); gap: 8px; align-content: start; padding-top: 17px; }
+.vpad { height: 58px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line2); background: var(--bg3); color: var(--text2); cursor: pointer; display: grid; align-content: center; justify-items: center; gap: 3px; touch-action: none; user-select: none; }
+.vpad:hover { border-color: #3a4150; }
+.vpad .nm { font-family: var(--mono); font-size: 10.5px; color: var(--text); }
+.vpad.down { background: var(--midi); border-color: var(--midi); }
+.vpad.down .nm, .vpad.down .tg { color: #241a00; }

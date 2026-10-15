@@ -53,10 +53,11 @@ const ui = {
   // the zone whose + Add list is open, the playlist being renamed
   playlistOpen: {}, playlistStep: null, playlistAdd: null, playlistRename: null,
   curveZoom: 'full',   // the fixture's dimming curve graph: 'full', or 'low' (the first 10 %)
-  // MIDI on this computer: whether it is on, the ports switched off (by name), whether the MIDI tab shows its monitor
-  midiOn: false, midiOff: [], midiMon: false,
+  // MIDI on this computer: whether it is on, the ports switched off (by name), whether the MIDI window shows its
+  // monitor and its virtual controller
+  midiOn: false, midiOff: [], midiMon: false, midiVc: false,
 };
-const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon'];
+const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc'];
 let geomDirty = true, patchDirty = true;
 const markGeom = () => { geomDirty = true; };
 const markPatch = () => { patchDirty = true; };

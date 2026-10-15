@@ -19,7 +19,9 @@ const midi = {
 function midiKeyParts(key) { const m = MIDI_KEY.exec(key); return m ? { port: m[1], ch: +m[2], type: m[3], num: +m[4] } : null; }
 const midiKeyLabel = key => { const k = midiKeyParts(key); return k ? `${k.type === 'cc' ? 'CC' : 'Note'} ${k.num}` : '?'; };
 const midiKeyFull = key => { const k = midiKeyParts(key); return k ? `${midiKeyLabel(key)} · ch${k.ch}` : '?'; };
-const midiPortLive = name => midi.ports.some(p => p.name === name && p.state !== 'disconnected');
+// The virtual controller (on screen, in the MIDI window) is a port too, there while it is shown
+const MIDI_VIRTUAL = 'Virtual controller';
+const midiPortLive = name => (name === MIDI_VIRTUAL ? !!(ui.midiOn && ui.midiVc) : midi.ports.some(p => p.name === name && p.state !== 'disconnected'));
 const midiPortOn = name => !(ui.midiOff || []).includes(name);
 
 /* ---------- targets ---------- */

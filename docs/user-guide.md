@@ -1,6 +1,6 @@
 # openLedMapper: detailed reference
 
-Everything openLedMapper 0.9.0 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything openLedMapper 0.9.1 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -296,6 +296,8 @@ A control can drive several things: to learn the same control onto a second thin
 
 **The MIDI window.** Along the top: **Learn** and what to do next, how many controllers are plugged in, and **Turn off**. On the left, your controllers, each with a light that blinks with its messages and a tick to ignore it. In the middle, the mappings: each control, what it drives (a list: Master, Blackout, or a zone's level, a scene, the next scene or a playlist), Pickup or Jump (Toggle or Hold), where the control is, and **×** to remove it. On the right, the **Monitor** (click its name to open it): every message, with what it moved. **Esc** stops learning and **⌘Z** undoes, in the MIDI window too.
 
+**The virtual controller.** At the bottom of the MIDI window, **Virtual controller** opens a controller on screen, to try MIDI without one: 8 faders (CC 21 to 28) and 8 pads (notes 36 to 43; keys **1** to **8** play them while the MIDI window is in front). It is listed with your controllers and learnt like them, and it works even where the browser has no MIDI. Under each fader and pad is what it drives. Click its name again to fold it away.
+
 **On the sliders.** A slider a fader drives keeps its colour and gets a thin yellow line where the fader is: faint until the slider has been picked up, bright once it follows. While the MIDI window is open, or while learning, each slider, scene, playlist and Blackout a control drives shows the control's name in yellow (CC 21, Note 36).
 
 **Good to know.**
@@ -342,7 +344,7 @@ Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture in
 The apps are an [Electron](https://www.electronjs.org/) window (`desktop/`) around the interface, with the Art-Net bridge (`openledmapper.py`, packed with PyInstaller by `openledmapper.spec`) running inside: the app starts it with `--embedded` and it stops when the app quits. GitHub builds them (`.github/workflows/release.yml`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
 
 1. Set `VERSION` in `openledmapper.py` (and the README title), and commit.
-2. Tag it with the same version and push the tag: `git tag v0.9.0 && git push origin v0.9.0`.
+2. Tag it with the same version and push the tag: `git tag v0.9.1 && git push origin v0.9.1`.
 
 The three apps are built, started once to check that they start the bridge and stop it again, and attached to a new release on the Releases page, in about 10 minutes. The app's version comes from `VERSION`; a tag that doesn't match it fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run.
 

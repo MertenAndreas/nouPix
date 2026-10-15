@@ -1,6 +1,6 @@
 // openLedMapper · js/ui-midi.js
 // MIDI in the interface: the top-bar button (its light blinks with each message, it turns yellow while learning),
-// the MIDI window (MIDI on or off, Learn, the controllers, the mappings, the monitor), the bar that says what to do
+// the MIDI window (MIDI on or off, Learn, the controllers, the mappings, the monitor, a virtual controller), the bar that says what to do
 // while learning, and the marks on what a control drives: a thin yellow line on a slider where its fader is, and the
 // control's name while the MIDI window is open or while learning. While learning, touching anything marked data-midi
 // picks it.
@@ -64,7 +64,11 @@ function openMidiWindow() {
   w.addEventListener('keydown', e => {
     if (e.key === 'Escape' && midi.learn.on) midiSetLearn(false);
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+    // keys 1 to 8 play the virtual controller's pads
+    const pad = /^[1-8]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && ui.midiOn && ui.midiVc && !typingIn(e.target) && VC_PADS[+e.key - 1];
+    if (pad) { e.preventDefault(); if (!e.repeat) vcPad(pad, true); }
   });
+  w.addEventListener('keyup', e => { const pad = /^[1-8]$/.test(e.key) && VC_PADS[+e.key - 1]; if (pad) vcPad(pad, false); });
   w.addEventListener('pagehide', () => { if (midiWin === w) { midiWin = null; updateMidiUI(); } });
   midiSig = '';
   updateMidiUI();
@@ -113,11 +117,11 @@ function midiRedraw() {
   markMidi();
   const D = midiDoc();
   if (!D) return;
-  if (midiTabSig() !== midiSig || !$('.midipanel', D)) renderMidiWindow(D);
+  if ((midiTabSig() !== midiSig || !$('.midipanel', D)) && !vcHeld) renderMidiWindow(D);
   else midiTabUpdate(D);
 }
 // What the MIDI window is built from; when it changes, it is built again
-const midiTabSig = () => JSON.stringify([ui.midiOn, midi.status, midi.ports, ui.midiOff, ui.midiMon, midi.learn,
+const midiTabSig = () => JSON.stringify([ui.midiOn, midi.status, midi.ports, ui.midiOff, ui.midiMon, ui.midiVc, midi.learn,
   project.midi.maps.map(w => [w.id, w.key, w.to, w.takeover, w.mode, midiTargetLabel(w.to)]),
   project.zones.map(z => [z.id, z.name, z.scenes.map(s => [s.id, s.name]), z.playlists.map(p => [p.id, p.name])])]);
 
@@ -138,11 +142,11 @@ function renderMidiWindow(D) {
       h('button', { class: 'btn primary', type: 'button', onclick: () => setMidiOn(true) }, 'Turn MIDI on'),
       h('p', { class: 'note' }, 'The browser may ask whether openLedMapper can use your MIDI devices.')));
   } else body = h('div', { class: 'midipanel' + (ui.midiMon ? '' : ' monshut') }, midiPorts(), midiMaps(), midiMonitor());
-  D.body.replaceChildren(head, body);
+  D.body.replaceChildren(head, body, ui.midiOn ? midiVc() : '');
   midiTabUpdate(D);
 }
 function midiPorts() {
-  const known = midi.ports.map(p => p.name);
+  const known = (ui.midiVc ? [MIDI_VIRTUAL] : []).concat(midi.ports.map(p => p.name));
   for (const w of project.midi.maps) { const k = midiKeyParts(w.key); if (k && !known.includes(k.port)) known.push(k.port); }
   const note = { asking: 'Asking for your MIDI devices… The browser may show a question at the top of the main window.',
     none: 'This browser has no MIDI: use Chrome or Edge, or the openLedMapper app.',
@@ -152,12 +156,14 @@ function midiPorts() {
     ...known.map(name => {
       const live = midiPortLive(name), on = midiPortOn(name);
       return h('label', { class: 'mport' + (live ? '' : ' gone'), title: on ? 'Listening. Untick to ignore it.' : 'Ignored. Tick to listen to it.' },
-        h('span', { class: 'led', 'data-led': name }), h('span', { class: 'nm', title: name }, name, live ? null : h('small', null, 'not plugged in')),
+        h('span', { class: 'led', 'data-led': name }), h('span', { class: 'nm', title: name }, name,
+          name === MIDI_VIRTUAL ? h('small', null, 'on screen') : live ? null : h('small', null, 'not plugged in')),
         h('input', { type: 'checkbox', checked: on, 'aria-label': 'Listen to ' + name,
           onchange: e => { const off = new Set(ui.midiOff || []); if (e.target.checked) off.delete(name); else off.add(name); ui.midiOff = [...off]; savePrefs(); updateMidiUI(); } }));
     }),
     note ? h('p', { class: 'note' + (midi.status === 'blocked' || midi.status === 'none' ? ' warn' : '') }, note) : null,
-    midi.status === 'blocked' && midi.error ? h('p', { class: 'note' }, 'The browser says: ' + midi.error) : null);
+    midi.status === 'blocked' && midi.error ? h('p', { class: 'note' }, 'The browser says: ' + midi.error) : null,
+    (midi.status === 'blocked' || midi.status === 'none') ? h('p', { class: 'note' }, 'The virtual controller, at the bottom of this window, works anyway.') : null);
 }
 // What a mapping can drive, as a list: Master, Blackout, then each zone's level, scenes, next scene and playlists
 function midiTargetSelect(w) {
@@ -205,6 +211,12 @@ function midiTabUpdate(D) {
     if (bar) bar.style.width = c ? c.last * 100 + '%' : '0';
     el.classList.toggle('hit', !!(w && w._hit && performance.now() - w._hit < 200));
   }
+  for (const t of $$('.vtrack', D)) {
+    const v = vcVals.get(+t.dataset.cc), x = v / 127;
+    t.querySelector('.vcap').style.bottom = `calc(8px + ${x} * (100% - 16px))`; t.querySelector('.vfill').style.height = `calc(${x} * (100% - 16px))`;
+    t.setAttribute('aria-valuenow', v); t.parentElement.querySelector('.v').textContent = v;
+  }
+  for (const p of $$('.vpad', D)) p.classList.toggle('down', vcDown.has(+p.dataset.note));
   const e0 = midi.log[0];
   if (e0 && e0 !== midiLogShown) { const led = $(`.led[data-led="${CSS.escape(e0.port)}"]`, D); if (led) { led.classList.add('on'); clearTimeout(led._t); led._t = setTimeout(() => led.classList.remove('on'), 90); } }
   const mon = $('#midiMon', D);
@@ -214,6 +226,60 @@ function midiTabUpdate(D) {
     h('span', { class: 't' }, e.time.toFixed(2)), h('span', { class: 'm', title: e.port }, e.text), h('span', { class: 'v' }, e.val),
     h('span', { class: 'd' + (e.to.length ? ' go' : e.note === 'learnt' ? ' learnt' : '') }, e.to.length ? '→ ' + e.to.join(', ') : e.note)))
     : [h('p', { class: 'note' }, 'Every message from your controllers shows here, with what it moves.')]));
+}
+
+/* ---------- the virtual controller ---------- */
+// A controller on screen, for trying MIDI without one: 8 faders (CC 21 to 28) and 8 pads (notes 36 to 43, also keys
+// 1 to 8 in the MIDI window), on channel 1 of a port called Virtual controller. It folds to its heading.
+const VC_FADERS = [21, 22, 23, 24, 25, 26, 27, 28], VC_PADS = [36, 37, 38, 39, 40, 41, 42, 43];
+const vcVals = new Map(VC_FADERS.map(n => [n, 0])), vcDown = new Set();
+let vcHeld = false;   // a fader held: the MIDI window isn't built again under the pointer
+const vcKey = (type, n) => `midi:${MIDI_VIRTUAL}:1:${type}:${n}`;
+const vcLabel = key => midiMapsFor(key).map(w => midiTargetLabel(w.to)).join(', ') || '—';
+function vcFader(n, v) {
+  v = clamp(Math.round(v), 0, 127);
+  if (v === vcVals.get(n)) return;
+  vcVals.set(n, v);
+  midiIn({ port: MIDI_VIRTUAL, ch: 1, type: 'cc', num: n, val: v });
+}
+function vcPad(n, on) {
+  if (vcDown.has(n) === on) return;
+  if (on) vcDown.add(n); else vcDown.delete(n);
+  midiIn({ port: MIDI_VIRTUAL, ch: 1, type: on ? 'on' : 'off', num: n, val: on ? 100 : 0 });
+}
+function midiVc() {
+  const open = !!ui.midiVc;
+  const head = h('div', { class: 'vchead' },
+    h('button', { class: 'mfold' + (open ? ' open' : ''), type: 'button', 'aria-expanded': String(open), title: open ? 'Fold the virtual controller' : 'Show the virtual controller',
+      onclick: () => { ui.midiVc = !open; savePrefs(); updateMidiUI(); } }, icon('chev'), 'Virtual controller'),
+    h('span', { class: 'note' }, open ? 'Faders send CC 21 to 28, pads notes 36 to 43 (keys 1 to 8). Learn them like a real controller.' : 'Faders and pads on screen, to try MIDI without a controller.'));
+  if (!open) return h('section', { class: 'vc' }, head);
+  const faders = VC_FADERS.map((n, i) => {
+    const track = h('div', { class: 'vtrack', tabindex: 0, role: 'slider', 'aria-label': `Fader ${i + 1}, CC ${n}`, 'aria-valuemin': 0, 'aria-valuemax': 127, 'data-cc': n },
+      h('i', { class: 'vfill' }), h('i', { class: 'vcap' }));
+    const at = y => { const r = track.getBoundingClientRect(); return (1 - clamp((y - r.top - 8) / (r.height - 16), 0, 1)) * 127; };
+    const up = () => { if (vcHeld) { vcHeld = false; updateMidiUI(); } };
+    track.addEventListener('pointerdown', e => { vcHeld = true; track.setPointerCapture(e.pointerId); vcFader(n, at(e.clientY)); });
+    track.addEventListener('pointermove', e => { if (vcHeld && track.hasPointerCapture(e.pointerId)) vcFader(n, at(e.clientY)); });
+    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) track.addEventListener(t, up);
+    track.addEventListener('wheel', e => { e.preventDefault(); vcFader(n, vcVals.get(n) + (e.deltaY < 0 ? 4 : -4)); }, { passive: false });
+    track.addEventListener('keydown', e => { const d = { ArrowUp: 1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[e.key]; if (d) { e.preventDefault(); vcFader(n, vcVals.get(n) + d * (e.shiftKey ? 10 : 1)); } });
+    const tg = vcLabel(vcKey('cc', n));
+    return h('div', { class: 'vf' }, h('span', { class: 'v' }), track, h('span', { class: 'nm' }, 'CC ' + n), h('span', { class: 'tg', title: tg }, tg));
+  });
+  // a pad sounds while held; its release is heard wherever the pointer goes (the window may be built again meanwhile)
+  const pads = VC_PADS.map((n, i) => {
+    const tg = vcLabel(vcKey('note', n));
+    const el = h('button', { class: 'vpad', type: 'button', 'data-note': n, 'aria-label': `Pad ${i + 1}, note ${n}` }, h('span', { class: 'nm' }, `${i + 1} · Note ${n}`), h('span', { class: 'tg', title: tg }, tg));
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      vcPad(n, true);
+      const win = el.ownerDocument.defaultView, off = () => { vcPad(n, false); win.removeEventListener('pointerup', off); win.removeEventListener('pointercancel', off); };
+      win.addEventListener('pointerup', off); win.addEventListener('pointercancel', off);
+    });
+    return el;
+  });
+  return h('section', { class: 'vc open' }, head, h('div', { class: 'vcbody' }, h('div', { class: 'vfaders' }, faders), h('div', { class: 'vpads' }, pads)));
 }
 
 /* ---------- learning, the button ---------- */

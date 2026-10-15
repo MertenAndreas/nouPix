@@ -393,6 +393,21 @@ function moveScene(d, z, to = z.scenes.length) {
   commit();
 }
 
+/* ---------- macros ---------- */
+// A macro moved: from its slider, a MIDI control or a device. Moving a colour or a shared control that is off turns
+// it on. Like the master, it is saved but not a step of undo, and the devices hear it at once.
+function setMacro(id, patch) {
+  const d = macroDef(id), m = project.macros[id];
+  if (!d || !m || !isObj(patch)) return;
+  if (REMOTE_CLIENT) remoteOp({ op: 'macro', id, patch });   // the main computer has the last word, and tells every device
+  const next = Object.assign({}, m, patch);
+  if ('on' in m && !('on' in patch)) next.on = true;
+  project.macros[id] = fixMacros({ [id]: next })[id];
+  saveSoon(); remoteLiveChanged(); updateMacrosUI();
+}
+// Part i of a colour macro (hue, saturation, value; or red, green, blue) set to x, from 0 to 1
+function setMacroPart(id, i, x) { const m = project.macros[id]; if (m && macroDef(id).kind === 'color') setMacro(id, macroPartPatch(m, i, clamp(x, 0, 1))); }
+
 /* ---------- playlists ---------- */
 // Play, pause, next… of a playlist, from any button, menu or key. On a device they go to the main computer, which
 // plays the playlists.

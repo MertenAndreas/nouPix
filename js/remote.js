@@ -62,7 +62,7 @@ const PLAYLIST_DO = ['toggle', 'start', 'play', 'pause', 'resume', 'next', 'prev
 const hasClients = roles => [...remote.clients.values()].some(c => roles.includes(c.role));
 // What every device shows besides the project: the master level, blackout, and where the playlists are, which live
 // outside the project
-const remoteLive = () => ({ t: 'live', master: project.settings.master, blackout: ui.blackout, output: ui.outputOn, play: playState() });
+const remoteLive = () => ({ t: 'live', master: project.settings.master, blackout: ui.blackout, output: ui.outputOn, play: playState(), macros: project.macros });
 // What the phones show: each zone (top first) with its scenes, the scene playing, its level, its content, its
 // playlists and the one playing
 function remoteState() {
@@ -118,6 +118,8 @@ function remoteFromDevice(cid, role, m) {
     saveSoon(); remoteLiveChanged();
   } else if (m.op === 'blackout' && role !== 'remote') {
     if (!!m.on !== ui.blackout) toggleBlackout();
+  } else if (m.op === 'macro' && role !== 'remote' && typeof m.id === 'string' && macroDef(m.id) && isObj(m.patch)) {
+    setMacro(m.id, m.patch);
   } else if (m.op === 'project' && typeof m.data === 'string' && FULL_ROLES.includes(role)) {
     if (isFinite(m.seq)) remote.acks[cid] = Math.max(remote.acks[cid] || 0, +m.seq);   // that device's change is in from now on
     let data = m.data;
@@ -208,6 +210,7 @@ function remoteApplyLive(m) {
   if (isObj(m.play)) applyPlayState(m.play);
   if (isFinite(m.master)) { project.settings.master = m.master; $('#master').value = m.master; $('#masterVal').textContent = pct(m.master); }
   if (!!m.blackout !== ui.blackout) { ui.blackout = !!m.blackout; $('#btnBlackout').classList.toggle('on', ui.blackout); $('#btnBlackout').setAttribute('aria-pressed', ui.blackout); }
+  if (isObj(m.macros)) { project.macros = fixMacros(m.macros); updateMacrosUI(); }
 }
 // A change made here goes to the host: at most about ten times a second while it goes on, and once at the end
 let remoteOut = null;

@@ -24,6 +24,7 @@ order by `<script src>` tags at the end of `index.html`:
 | `builtins.js` | The 32 built-in effects, as ISF code and categories (data) | `BUILTINS` |
 | `util.js` | Helpers used everywhere: elements, numbers and text, local storage, toasts, error reports, icons | `$` `$$` `h` `clamp` `wrap180` `wrap360` `pct` `fmtN` `store` `toast` `debounce` `report` `replacer` `MOD` |
 | `model.js` | The project and its parts: constants (`CURVES`, `CURVE_STRENGTH`), defaults, the `project` and `ui` state, factories, groups, selection, look-ups by id | `project` `ui` `blankProject` `newFixture` `fxBits` `fxCurve` `curveParam` `newZone` `newLayer` `newPlaylist` `newStep` `newController` `selected` `selUnits` `fxById` `markGeom` `markPatch` |
+| `macros.js` | Macros: their list (`MACROS`: Speed, Intensity, Saturation, Color 1 and 2, the shared controls), defaults and repair, which control of an effect follows which (by name), a value with its macro on it, colour parts | `MACROS` `macroDef` `defaultMacros` `fixMacros` `macroRoles` `macroActive` `macroOver` `macroPart` `macroPartPatch` |
 | `geometry.js` | Mapping math: each fixture's pixel positions, lengths, bounds, distances; moving, turning, scaling a fixture and the frame around several | `computePoints` `rebuildGeometry` `computeBB` `rotateFixture` `scaleFixture` `frameOf` `snap45` |
 | `patch.js` | Addressing: universe and channels of every pixel on its controller output (`BPP`: channels per pixel, doubled on 16-bit fixtures), conflicts | `computePatch` `ensurePatch` `universes` `addrOf` `BPP` `assign` `unassign` |
 | `sources.js` | Content sources: WebGL canvas, ISF runtimes (compiled when first played or drawn as a thumbnail; `headerOf` reads a header without compiling), parameters and speeds, images and videos (trim, loop, sound), the media format check, source thumbnails | `runtimeOf` `headerOf` `renderSource` `applyParams` `probeMedia` `attachMedia` `syncMedia` `videoTick` |
@@ -43,6 +44,7 @@ order by `<script src>` tags at the end of `index.html`:
 | `ui-playlists.js` | The playlists in the Scenes panel: tabs folded to one line or open, steps (with their own fades, moved by dragging or Alt ← →), step editor, + Add, the New playlist window (order with ↑ ↓, a fade per step), the playlist menu | `playlistArea` `newPlaylistDialog` `playlistMenu` `shiftStep` `drawPlaylistProgress` |
 | `ui-menus.js` | The menu system and every menu, the SVG import dialog, copy/cut/paste keys | `menu` `fixtureMenu` `canvasMenu` `projectMenu` … |
 | `ui-remote.js` | Remote control in the interface: the top-bar button and menu, the Settings section, the waiting screen on devices, `lockPanel` for operators | `updateRemoteUI` `remoteMenu` `remoteSection` `remoteOverlay` `lockPanel` |
+| `ui-macros.js` | The Macros section at the top of the Content tab (folding, colour parts in HSV or RGB, the shared controls), the "Follows Speed" note under an effect's control | `macrosSection` `macroFollows` `updateMacrosUI` |
 | `ui-midi.js` | MIDI in the interface: the top-bar button, the MIDI window (a popup this page draws into: Learn, controllers, mappings, monitor, the virtual controller: on-screen faders and pads sent through `midiIn` as port `MIDI_VIRTUAL`), the learn bar, learning by touching anything marked `data-midi`, the yellow line and tags on what a control drives | `updateMidiUI` `openMidiWindow` `renderMidiWindow` `midiSlot` `midiButton` `markMidi` `initMidiUI` |
 | `app.js` | Top bar and status bar, wiring buttons and keys, the frame loop, `boot()`, and `window.olm` | `initUI` `onKey` `renderAll` `boot` |
 
@@ -55,17 +57,18 @@ order by `<script src>` tags at the end of `index.html`:
   stage canvas and the document, the autosave timer) may only use what earlier files define. Everything else runs
   later, after `boot()` at the end of `app.js`, when all files are there. A function used at load time from an
   earlier file doesn't exist yet: functions are only hoisted within their own file.
-- **Layers.** The engine is `util → model → geometry → patch → sources → render → output → project-io → remote →
+- **Layers.** The engine is `util → model → macros → geometry → patch → sources → render → output → project-io → remote →
   playlists → midi`; each uses only the ones before it, with these exceptions: `computePatch` ends with `layoutFrame` (output.js)
   so the outgoing frame matches the new patch; `tick` (output.js) calls `playlistTick`; `restore` (project-io.js) uses
   `playlistOf`/`playingList` to carry playlists through an undo; remote.js reads the playlists' state (`playState`,
-  `playForPhone`) for the devices; `hydrate` repairs the MIDI mappings with `MIDI_KEY` (model.js). The UI is `actions → ui-forms → ui-color, ui-stage, ui-lists, ui-inspector,
+  `playForPhone`) for the devices; `hydrate` repairs the MIDI mappings with `MIDI_KEY` (model.js); `applyParams`
+  (sources.js) and `renderLook` (render.js) put the macros on each layer as it draws, from `project.macros`. The UI is `actions → ui-forms → ui-color, ui-stage, ui-lists, ui-inspector,
   ui-dock, ui-menus → app`; UI files use any engine file and each other.
 - **The engine calls the UI only to redraw**, through these: `renderAll`, `renderRight`, `renderDock`,
   `onPatchChanged`, `renderFxList`, `renderSrcList`, `refreshScenes`, `updateUndoButtons`, `updateBridgeUI`,
   `updateHighlightUI`, `showVersion`, `keepAwake`, `loadGuide`, and for remote control `updateRemoteUI`,
-  `remoteOverlay`, `redrawStage`, and for MIDI `updateMidiUI`. Keep it to that list. (`remote.js` and `midi.js` also call
-  the actions they carry out for devices and controllers: `goScene`, `setZoneOpacity`, `toggleBlackout`, `playlistDo`.) `refreshScenes` waits while something in the
+  `remoteOverlay`, `redrawStage`, for MIDI `updateMidiUI`, and for the macros `updateMacrosUI`. Keep it to that list. (`remote.js` and `midi.js` also call
+  the actions they carry out for devices and controllers: `goScene`, `setZoneOpacity`, `toggleBlackout`, `playlistDo`, `setMacro`.) `refreshScenes` waits while something in the
   Scenes panel is dragged or typed in, so a playlist moving on doesn't break the user's drag.
 - **Not strict mode.** The scripts run without `'use strict'`, as the app always has. Don't add the directive to a
   file without testing everything: it changes what some code does.
@@ -93,6 +96,10 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   hold); their working state (`w._picked`, `w._last`…) is never saved. Whether MIDI is on and which ports are ignored
   are this computer's (`ui.midiOn`, `ui.midiOff`). Anything MIDI can drive in the interface is marked `data-midi`
   (`midiSlot` for a slider, `midiButton` for a button or tile): learning picks it, `markMidi` gives it its line and tag.
+- Macros live in `project.macros` (`fixMacros` keeps every one, in range). They are live controls, like the master:
+  `setMacro` saves them soon and tells the devices (in `remoteLive`), it is not a step of undo, and `restore` keeps the
+  current ones (an undo, or a device's copy, doesn't move them). They apply as each layer draws and never change the
+  layers' own values; an effect's control follows a macro by its name (`macroRoles`, kept as `rt.roles`).
 - Files: `{ format: 'openledmapper-project', version: 3, … }`. `hydrate` (project-io.js) repairs anything opened
   (older versions, Weft files, hand edits) so the rest of the code can trust the project. A new field gets its
   default there.
@@ -166,6 +173,8 @@ several devices while every zone plays a playlist, and checks they all end equal
 strengths, the graph following the sliders, mixed with 8-bit). `test_values.py` checks typed values, Shift + scroll and the angle buttons. `test_midi.py` checks MIDI with a controller
 simulated in the page (Web MIDI replaced): turning it on, the MIDI window, ports, learn in either order, pickup and jump, toggle and
 hold, scenes, next scene, playlists, ignored ports, another port name, saving, undo, missing targets, the line and tags,
-the virtual controller. `test_playlist.py` checks playlists
+the virtual controller. `test_macros.py` checks the macros: what follows what, Speed through the clocks, Intensity,
+Saturation, the colours, the shared controls, scenes and thumbnails, files and undo, the Macros section, MIDI onto a
+macro and a colour's part, devices. `test_playlist.py` checks playlists
 (files, the panel folding and opening, timing and fades, the end, pause and resume, undo, editing while playing, the
 fade on a scene's button, play on open, the phone).

@@ -168,6 +168,7 @@ function hydrate(p) {
     return z;
   });
   out.midi = fixMidi(p.midi);
+  out.macros = fixMacros(p.macros);
   return out;
 }
 // The MIDI mappings: well-formed ones only, each with its own id. A mapping to a zone, scene or playlist that is gone
@@ -217,6 +218,8 @@ function restore(s) {
   for (const z of p.zones) { const o = fading.get(z.id); if (o && JSON.stringify(o.layers) === JSON.stringify(z.layers)) z._fade = o._fade; }
   // folding a group in the list is not an edit: undo leaves groups folded or unfolded as they are
   for (const g of p.groups) { const o = project.groups.find(x => x.id === g.id); if (o) g.open = o.open; }
+  // the macros are live controls, like the master on a desk: an undo, or a device's copy, leaves them where they are
+  p.macros = project.macros;
   project = p;
   ui.sel = new Set([...ui.sel].filter(id => fxById(id)));
   markGeom(); markPatch(); rebuildGeometry();

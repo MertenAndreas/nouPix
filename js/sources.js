@@ -64,6 +64,7 @@ function runtimeOf(src) {
     const from = isObj(c) && (rt.hdr.INPUTS || []).find(i => i.NAME === c.FROM && i.TYPE === 'float');
     if (from && (rt.hdr.INPUTS || []).some(i => i.NAME === name)) (rt.clocks = rt.clocks || {})[name] = { from, scale: numOr(c.SCALE, 1), wrap: Math.max(0, numOr(c.WRAP, 0)) };
   }
+  rt.roles = macroRoles(rt);   // which macro each control follows
   R.setDateUniforms = function () { this.setValue('TIME', isfTime ?? layerTime ?? clockT); this.setValue('TIMEDELTA', clockDT); this.setValue('FRAMEINDEX', frameIndex); };
   rt.R = R;
   return rt;
@@ -127,21 +128,26 @@ function speedTime(key, rate) {
   else { if (clockT > c.t) c.tau += (clockT - c.t) * rate; c.t = clockT; }
   return c.tau;
 }
-// Layers can share a shader with different settings, so each layer's values are applied before it draws.
+// Layers can share a shader with different settings, so each layer's values are applied before it draws. The
+// macros go on top (macros.js), on the layers of the composition, not on the source thumbnails. Speed multiplies the
+// rate of the layer's clocks, so it changes as smoothly as the effect's own speed.
 function applyParams(rt, L, src) {
   layerTime = null;
+  const roles = L.id != null && rt.roles, speed = roles ? project.macros.speed.v : 1;
   for (const inp of rt.hdr.INPUTS || []) {
     if (!PARAM_TYPES.includes(inp.TYPE) || (rt.clocks && inp.NAME in rt.clocks)) continue;
     let v = paramValue(L, src, inp);
+    const role = roles && roles[inp.NAME];
+    if (role && role !== 'speed') v = macroOver(role, inp, v);
     if (inp === rt.speed && L.id != null && isfTime == null) {
       const M = speedMax(inp);
-      layerTime = speedTime(L.id + '|' + src.id, Math.abs(v) / M);
+      layerTime = speedTime(L.id + '|' + src.id, Math.abs(v) / M * speed);
       v = v < 0 ? -M : M;
     }
     try { rt.R.setValue(inp.NAME, typeof v === 'boolean' ? (v ? 1 : 0) : v); } catch (e) { /* input not used by the shader */ }
   }
   if (rt.clocks) for (const [name, c] of Object.entries(rt.clocks)) {
-    const r = numOr(paramValue(L, src, c.from), 0) * c.scale;
+    const r = numOr(paramValue(L, src, c.from), 0) * c.scale * speed;
     let ph = isfTime != null ? isfTime * r : L.id != null ? speedTime(L.id + '|' + src.id + '|' + name, r) : clockT * r;
     if (c.wrap) ph = ((ph % c.wrap) + c.wrap) % c.wrap;
     try { rt.R.setValue(name, ph); } catch (e) { /* not used */ }

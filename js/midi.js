@@ -26,8 +26,16 @@ const midiPortOn = name => !(ui.midiOff || []).includes(name);
 
 /* ---------- targets ---------- */
 // What a mapping drives, from its target: a fader (0 to 1), a toggle (on or off) or a trigger (a press does it).
-// Null when it is gone: a zone, scene or playlist deleted.
+// Null when it is gone: a zone, scene or playlist deleted. m:<macro> is a macro (m:color1.0 to .2: the parts of a
+// colour, as its mode has them).
 function midiTarget(t) {
+  if (t.startsWith('m:')) {
+    const [id, i] = t.slice(2).split('.'), d = macroDef(id);
+    if (!d || (d.kind === 'color') !== (i != null)) return null;
+    if (i == null) return { kind: 'fader', label: d.label, get: () => project.macros[id].v / macroMax(d), set: x => setMacro(id, { v: x * macroMax(d) }) };
+    const part = MACRO_PARTS[project.macros[id].mode][+i];
+    return part ? { kind: 'fader', label: `${d.label} · ${part[1]}`, get: () => macroPart(project.macros[id], +i), set: x => setMacroPart(id, +i, x) } : null;
+  }
   if (t === 'master') return { kind: 'fader', label: 'Master', get: () => project.settings.master, set: midiSetMaster };
   if (t === 'blackout') return { kind: 'toggle', label: 'Blackout', get: () => (ui.blackout ? 1 : 0), set: v => { if (!!v !== ui.blackout) toggleBlackout(); } };
   const [k, zid, id] = t.split(':'), z = zid ? zoneById(zid) : null;

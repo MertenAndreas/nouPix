@@ -56,8 +56,10 @@ const ui = {
   // MIDI on this computer: whether it is on, the ports switched off (by name), whether the MIDI window shows its
   // monitor and its virtual controller
   midiOn: false, midiOff: [], midiMon: false, midiVc: false,
+  // the Macros section of the Content tab: open or folded, and the parts of it opened ('color1', 'color2', 'shared')
+  macrosOpen: true, macroOpen: [],
 };
-const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc'];
+const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'macrosOpen', 'macroOpen'];
 let geomDirty = true, patchDirty = true;
 const markGeom = () => { geomDirty = true; };
 const markPatch = () => { patchDirty = true; };
@@ -66,7 +68,7 @@ function blankProject(name = 'Untitled') {
   return {
     format: 'openledmapper-project', version: 3, name, settings,
     fixtures: [], groups: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
-    midi: { maps: [] },
+    midi: { maps: [] }, macros: defaultMacros(),
   };
 }
 // A MIDI mapping (midi.js): a control (key: midi:<port>:<channel>:cc|note:<number>) drives a target (to: master,

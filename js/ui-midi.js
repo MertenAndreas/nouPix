@@ -100,7 +100,7 @@ function midiHint() {
   return !L.on ? ['Press Learn, move a control on your controller, then click what it should move in the main window.']
     : L.pending ? [h('b', null, midiKeyFull(L.pending)), ' moved: now click what it should move in the main window.']
       : L.target ? ['Now move the control for ', h('b', null, midiTargetLabel(L.target)), '.']
-        : ['Move a control on your controller, then click what it should move in the main window: Master, Blackout, a zone\'s level, a scene, a playlist. Or the other way round.'];
+        : ['Move a control on your controller, then click what it should move in the main window: Master, Blackout, a zone\'s level, a scene, a playlist, a macro. Or the other way round.'];
 }
 function midiRedraw() {
   if (!project || REMOTE_CLIENT) return;
@@ -123,7 +123,8 @@ function midiRedraw() {
 // What the MIDI window is built from; when it changes, it is built again
 const midiTabSig = () => JSON.stringify([ui.midiOn, midi.status, midi.ports, ui.midiOff, ui.midiMon, ui.midiVc, midi.learn,
   project.midi.maps.map(w => [w.id, w.key, w.to, w.takeover, w.mode, midiTargetLabel(w.to)]),
-  project.zones.map(z => [z.id, z.name, z.scenes.map(s => [s.id, s.name]), z.playlists.map(p => [p.id, p.name])])]);
+  project.zones.map(z => [z.id, z.name, z.scenes.map(s => [s.id, s.name]), z.playlists.map(p => [p.id, p.name])]),
+  project.macros.color1.mode, project.macros.color2.mode]);
 
 /* ---------- what the MIDI window shows ---------- */
 function renderMidiWindow(D) {
@@ -171,6 +172,9 @@ function midiTargetSelect(w) {
   return h('select', { class: 'mtarget', 'aria-label': `What ${midiKeyFull(w.key)} drives`, title: 'What it drives', onchange: e => midiSetMap(w.id, { to: e.target.value }) },
     midiTarget(w.to) ? null : h('option', { value: w.to, selected: true }, 'Missing: it was deleted'),
     opt('master', 'Master'), opt('blackout', 'Blackout'),
+    h('optgroup', { label: 'Macros' }, MACROS.map(d => d.kind === 'color'
+      ? MACRO_PARTS[project.macros[d.id].mode].map(([, name], i) => opt(`m:${d.id}.${i}`, `${d.label} · ${name}`))
+      : opt('m:' + d.id, d.label))),
     project.zones.slice().reverse().map(z => h('optgroup', { label: z.name },
       opt('z:' + z.id, z.name + ' level'),
       z.scenes.map(sc => opt(`sc:${z.id}:${sc.id}`, `${z.name} · ${sc.name}`)),

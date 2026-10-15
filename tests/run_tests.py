@@ -106,6 +106,7 @@ SUITES = [   # name, function, part of --quick
     ("16bit", simple("test_16bit.py", 8174, 600), True),
     ("values", simple("test_values.py", 8178, 300), True),
     ("midi", simple("test_midi.py", 8182, 400), True),
+    ("macros", simple("test_macros.py", 8184, 400), True),
     ("profile", last_line("test_profile_move.py", [], 60, lambda l: "ALL PASS" in l), True),
 ]
 

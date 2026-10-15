@@ -161,10 +161,12 @@ function sliderRow(text, obj, key, o = {}) {
     else return;
     e.preventDefault(); e.stopPropagation();
   });
-  const wrap = h('div', { class: 'slider' }, r, val);
+  // o.midi: what a MIDI control drives through this slider (it gets the fader's line and tag, see ui-midi.js);
+  // o.label: an element in place of the text, before the slider
+  const wrap = h('div', { class: 'slider' }, o.midi ? midiSlot(r, o.midi) : r, val);
   shiftWheel(wrap, nudge, settle);
   binders.push(() => { if (document.activeElement !== r) show(); });
-  return row(text, wrap);
+  return row(o.label || text, wrap);
 }
 function seg(options, value, onChange) {
   const el = h('div', { class: 'seg', role: 'group' });

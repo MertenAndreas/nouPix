@@ -378,7 +378,7 @@ function layersSection(z) {
 }
 function renderContentTab(body) {
   if (!mixer.ok) body.append(sec('Content', h('div', { class: 'errbox' }, 'WebGL is off or unavailable in this browser, so content cannot be rendered. Use Chrome or Edge with hardware acceleration on.')));
-  body.append(zonesSection());
+  body.append(macrosSection(), zonesSection());
   const z = selZone();
   if (!z) return;
   body.append(layersSection(z));
@@ -446,6 +446,7 @@ function renderContentTab(body) {
         const up = () => set([pt.x, pt.y]);
         ctl.push(row(label, numInput(pt, 'x', { prefix: 'X', step: 0.01, onInput: up, onCommit: commit }), numInput(pt, 'y', { prefix: 'Y', step: 0.01, onInput: up, onCommit: commit })));
       }
+      if (rt.roles && rt.roles[inp.NAME]) ctl.push(macroFollows(rt.roles[inp.NAME]));   // the macro it follows, while that changes it
     }
     ctl.push(h('div', { class: 'actions' }, h('button', { class: 'btn sm', type: 'button', onclick: () => { delete L.params[src.id]; commit(); renderRight(); } }, 'Reset to defaults')));
     body.append(sec('Parameters', ctl));

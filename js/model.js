@@ -57,7 +57,7 @@ const ui = {
   // monitor and its virtual controller
   midiOn: false, midiOff: [], midiMon: false, midiVc: false,
   // the Macros section of the Content tab: open or folded, and the parts of it opened ('color1', 'color2', 'shared')
-  macrosOpen: true, macroOpen: [],
+  macrosOpen: false, macroOpen: [],
 };
 const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'macrosOpen', 'macroOpen'];
 let geomDirty = true, patchDirty = true;

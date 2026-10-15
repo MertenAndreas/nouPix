@@ -275,7 +275,7 @@ Phones, tablets and other computers on the same network can use openLedMapper to
 
 ## Macros
 
-Macros move the same kind of control in every effect at once. They are at the top of the **Content** tab (click **Macros** to fold them to one line, which then says which are in use).
+Macros move the same kind of control in every effect at once. They are at the top of the **Content** tab, folded to one line that says which are in use: click **Macros** to open them.
 
 - **Speed** makes every effect faster or slower: 1× in the middle leaves them as they are, 0 stops them where they are, 2× is twice as fast. It changes smoothly, as an effect's own speed does, and it works on effects whose speed is a rate or a tempo (Strobe, Breathe, Checker, Disco dots, Color hits) too.
 - **Intensity** is the level of every layer (100 % leaves them as they are). The master still comes after it.

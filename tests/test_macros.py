@@ -113,8 +113,11 @@ try:
     # ---------- the Macros section
     load("b-bars")
     sec = pg.locator("#rightBody .sec.macros")
-    check("the Content tab starts with the macros", pg.locator("#rightBody .sec").first.evaluate("e => e.classList.contains('macros')")
-          and [x.strip() for x in sec.locator(".row .lbl").all_inner_texts()][:3] == ["Speed", "Intensity", "Saturation"], sec.locator(".row .lbl").all_inner_texts())
+    check("the Content tab starts with the macros, folded to one line", pg.locator("#rightBody .sec").first.evaluate("e => e.classList.contains('macros')")
+          and sec.locator(".row").count() == 0 and "none in use" in sec.inner_text(), sec.inner_text())
+    sec.locator("h3 .mfold").click(); settle()
+    check("open, Speed, Intensity and Saturation come first", [x.strip() for x in sec.locator(".row .lbl").all_inner_texts()][:3] == ["Speed", "Intensity", "Saturation"] and ev("ui.macrosOpen"),
+          sec.locator(".row .lbl").all_inner_texts())
     sl = sec.locator(".row", has=pg.locator(".lbl", has_text="Speed")).locator("input[type=range]")
     sl.fill("1.5"); sl.dispatch_event("input"); settle()
     check("the Speed slider moves Speed", ev("project.macros.speed.v") == 1.5 and "1.50×" in sec.inner_text())

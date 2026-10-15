@@ -49,7 +49,7 @@ function macroColor(id) {
   return [r, h('div', { class: 'msub' }, row('Sliders', mode), ...parts)];
 }
 function macrosSection() {
-  const open = ui.macrosOpen !== false, shared = macroOpen().has('shared');
+  const open = !!ui.macrosOpen, shared = macroOpen().has('shared');
   const sum = h('span', { class: 'msum' });
   bind(() => { const on = MACROS.filter(d => macroActive(d.id)); sum.textContent = on.length ? on.map(d => d.kind === 'color' || d.kind === 'abs' ? d.label : `${d.label} ${macroText(d.id)}`).join(' · ') : 'none in use'; });
   const head = h('h3', null, foldBtn(open, 'Macros', () => { ui.macrosOpen = !open; savePrefs(); renderRight(); }, open ? 'Fold the macros' : 'Speed, Intensity, colours… for every effect at once'), h('span', { class: 'fill' }), open ? null : sum);

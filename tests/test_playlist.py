@@ -81,7 +81,7 @@ try:
     pg.click(".zoneblock >> nth=0 >> .ptab.open .pb"); wait()
     s = E("ST()")
     check("▶ on the tab plays it from step 1", s and s["on"] and s["i"] == 0 and s["list"] == "Evening", s)
-    pg.click(".zoneblock >> nth=0 >> .ptab.open .nm"); wait(0.2)
+    pg.click(".zoneblock >> nth=0 >> .ptab.open .nm"); wait(0.5)
     check("clicking the open playlist's tab folds it back to one line", pg.locator(".zoneblock >> nth=0 >> .plane").count() == 0 and pg.locator(".zoneblock >> nth=0 >> .ptabs.folded").count() == 1)
     check("folded, the line says what plays and how long is left", "Evening" in pg.inner_text(".zoneblock >> nth=0 >> .pbrief") and "left" in pg.inner_text(".zoneblock >> nth=0 >> .pbrief"), pg.inner_text(".zoneblock >> nth=0 >> .pbrief"))
     check("folded, the playlist keeps playing", E("ST().on"))

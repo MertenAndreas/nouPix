@@ -89,9 +89,16 @@ function playlistTab(z, pl, open) {
     if (ui.zone !== z.id) selectZone(z); else renderDock();
   };
   midiButton(t, `pl:${z.id}:${pl.id}`);   // a MIDI pad can play and pause it
-  t.addEventListener('click', toggleOpen);
+  // Folding an open tab waits out a double-click: folding shrinks the panel, which can scroll, and the second click
+  // would land on whatever moved under it.
+  let foldSoon = 0;
+  t.addEventListener('click', e => {
+    if (!isOpen) return toggleOpen();
+    if (e.detail > 1) return;
+    foldSoon = setTimeout(toggleOpen, 260);
+  });
   t.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target === t) { e.preventDefault(); toggleOpen(); } });
-  t.addEventListener('dblclick', () => { ui.playlistRename = pl.id; ui.playlistOpen[z.id] = pl.id; renderDock(); });
+  t.addEventListener('dblclick', () => { clearTimeout(foldSoon); ui.playlistRename = pl.id; ui.playlistOpen[z.id] = pl.id; renderDock(); });
   onRightClick(t, e => playlistMenu(at(e), z, pl));
   return t;
 }

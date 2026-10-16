@@ -83,7 +83,7 @@ with sync_playwright() as p:
     check("removing a video source stops and frees its video", rel["removed"] == {"paused": True, "released": True, "gone": True}, rel["removed"])
     # ---------- the Scenes panel keeps where it was scrolled; rows of many scenes scroll with ‹ ›
     pg.evaluate("""(() => { olm.loadProject(demoProject()); for (const z of project.zones) { while (z.scenes.length < 12) storeScene(z); }
-      ui.dockTab = 'scenes'; ui.dockCollapsed = false; ui.dockH = 260; renderDock(); })()"""); time.sleep(0.8)
+      ui.dockTab = 'scenes'; ui.dockCollapsed = false; ui.dockH = 200; renderDock(); })()"""); time.sleep(0.8)
     st = lambda: pg.evaluate("[...document.querySelectorAll('#dockBody .stiles')].map(e => Math.round(e.scrollLeft))")
     zr = lambda: pg.evaluate("Math.round(document.querySelector('#dockBody .zonerows').scrollTop)")
     pg.evaluate("(() => { const zr = document.querySelector('#dockBody .zonerows'); zr.scrollTop = zr.scrollHeight; })()"); time.sleep(0.2)

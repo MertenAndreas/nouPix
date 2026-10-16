@@ -33,8 +33,10 @@ function markMidi() {
     const t = el.dataset.midi, ws = maps.filter(w => w.to === t);
     el.classList.toggle('midi-mapped', !!ws.length);
     el.classList.toggle('midi-pick', L.on && L.target === t);
-    const tag = el.querySelector(':scope > .ftag');
-    if (tag) { tag.hidden = !ws.length; tag.textContent = ws.length ? midiKeyLabel(ws[0].key) + (ws.length > 1 ? ' +' + (ws.length - 1) : '') : ''; }
+    const tag = el.querySelector(':scope > .ftag, :scope > .t > .ftag');
+    // on a scene's button, short (N58, CC21), so it leaves the name its room
+    const short = el.classList.contains('scene'), label = key => (short ? midiKeyLabel(key).replace('Note ', 'N').replace('CC ', 'CC') : midiKeyLabel(key));
+    if (tag) { tag.hidden = !ws.length; tag.textContent = ws.length ? label(ws[0].key) + (ws.length > 1 ? ' +' + (ws.length - 1) : '') : ''; tag.title = ws.map(w => midiKeyFull(w.key)).join(', '); }
     const line = el.querySelector(':scope > .fline');
     if (line) {
       const w = ws.find(x => midiKeyParts(x.key).type === 'cc'), c = w && midiControlOf(w);

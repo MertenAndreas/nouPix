@@ -114,7 +114,7 @@ try:
     check("clicked first, something else takes the same control", ev(f"project.midi.maps.some(w => w.key.endsWith('cc:13') && w.to === 'z:{other}')") and ev("midi.learn.target") is None, maps())
     ev("project.midi.maps = project.midi.maps.filter(w => !/cc:1[0-3]$/.test(w.key)); commit(); midiSetLearn(true)"); settle()
     check("while learning, the tags show on what is wired", pg.locator(".master .ftag").is_visible() and pg.locator(".master .ftag").inner_text() == "CC 7"
-          and tiles.nth(2).locator(".ftag").inner_text() == "Note 37")
+          and tiles.nth(2).locator(".ftag").inner_text() == "N37" and tiles.nth(2).locator(".ftag").get_attribute("title") == "Note 37 · ch1")
     W.keyboard.press("Escape"); settle()
     check("Esc stops learning, in the MIDI window too", not ev("midi.learn.on") and pg.locator("#midiLearnBar").is_hidden() and not ev("document.body.classList.contains('midi-learning')"))
     check("with the MIDI window open the tags show", pg.locator(".master .ftag").is_visible())

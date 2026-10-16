@@ -673,7 +673,7 @@ body.remote-client #btnMidi { display: none; }
 .midi-open .ftag:not([hidden]), .midi-learning .ftag:not([hidden]) { display: block; }
 .master .ftag, #btnBlackout .ftag { top: auto; bottom: -11px; }
 #btnBlackout { position: relative; }
-.scene .ftag { top: auto; bottom: 6px; right: 8px; }
+.scene .t > .ftag { position: static; flex: none; font-weight: 500; }
 .ptab { position: relative; }
 .ptab .ftag { top: -9px; right: 6px; }
 .checkrow[data-midi], .btn[data-midi] { position: relative; }

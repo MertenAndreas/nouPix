@@ -46,6 +46,7 @@ order by `<script src>` tags at the end of `index.html`:
 | `ui-remote.js` | Remote control in the interface: the top-bar button and menu, the Settings section, the waiting screen on devices, `lockPanel` for operators | `updateRemoteUI` `remoteMenu` `remoteSection` `remoteOverlay` `lockPanel` |
 | `ui-macros.js` | The macros panel of the MIDI window (colour parts in HSV or RGB, the shared controls folded; its own binders, `macroBinders`), the "Follows Speed" note under an effect's control, "Macros it follows" in an effect's Parameters (what each control follows, for that effect), the Content tab's values and an open colour picker refreshed once a frame | `macrosPanel` `macroFollows` `macroLinksFold` `syncContentSoon` `updateMacrosUI` |
 | `ui-midi.js` | MIDI in the interface: the top-bar button, the MIDI window (a popup this page draws into: Learn, controllers and the macros under them, mappings (while learning, the control just moved at the top with a list to choose its target), monitor, the virtual controller: on-screen faders and pads sent through `midiIn` as port `MIDI_VIRTUAL`), the learn bar, learning by touching anything marked `data-midi` in either window (`midiCapture`), the yellow line and tags on what a control drives | `updateMidiUI` `openMidiWindow` `renderMidiWindow` `midiSlot` `midiButton` `markMidi` `initMidiUI` |
+| `ui-bay.js` | The patch bay, the MIDI window's second view (`ui.midiView`: 'list' or 'bay'): controls, targets (output, zones, macros) and effects' controls in three columns, a wire per mapping (SVG over the columns; dashed into a folded group or past a column's edge), a wire picked with its settings and Remove (Delete), rows that move their target, folding (`ui.bayOpen`) | `bay` `bayView` `bayWires` `bayUpdate` `bayKeys` |
 | `app.js` | Top bar and status bar, wiring buttons and keys, the frame loop, `boot()`, and `window.olm` | `initUI` `onKey` `renderAll` `boot` |
 
 ### How the files fit together
@@ -185,7 +186,8 @@ the virtual controller. `test_macros.py` checks the macros: what follows what, S
 Saturation, the colours, the shared controls, scenes and thumbnails, files and undo, the Macros section, MIDI onto a
 macro and a colour's part, devices. `test_links.py` checks what an effect follows as chosen (engine, files, undo, the
 fold, the operator's lock), MIDI onto an effect's controls (learn, pickup and jump, every layer, scenes, speed, lists,
-ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. The simulated Web MIDI
+ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. `test_bay.py` checks the patch bay
+(the switch, columns, wires, folding, a wire's settings, Remove and Delete, undo, learn, the rows). The simulated Web MIDI
 is `FAKE_MIDI` in `harness.py`. `test_playlist.py` checks playlists
 (files, the panel folding and opening, timing and fades, the end, pause and resume, undo, editing while playing, the
 fade on a scene's button, play on open, the phone).

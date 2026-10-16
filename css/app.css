@@ -747,6 +747,57 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .mmon .d.go { color: var(--accent); }
 .mmon .d.learnt { color: var(--midi); }
 .mmon .note { font-family: var(--ui); padding: 0 4px; }
+/* the patch bay: controls, what they drive, the effects' controls; wires between them (ui-bay.js) */
+.bay { position: relative; min-height: 0; display: grid; grid-template-columns: minmax(170px, .7fr) minmax(250px, 1fr) minmax(250px, 1fr); column-gap: 84px; padding: 0 16px; }
+.bcol { min-height: 0; overflow: auto; padding: 12px 2px 16px; display: flex; flex-direction: column; gap: 5px; scrollbar-width: thin; }
+.bcol h3 { position: sticky; top: -12px; z-index: 1; margin: 0; padding: 8px 0 6px; background: var(--bg0); font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.bcol .note { margin: 2px 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.bctl, .brow { position: relative; display: grid; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line2); }
+.bctl { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 18px 10px; row-gap: 0; padding-top: 4px; padding-bottom: 4px; }
+.bctl .mk { font-family: var(--mono); font-size: 12px; color: var(--midi); }
+.bctl small { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bctl .cval { grid-column: 1 / -1; height: 3px; align-self: center; border-radius: 2px; background: var(--bg4); overflow: hidden; }
+.bctl .cbar { display: block; height: 100%; width: 0; background: var(--midi); }
+.bctl.loose { opacity: .7; }
+.bctl.new { border-color: var(--midi); box-shadow: 0 0 0 3px rgba(255, 210, 63, .14); }
+.brow { grid-template-columns: minmax(0, 1fr) minmax(70px, 120px); }
+.brow .nm { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brow .k { justify-self: end; font-size: 10.5px; color: var(--muted); }
+.brow .btn.sm { justify-self: end; min-width: 52px; }
+.brow .btn.on { border-color: var(--accent); color: var(--accent); }
+.brow input[type=range] { width: 100%; min-width: 0; }
+.brow.sub { min-height: 28px; background: var(--bg1); }
+.bhead { display: flex; }
+.bhead .nm { flex: 1; min-width: 0; }
+.bhead > input[type=range] { flex: 0 0 120px; }
+.bhead > .mfold { color: var(--muted); }
+.bsw { width: 34px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); justify-self: end; }
+.bgroup { display: grid; gap: 4px; }
+.bsub { display: grid; gap: 4px; margin-left: 14px; }
+.bmore { margin-left: 26px; font-size: 11px; color: var(--muted); }
+.bctl.lit, .brow.lit { border-color: var(--midi); }
+/* the dots wires join: out on a control's right, in on a target's left */
+.bdot { position: absolute; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: var(--bg0); border: 2px solid var(--line2); }
+.bdot.out { right: -6px; }
+.bdot.in { left: -6px; }
+.bctl:not(.loose) .bdot.out, .brow.midi-mapped > .bdot.in { border-color: var(--midi); }
+.bdot.alias { border-style: dashed; }
+.bay .ftag { display: none !important; }   /* the wires say it */
+.bwires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.bwires path { fill: none; }
+.bwires .wire { stroke: var(--midi); stroke-width: 1.6; opacity: .55; }
+.bwires .wire.fx { opacity: .4; }
+.bwires .wire.lit, .bwires .wire.sel { opacity: 1; stroke-width: 2.2; }
+.bwires .wire.hot { opacity: 1; stroke-width: 2.6; }
+.bwires .wire.folded, .bwires .wire.edge { stroke-dasharray: 4 3; }
+.bwires .wire.sel { stroke: var(--text); }
+.bwires .hit { stroke: transparent; stroke-width: 12; pointer-events: stroke; cursor: pointer; }
+.bpop { position: absolute; z-index: 3; min-width: 250px; padding: 10px 12px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--line2); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); display: grid; gap: 8px; font-size: 12.5px; }
+.bpop[hidden] { display: none; }
+.bpop .bph b { color: var(--midi); font-weight: 500; }
+.bpop .bpr { display: flex; align-items: center; gap: 8px; }
+.bpop .bpr .fill { flex: 1; }
+.mwhead > .seg { flex: none; }
 /* the virtual controller, at the bottom of the MIDI window: faders and pads; folded, its heading */
 .vc { background: var(--bg1); border-top: 1px solid var(--line); }
 .vchead { display: flex; align-items: center; gap: 14px; min-height: 36px; padding: 0 16px; }

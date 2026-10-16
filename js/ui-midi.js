@@ -65,6 +65,9 @@ function openMidiWindow() {
   d.body.replaceChildren();
   w.addEventListener('keydown', e => {
     if (e.key === 'Escape' && midi.learn.on) midiSetLearn(false);
+    // the patch bay: Delete removes the wire picked, Esc lets it go
+    if (bay.sel && !typingIn(e.target) && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); const id = bay.sel; bay.sel = null; midiDisconnect(id); }
+    if (bay.sel && e.key === 'Escape') { bay.sel = null; bayWires(); }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
     // keys 1 to 8 play the virtual controller's pads
     const pad = /^[1-8]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && ui.midiOn && ui.midiVc && !typingIn(e.target) && VC_PADS[+e.key - 1];
@@ -72,6 +75,7 @@ function openMidiWindow() {
   });
   w.addEventListener('keyup', e => { const pad = /^[1-8]$/.test(e.key) && VC_PADS[+e.key - 1]; if (pad) vcPad(pad, false); });
   w.addEventListener('pagehide', () => { if (midiWin === w) { midiWin = null; updateMidiUI(); } });
+  w.addEventListener('resize', () => bayWires());
   midiCapture(d);   // learning picks the macros drawn there, as in the main window
   midiSig = '';
   updateMidiUI();
@@ -122,7 +126,7 @@ function midiRedraw() {
   if (!D) return;
   D.body.classList.toggle('midi-open', true);
   D.body.classList.toggle('midi-learning', L.on);
-  if ((midiTabSig() !== midiSig || !$('.midipanel', D)) && !vcHeld) renderMidiWindow(D);
+  if ((midiTabSig() !== midiSig || !$('.midipanel, .bay', D)) && !vcHeld) renderMidiWindow(D);
   else midiTabUpdate(D);
   markMidi();   // again, for what the MIDI window has just drawn
 }
@@ -130,7 +134,7 @@ function midiRedraw() {
 const midiTabSig = () => JSON.stringify([ui.midiOn, midi.status, midi.ports, ui.midiOff, ui.midiMon, ui.midiVc, midi.learn,
   project.midi.maps.map(w => [w.id, w.key, w.to, w.takeover, w.mode, midiTargetLabel(w.to)]),
   project.zones.map(z => [z.id, z.name, z.scenes.map(s => [s.id, s.name]), z.playlists.map(p => [p.id, p.name])]),
-  project.macros.color1.mode, project.macros.color2.mode, midiEffects(), ui.macroOpen]);
+  project.macros.color1.mode, project.macros.color2.mode, midiEffects(), ui.macroOpen, ui.midiView, ui.midiView === 'bay' ? baySig() : 0]);
 // The effects in the project: in a zone's layers or in its scenes (so a playlist moving on doesn't change the list)
 const midiEffects = () => [...new Set(project.zones.flatMap(z => z.layers.concat(...z.scenes.map(sc => sc.layers)).map(L => L.src)))].filter(id => { const s = id && srcById(id); return s && s.kind === 'isf'; }).sort();
 
@@ -142,6 +146,7 @@ function renderMidiWindow(D) {
     h('span', { class: 'mwtitle', html: $('#btnMidi svg').outerHTML }, 'MIDI'),
     ui.midiOn ? h('button', { class: 'btn learn' + (L.on ? ' on' : ''), type: 'button', 'aria-pressed': String(L.on), title: 'Learn: move a control, then choose what it should move. Esc stops.', onclick: () => midiSetLearn(!L.on) }, L.on ? 'Learning' : 'Learn') : null,
     ui.midiOn ? h('span', { class: 'mwhint' + (L.on ? ' on' : '') }, midiHint()) : h('span', { class: 'fill' }),
+    ui.midiOn ? seg([['list', 'List'], ['bay', 'Patch bay']], ui.midiView === 'bay' ? 'bay' : 'list', v => { ui.midiView = v; bay.sel = null; savePrefs(); updateMidiUI(); }) : null,
     ui.midiOn && midi.status === 'ok' ? h('span', { class: 'pill' + (n ? ' ok' : ' warn') }, h('span', { class: 'dot' }), `${n} controller${n === 1 ? '' : 's'}`) : null,
     ui.midiOn ? h('button', { class: 'btn sm ghost', type: 'button', title: 'Stop listening to MIDI on this computer', onclick: () => setMidiOn(false) }, 'Turn off') : null);
   let body;
@@ -150,9 +155,13 @@ function renderMidiWindow(D) {
       h('p', null, 'Play this project from a MIDI controller: its faders, knobs and pads can move the master, blackout and the zones\' levels, and play their scenes and playlists.'),
       h('button', { class: 'btn primary', type: 'button', onclick: () => setMidiOn(true) }, 'Turn MIDI on'),
       h('p', { class: 'note' }, 'The browser may ask whether openLedMapper can use your MIDI devices.')));
-  } else body = h('div', { class: 'midipanel' + (ui.midiMon ? '' : ' monshut') }, midiPorts(), midiMaps(), midiMonitor());
+  } else if (ui.midiView === 'bay') body = bayView();
+  else body = h('div', { class: 'midipanel' + (ui.midiMon ? '' : ' monshut') }, midiPorts(), midiMaps(), midiMonitor());
+  const scrolled = $$('.bcol', D).map(c => [c.classList[1], c.scrollTop]);   // the bay's columns keep where they were
   D.body.replaceChildren(head, body, ui.midiOn ? midiVc() : '');
+  for (const [k, top] of scrolled) { const c = $('.bcol.' + k, D); if (c) c.scrollTop = top; }
   midiTabUpdate(D);
+  if (ui.midiView === 'bay') midiWin.requestAnimationFrame(() => bayWires());   // once it is laid out
 }
 function midiPorts() {
   const known = (ui.midiVc ? [MIDI_VIRTUAL] : []).concat(midi.ports.map(p => p.name));
@@ -230,6 +239,7 @@ function midiMonitor() {
 // What changes with each message: the bars of the mapped controls, the controllers' lights, the monitor
 function midiTabUpdate(D) {
   for (const b of macroBinders) b();
+  if ($('.bay', D)) bayUpdate(D);
   for (const el of $$('.mmap', D)) {
     const w = project.midi.maps.find(x => x.id === el.dataset.map), c = w && midiControlOf(w), bar = el.querySelector('.cbar');
     if (bar) bar.style.width = c ? c.last * 100 + '%' : '0';

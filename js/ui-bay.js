@@ -14,16 +14,11 @@ function bayToggle(key) {
   if (s.has(key)) s.delete(key); else s.add(key);
   ui.bayOpen = [...s]; savePrefs(); updateMidiUI();
 }
-// The controls in the bay: the mapped ones and the ones moved since MIDI came on, by port, type and number
+// The controls in the bay: the mapped ones and the ones moved since MIDI came on, in the user's order (midiKeyOrder)
 function bayKeys() {
-  const keys = new Set(project.midi.maps.map(w => w.key).concat([...midi.controls.keys()]));
-  if (midi.learn.on && midi.learn.pending) keys.add(midi.learn.pending);
-  const order = k => { const p = midiKeyParts(k); return p ? [p.port, p.type, p.ch, p.num] : [k]; };
-  return [...keys].filter(k => midiKeyParts(k)).sort((a, b) => {
-    const x = order(a), y = order(b);
-    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
-    return 0;
-  });
+  const keys = project.midi.maps.map(w => w.key).concat([...midi.controls.keys()]);
+  if (midi.learn.on && midi.learn.pending) keys.push(midi.learn.pending);
+  return midiKeyOrder(keys);
 }
 const baySig = () => [ui.bayOpen, bayKeys()];
 
@@ -67,10 +62,41 @@ function bayControls() {
     h('h3', null, 'Controls'),
     keys.length ? keys.map(key => {
       const k = midiKeyParts(key), ws = project.midi.maps.filter(w => w.key === key), lost = ws.filter(w => !midiTarget(w.to)).length;
-      return h('div', { class: 'bctl' + (L.on && L.pending === key ? ' new' : '') + (ws.length ? '' : ' loose'), 'data-key': key, onmouseenter: () => bayHover(key), onmouseleave: () => bayHover(null), title: k.port },
-        h('span', { class: 'mk' }, midiKeyLabel(key)), h('small', null, `ch${k.ch}` + (ports.size > 1 ? ' · ' + k.port : '') + (lost ? ` · ${lost} missing` : '')),
+      const row = h('div', { class: 'bctl' + (L.on && L.pending === key ? ' new' : '') + (ws.length ? '' : ' loose'), 'data-key': key, onmouseenter: () => bayHover(key), onmouseleave: () => bayHover(null), title: k.port + '. Drag it to put it in another place.' },
+        h('span', { class: 'pgrip', 'aria-hidden': 'true' }), h('span', { class: 'mk' }, midiKeyLabel(key)), h('small', null, `ch${k.ch}` + (ports.size > 1 ? ' · ' + k.port : '') + (lost ? ` · ${lost} missing` : '')),
+        h('button', { class: 'x', type: 'button', title: ws.length ? 'Forget this control and its mappings' : 'Forget this control', 'aria-label': 'Forget ' + midiKeyFull(key), onclick: e => { e.stopPropagation(); midiForget(key); } }, icon('x')),
         h('span', { class: 'cval' }, h('i', { class: 'cbar', 'data-cbar': key })), bayDot('out', key));
+      bayDrag(row, key);
+      return row;
     }) : h('p', { class: 'note' }, 'Move a fader, knob or pad on your controller: it shows here. Then press Learn and click what it should move, or use the list view.'));
+}
+// Dragging a control up or down puts it in another place (in the list view too); a line shows where it goes
+function bayDrag(row, key) {
+  row.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('button') || midi.learn.on) return;
+    const col = row.closest('.bcol'), y0 = e.clientY;
+    let moved = false, to = null;
+    const move = ev => {
+      if (!moved && Math.abs(ev.clientY - y0) < 5) return;
+      moved = true; row.classList.add('dragging');
+      to = null;
+      for (const r of $$('.bctl', col)) {
+        r.classList.remove('dropbefore', 'dropafter');
+        const b = r.getBoundingClientRect();
+        if (ev.clientY >= b.top && ev.clientY < b.bottom && r !== row) { to = { key: r.dataset.key, after: ev.clientY > b.top + b.height / 2 }; r.classList.add(to.after ? 'dropafter' : 'dropbefore'); }
+      }
+    };
+    const up = () => {
+      row.ownerDocument.removeEventListener('pointermove', move); row.ownerDocument.removeEventListener('pointerup', up);
+      row.classList.remove('dragging');
+      for (const r of $$('.bctl', col)) r.classList.remove('dropbefore', 'dropafter');
+      if (!moved || !to) return;
+      const keys = bayKeys().filter(k => k !== key), i = keys.indexOf(to.key) + (to.after ? 1 : 0);
+      keys.splice(i, 0, key);
+      midiSetOrder(keys);
+    };
+    row.ownerDocument.addEventListener('pointermove', move); row.ownerDocument.addEventListener('pointerup', up);
+  });
 }
 function bayTargets() {
   const open = bayOpen(), rows = [h('h3', null, 'Output')];

@@ -1,8 +1,8 @@
 # The patch bay (ui-bay.js), the MIDI window's second view: switching between the list and the bay (remembered); the
 # controls, what they drive and the effects in three columns; a wire for each mapping (dashed into a folded group,
 # bright while its control moves); a wire picked shows its settings (Pickup or Jump, Toggle and Follow) and is
-# removed by its button or Delete; learning by clicking a row; the rows' sliders and buttons; folding; both views
-# showing the same mappings.
+# removed by its button or Delete; learning by clicking a row; the rows' sliders and buttons; folding; a control
+# forgotten (×) and the controls put in order by dragging; both views showing the same mappings.
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import CHROME_ARGS, start_bridge, app_error, FAKE_MIDI
@@ -103,6 +103,29 @@ try:
     cc(10, 64); settle(0.5)
     check("or the other way round: an effect's control clicked, then a fader moved", ev(f"project.midi.maps.some(w => w.key.endsWith('cc:10') && w.to === '{FX}')"), maps())
     W.keyboard.press("Escape"); settle()
+
+    # ---------- forgetting a control, and putting the controls in order
+    cc(30, 50); settle(0.4)
+    row = W.locator('.bay .bctl[data-key="midi:nanoKONTROL2:1:cc:30"]')
+    check("a control moved but not mapped is listed", row.count() == 1)
+    row.hover(); row.locator("button.x").click(); settle(0.4)
+    check("× forgets it", W.locator('.bay .bctl[data-key="midi:nanoKONTROL2:1:cc:30"]').count() == 0)
+    n0 = ev("project.midi.maps.length")
+    row = W.locator('.bay .bctl[data-key="midi:nanoKONTROL2:1:cc:9"]'); row.hover(); row.locator("button.x").click(); settle(0.4)
+    check("forgetting a mapped one removes its mappings too, as a step of undo", ev("project.midi.maps.length") == n0 - 1 and not ev("project.midi.maps.some(w => w.key.endsWith('cc:9'))"))
+    W.keyboard.press("Control+z"); settle(0.5)
+    check("undone, it is back", ev("project.midi.maps.some(w => w.key.endsWith('cc:9'))"))
+    order = lambda: [x.strip() for x in W.locator(".bay .bctl .mk").all_inner_texts()]
+    before = order()
+    src = W.locator('.bay .bctl[data-key="midi:nanoKONTROL2:1:note:41"]').bounding_box(); dst = W.locator('.bay .bctl[data-key="midi:nanoKONTROL2:1:cc:1"]').bounding_box()
+    W.mouse.move(src["x"] + 20, src["y"] + src["height"] / 2); W.mouse.down()
+    W.mouse.move(src["x"] + 20, src["y"] - 30, steps=4); W.mouse.move(dst["x"] + 20, dst["y"] + 6, steps=8); W.mouse.up(); settle(0.5)
+    after = order()
+    check("dragging a control puts it in another place", after[0] == "Note 41" and sorted(after) == sorted(before), (before, after))
+    check("which the project keeps, and the list follows", ev("project.midi.order[0]").endswith("note:41") and ev("project.midi.maps[0].key").endswith("note:41"))
+    check("the wires follow it", W.locator(".bwires path.wire").count() == ev("project.midi.maps.filter(w => midiTarget(w.to)).length"))
+    saved = ev("JSON.parse(serialize()).midi.order")
+    check("saved in the file", saved and saved[0].endswith("note:41"), saved)
 
     # ---------- the list shows the same
     W.locator(".mwhead .seg button", has_text="List").click(); settle(0.5)

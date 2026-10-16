@@ -68,7 +68,7 @@ function blankProject(name = 'Untitled') {
   return {
     format: 'openledmapper-project', version: 3, name, settings,
     fixtures: [], groups: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
-    midi: { maps: [] }, macros: defaultMacros(), macroLinks: {},
+    midi: { maps: [], order: [] }, macros: defaultMacros(), macroLinks: {},
   };
 }
 // A MIDI mapping (midi.js): a control (key: midi:<port>:<channel>:cc|note:<number>) drives a target (to: master,

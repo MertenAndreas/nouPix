@@ -132,7 +132,7 @@ function midiRedraw() {
 }
 // What the MIDI window is built from; when it changes, it is built again
 const midiTabSig = () => JSON.stringify([ui.midiOn, midi.status, midi.ports, ui.midiOff, ui.midiMon, ui.midiVc, midi.learn,
-  project.midi.maps.map(w => [w.id, w.key, w.to, w.takeover, w.mode, midiTargetLabel(w.to)]),
+  project.midi.maps.map(w => [w.id, w.key, w.to, w.takeover, w.mode, midiTargetLabel(w.to)]), project.midi.order,
   project.zones.map(z => [z.id, z.name, z.scenes.map(s => [s.id, s.name]), z.playlists.map(p => [p.id, p.name])]),
   project.macros.color1.mode, project.macros.color2.mode, midiEffects(), ui.macroOpen, ui.midiView, ui.midiView === 'bay' ? baySig() : 0]);
 // The effects in the project: in a zone's layers or in its scenes (so a playlist moving on doesn't change the list)
@@ -208,7 +208,8 @@ function midiTargetSelect(w, pick = to => midiSetMap(w.id, { to })) {
 function midiMaps() {
   const maps = project.midi.maps;
   const ports = new Set(maps.map(w => midiKeyParts(w.key).port));
-  const rows = maps.map(w => {
+  const keyAt = new Map(midiKeyOrder(maps.map(w => w.key)).map((k, i) => [k, i]));   // in the controls' order
+  const rows = maps.slice().sort((a, b) => keyAt.get(a.key) - keyAt.get(b.key)).map(w => {
     const k = midiKeyParts(w.key), T = midiTarget(w.to);
     const seg = (key, opts) => h('span', { class: 'seg mini' }, opts.map(([v, label, tip]) => h('button', { type: 'button', class: w[key] === v ? 'on' : '', title: tip, onclick: () => midiSetMap(w.id, { [key]: v }) }, label)));
     const how = !T ? h('span') : T.kind === 'fader' ? seg('takeover', [['pickup', 'Pickup', 'It follows once the fader reaches it'], ['jump', 'Jump', 'It goes where the fader is at once']])

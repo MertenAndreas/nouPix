@@ -245,3 +245,29 @@ function midiDisconnect(id) {
   project.midi.maps = project.midi.maps.filter(w => w.id !== id);
   commit(); updateMidiUI();
 }
+// A control not wanted any more: its mappings go, and it is forgotten until it moves again
+function midiForget(key) {
+  project.midi.maps = project.midi.maps.filter(w => w.key !== key);
+  project.midi.order = project.midi.order.filter(k => k !== key);
+  midi.controls.delete(key);
+  if (midi.learn.pending === key) midi.learn.pending = null;
+  commit(); updateMidiUI();
+}
+// The controls in order: as the user put them, then the others by port, type, channel and number
+function midiKeyOrder(keys) {
+  const at = new Map(project.midi.order.map((k, i) => [k, i])), parts = k => { const p = midiKeyParts(k); return [p.port, p.type, p.ch, p.num]; };
+  return [...new Set(keys)].filter(k => midiKeyParts(k)).sort((a, b) => {
+    const x = at.has(a) ? at.get(a) : Infinity, y = at.has(b) ? at.get(b) : Infinity;
+    if (x !== y) return x - y;
+    const p = parts(a), q = parts(b);
+    for (let i = 0; i < p.length; i++) if (p[i] !== q[i]) return p[i] < q[i] ? -1 : 1;
+    return 0;
+  });
+}
+// The controls put in this order (dragged in the patch bay); the mappings in the list follow it
+function midiSetOrder(keys) {
+  project.midi.order = [...new Set(keys)];
+  const at = new Map(project.midi.order.map((k, i) => [k, i]));
+  project.midi.maps = project.midi.maps.slice().sort((a, b) => (at.get(a.key) ?? 1e9) - (at.get(b.key) ?? 1e9));
+  commit(); updateMidiUI();
+}

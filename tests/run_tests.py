@@ -116,6 +116,8 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     quick = "--quick" in args
     names = [a for a in args if not a.startswith("--")]
+    if "--midi" in args:   # a change to MIDI, the macros or the MIDI window only: their suites, and the page's files
+        names = names or ["static", "midi", "macros", "links", "bay"]
     todo = [s for s in SUITES if (s[0] in names if names else (s[2] or not quick))]
     print("Logs in", OUT)
     bad = 0

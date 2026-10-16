@@ -753,12 +753,22 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .bcol h3 { position: sticky; top: -12px; z-index: 1; margin: 0; padding: 8px 0 6px; background: var(--bg0); font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .bcol .note { margin: 2px 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
 .bctl, .brow { position: relative; display: grid; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line2); }
-.bctl { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 18px 10px; row-gap: 0; padding-top: 4px; padding-bottom: 4px; }
+.bctl { grid-template-rows: 18px 10px; row-gap: 0; padding-top: 4px; padding-bottom: 4px; }
 .bctl .mk { font-family: var(--mono); font-size: 12px; color: var(--midi); }
 .bctl small { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bctl .cval { grid-column: 1 / -1; height: 3px; align-self: center; border-radius: 2px; background: var(--bg4); overflow: hidden; }
 .bctl .cbar { display: block; height: 100%; width: 0; background: var(--midi); }
 .bctl.loose { opacity: .7; }
+.bctl { grid-template-columns: 8px auto minmax(0, 1fr) 20px; cursor: grab; }
+.bctl .pgrip { width: 6px; height: 12px; opacity: .4; background-image: radial-gradient(currentColor 1px, transparent 1.2px); background-size: 3px 3px; color: var(--text2); }
+.bctl:hover .pgrip { opacity: .9; }
+.bctl .x { width: 20px; height: 20px; padding: 0; border: 0; border-radius: 3px; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; opacity: 0; }
+.bctl:hover .x, .bctl .x:focus-visible { opacity: 1; }
+.bctl .x:hover { color: var(--danger); background: var(--danger-soft); }
+.bctl .x svg { width: 9px; height: 9px; }
+.bctl.dragging { opacity: .5; cursor: grabbing; }
+.bctl.dropbefore { box-shadow: 0 -2px 0 var(--midi); }
+.bctl.dropafter { box-shadow: 0 2px 0 var(--midi); }
 .bctl.new { border-color: var(--midi); box-shadow: 0 0 0 3px rgba(255, 210, 63, .14); }
 .brow { grid-template-columns: minmax(0, 1fr) minmax(70px, 120px); }
 .brow .nm { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

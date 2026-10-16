@@ -55,11 +55,11 @@ const ui = {
   curveZoom: 'full',   // the fixture's dimming curve graph: 'full', or 'low' (the first 10 %)
   // MIDI on this computer: whether it is on, the ports switched off (by name), whether the MIDI window shows its
   // monitor and its virtual controller
-  midiOn: false, midiOff: [], midiMon: false, midiVc: false,
-  // the Macros section of the Content tab: open or folded, and the parts of it opened ('color1', 'color2', 'shared')
-  macrosOpen: false, macroOpen: [],
+  midiOn: false, midiOff: [], midiMon: false, midiVc: false, midiView: 'list', bayOpen: [],
+  // the parts of the macros opened ('color1', 'color2', 'shared'; 'links': what an effect follows, in its Parameters)
+  macroOpen: [],
 };
-const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'macrosOpen', 'macroOpen'];
+const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'midiView', 'bayOpen', 'macroOpen'];
 let geomDirty = true, patchDirty = true;
 const markGeom = () => { geomDirty = true; };
 const markPatch = () => { patchDirty = true; };
@@ -68,12 +68,12 @@ function blankProject(name = 'Untitled') {
   return {
     format: 'openledmapper-project', version: 3, name, settings,
     fixtures: [], groups: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
-    midi: { maps: [] }, macros: defaultMacros(),
+    midi: { maps: [], order: [] }, macros: defaultMacros(), macroLinks: {},
   };
 }
 // A MIDI mapping (midi.js): a control (key: midi:<port>:<channel>:cc|note:<number>) drives a target (to: master,
-// blackout, z:<zone>, sc:<zone>:<scene>, nx:<zone>, pl:<zone>:<playlist>). takeover: pickup or jump, for a fader;
-// mode: toggle or hold, for something that is on or off.
+// blackout, z:<zone>, sc:<zone>:<scene>, nx:<zone>, pl:<zone>:<playlist>, m:<macro>, p:<source>:<control>).
+// takeover: pickup or jump, for a fader; mode: toggle or hold, for something that is on or off.
 const MIDI_KEY = /^midi:(.*):(\d{1,2}):(cc|note):(\d{1,3})$/;
 const newMidiMap = (key, to) => ({ id: uid(), key, to, takeover: 'pickup', mode: 'toggle' });
 // A group is a named set of fixtures. Its fixtures stay next to each other in the list (and so in drawing and

@@ -55,19 +55,39 @@ function runtimeOf(src) {
   const R = new interactiveShaderFormat.Renderer(gl);
   try { R.loadSource(code); } catch (e) { R.valid = false; R.error = e.message; }
   if (!R.valid) { rt.error = (R.errorLine ? 'Line ' + R.errorLine + ': ' : '') + String(R.error || 'Shader did not compile'); return rt; }
-  rt.speed = (rt.hdr.INPUTS || []).find(i => i.TYPE === 'float' && /^speed$/i.test(i.NAME) && (src.builtin || SPEED_USE.test(code))) || null;
-  // OLM_CLOCKS: { "phase": { "FROM": "rate", "SCALE": 1, "WRAP": 1024 } } makes the float input "phase" the running
-  // total of rate × SCALE over time, per layer, so a rate slider speeds the pattern up or down without a jump
-  // (as speed does through TIME), and a shader can have several such rates. WRAP keeps the total small for the GPU.
-  rt.clocks = null;
-  if (isObj(rt.hdr.OLM_CLOCKS)) for (const [name, c] of Object.entries(rt.hdr.OLM_CLOCKS)) {
-    const from = isObj(c) && (rt.hdr.INPUTS || []).find(i => i.NAME === c.FROM && i.TYPE === 'float');
-    if (from && (rt.hdr.INPUTS || []).some(i => i.NAME === name)) (rt.clocks = rt.clocks || {})[name] = { from, scale: numOr(c.SCALE, 1), wrap: Math.max(0, numOr(c.WRAP, 0)) };
-  }
+  rt.speed = (rt.hdr.INPUTS || []).find(i => isSpeedInput(src, i, code)) || null;
+  rt.clocks = clocksOf(rt.hdr);
   rt.roles = macroRoles(rt);   // which macro each control follows
   R.setDateUniforms = function () { this.setValue('TIME', isfTime ?? layerTime ?? clockT); this.setValue('TIMEDELTA', clockDT); this.setValue('FRAMEINDEX', frameIndex); };
   rt.R = R;
   return rt;
+}
+// OLM_CLOCKS: { "phase": { "FROM": "rate", "SCALE": 1, "WRAP": 1024 } } makes the float input "phase" the running
+// total of rate × SCALE over time, per layer, so a rate slider speeds the pattern up or down without a jump
+// (as speed does through TIME), and a shader can have several such rates. WRAP keeps the total small for the GPU.
+function clocksOf(hdr) {
+  let clocks = null;
+  if (isObj(hdr.OLM_CLOCKS)) for (const [name, c] of Object.entries(hdr.OLM_CLOCKS)) {
+    const from = isObj(c) && (hdr.INPUTS || []).find(i => i.NAME === c.FROM && i.TYPE === 'float');
+    if (from && (hdr.INPUTS || []).some(i => i.NAME === name)) (clocks = clocks || {})[name] = { from, scale: numOr(c.SCALE, 1), wrap: Math.max(0, numOr(c.WRAP, 0)) };
+  }
+  return clocks;
+}
+// What macroRolesOf needs of an effect (its header, speed, clocks and the macros its controls follow by name), without
+// compiling it: its runtime when it has one, else the same read from its header (for the patch bay, for an effect
+// that only a scene plays)
+const lightRts = new Map();
+function effectRt(src) {
+  const rt = runtimes.get(src.id);
+  if (rt && rt.R) return rt;
+  const code = sourceCode(src), c = lightRts.get(src.id);
+  if (c && c.code === code) return c;
+  const hdr = headerOf(src) || { INPUTS: [] }, l = { code, hdr };
+  l.speed = (hdr.INPUTS || []).find(i => isSpeedInput(src, i, code)) || null;
+  l.clocks = clocksOf(hdr);
+  l.roles = macroRoles(l);
+  lightRts.set(src.id, l);
+  return l;
 }
 // Free a source's compiled shader: its GPU programs, and the textures of its passes. Not its vertex buffers:
 // the ISF renderers share one context and all draw with the vertex buffer set up last, which may be this one.
@@ -102,6 +122,11 @@ function releaseMedia(id) {
 }
 const PARAM_TYPES = ['float', 'long', 'bool', 'color', 'point2D', 'event', 'int'];
 function isfInputs(src) { const rt = runtimeOf(src); return (rt.hdr && rt.hdr.INPUTS || []).filter(i => PARAM_TYPES.includes(i.TYPE) && !(rt.clocks && i.NAME in rt.clocks)); }
+// The same from the header alone, without compiling the shader (for an effect that isn't playing)
+function controlsOf(src) {
+  const hdr = src.kind === 'isf' ? headerOf(src) : null, clocks = hdr && isObj(hdr.OLM_CLOCKS) ? hdr.OLM_CLOCKS : {};
+  return (hdr && hdr.INPUTS || []).filter(i => PARAM_TYPES.includes(i.TYPE) && !(i.NAME in clocks));
+}
 function paramValue(L, src, inp) {
   const p = L.params[src.id];
   if (p && inp.NAME in p) return p[inp.NAME];
@@ -121,6 +146,8 @@ function setParam(L, src, name, v) { (L.params[src.id] = L.params[src.id] || {})
 // A layer that always ran at one speed shows exactly what it showed before.
 const SPEED_USE = /\bTIME\s*\*\s*(abs\s*\(\s*)?speed\b|\bspeed\s*\*\s*TIME\b/;
 const speedMax = inp => Math.max(Math.abs(inp.MIN ?? 0), Math.abs(inp.MAX ?? 1)) || 1;
+// A float called speed that the shader multiplies with TIME (every built-in one does)
+const isSpeedInput = (src, inp, code = sourceCode(src)) => inp.TYPE === 'float' && /^speed$/i.test(inp.NAME) && (!!src.builtin || SPEED_USE.test(code));
 const speedClocks = new Map();   // layer id | source id -> { tau, t }
 function speedTime(key, rate) {
   let c = speedClocks.get(key);
@@ -133,7 +160,8 @@ function speedTime(key, rate) {
 // rate of the layer's clocks, so it changes as smoothly as the effect's own speed.
 function applyParams(rt, L, src) {
   layerTime = null;
-  const roles = L.id != null && rt.roles, speed = roles ? project.macros.speed.v : 1;
+  // the macros, on a layer (not on a thumbnail); a control that follows Speed runs at its rate
+  const roles = L.id != null && macroRolesOf(src, rt), rate = inp => (roles && roles[inp.NAME] === 'speed' ? project.macros.speed.v : 1);
   for (const inp of rt.hdr.INPUTS || []) {
     if (!PARAM_TYPES.includes(inp.TYPE) || (rt.clocks && inp.NAME in rt.clocks)) continue;
     let v = paramValue(L, src, inp);
@@ -141,13 +169,13 @@ function applyParams(rt, L, src) {
     if (role && role !== 'speed') v = macroOver(role, inp, v);
     if (inp === rt.speed && L.id != null && isfTime == null) {
       const M = speedMax(inp);
-      layerTime = speedTime(L.id + '|' + src.id, Math.abs(v) / M * speed);
+      layerTime = speedTime(L.id + '|' + src.id, Math.abs(v) / M * rate(inp));
       v = v < 0 ? -M : M;
     }
     try { rt.R.setValue(inp.NAME, typeof v === 'boolean' ? (v ? 1 : 0) : v); } catch (e) { /* input not used by the shader */ }
   }
   if (rt.clocks) for (const [name, c] of Object.entries(rt.clocks)) {
-    const r = numOr(paramValue(L, src, c.from), 0) * c.scale * speed;
+    const r = numOr(paramValue(L, src, c.from), 0) * c.scale * rate(c.from);
     let ph = isfTime != null ? isfTime * r : L.id != null ? speedTime(L.id + '|' + src.id + '|' + name, r) : clockT * r;
     if (c.wrap) ph = ((ph % c.wrap) + c.wrap) % c.wrap;
     try { rt.R.setValue(name, ph); } catch (e) { /* not used */ }

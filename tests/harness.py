@@ -46,3 +46,21 @@ def app_error(m):
     return not ("fonts.googleapis.com" in url or "fonts.gstatic.com" in url)
 
 CHROME_ARGS = ["--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--ignore-gpu-blocklist"]
+
+# A Web MIDI stand-in, for ctx.add_init_script: __midi.plug(name), unplug(name), send(name, bytes); asked counts
+# requestMIDIAccess calls. The ports plugged in at the start, and a refused or missing Web MIDI, come from
+# sessionStorage.fakeMidi ({ ports, refuse, none }), so they hold across a reload.
+FAKE_MIDI = """(() => {
+  const inputs = new Map(), access = { inputs, outputs: new Map(), onstatechange: null, sysexEnabled: false };
+  const fire = p => { if (access.onstatechange) access.onstatechange({ port: p }); };
+  const saved = JSON.parse(sessionStorage.getItem('fakeMidi') || '{}');
+  window.__midi = {
+    asked: 0, refuse: !!saved.refuse,
+    plug(name) { const p = { id: name, name, state: 'connected', type: 'input', onmidimessage: null }; inputs.set(name, p); fire(p); },
+    unplug(name) { const p = inputs.get(name); if (!p) return; p.state = 'disconnected'; inputs.delete(name); fire(p); },
+    send(name, bytes) { const p = inputs.get(name); if (p && p.onmidimessage) p.onmidimessage({ data: new Uint8Array(bytes) }); },
+  };
+  for (const n of saved.ports || []) window.__midi.plug(n);
+  if (saved.none) { Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: undefined }); return; }
+  Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: () => { window.__midi.asked++; return window.__midi.refuse ? Promise.reject(new Error('refused')) : Promise.resolve(access); } });
+})();"""

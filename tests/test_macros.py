@@ -1,8 +1,10 @@
 # Macros (macros.js, ui-macros.js): what each effect control follows; Speed through the effects' clocks (also the
 # ones a rate or bpm drives), Intensity, Saturation, Color 1 and 2, the shared controls; the layers' own values never
 # change, scenes keep working, thumbnails keep their own look; saved in the project, repaired on opening, kept through
-# an undo; the Macros section of the Content tab (folding, the colour parts in HSV or RGB, typed values, the notes
-# under an effect's controls); MIDI learnt onto a macro and onto a part of a colour; a device's change by its role.
+# an undo; the macros in the MIDI window (the colour parts in HSV or RGB, the shared controls folded, typed values) and
+# the notes under an effect's controls; an effect's colour showing Color 1 while it follows it, and an open colour
+# picker following a fader; MIDI learnt onto a macro (clicked, or chosen from the list of the control just moved) and
+# onto a part of a colour; a device's change by its role.
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import CHROME_ARGS, start_bridge, app_error
@@ -110,67 +112,88 @@ try:
     check("and come back when it opens", ev("project.macros.speed.v") == 1.5 and ev("project.macros.color1.on"))
     reset(); settle()
 
-    # ---------- the Macros section
+    # ---------- the macros, in the MIDI window
     load("b-bars")
-    sec = pg.locator("#rightBody .sec.macros")
-    check("the Content tab starts with the macros, folded to one line", pg.locator("#rightBody .sec").first.evaluate("e => e.classList.contains('macros')")
-          and sec.locator(".row").count() == 0 and "none in use" in sec.inner_text(), sec.inner_text())
-    sec.locator("h3 .mfold").click(); settle()
-    check("open, Speed, Intensity and Saturation come first", [x.strip() for x in sec.locator(".row .lbl").all_inner_texts()][:3] == ["Speed", "Intensity", "Saturation"] and ev("ui.macrosOpen"),
-          sec.locator(".row .lbl").all_inner_texts())
-    sl = sec.locator(".row", has=pg.locator(".lbl", has_text="Speed")).locator("input[type=range]")
+    check("the Content tab has no macros of its own", pg.locator("#rightBody .sec.macros, #rightBody .mmacros").count() == 0)
+    ev("ui.midiVc = false; ui.macroOpen = []")
+    with pg.expect_popup() as pi: pg.click("#btnMidi")
+    W = pi.value; W.set_viewport_size({"width": 1180, "height": 760}); settle(0.6)
+    sec = W.locator(".mports .mmacros")
+    check("the MIDI window has them under the controllers: Speed, Intensity and Saturation first", W.locator(".mports h3.mmhead").inner_text().lower() == "macros"
+          and [x.strip() for x in sec.locator(".row .lbl").all_inner_texts()][:3] == ["Speed", "Intensity", "Saturation"], sec.locator(".row .lbl").all_inner_texts())
+    sl = sec.locator(".row", has=W.locator(".lbl", has_text="Speed")).locator("input[type=range]")
     sl.fill("1.5"); sl.dispatch_event("input"); settle()
     check("the Speed slider moves Speed", ev("project.macros.speed.v") == 1.5 and "1.50×" in sec.inner_text())
-    v = sec.locator(".row", has=pg.locator(".lbl", has_text="Intensity")).locator(".sval"); v.dblclick(); pg.keyboard.type("40"); pg.keyboard.press("Enter"); settle()
+    v = sec.locator(".row", has=W.locator(".lbl", has_text="Intensity")).locator(".sval"); v.dblclick(); W.keyboard.type("40"); W.keyboard.press("Enter"); settle()
     check("a value can be typed (40 means 40 %)", abs(ev("project.macros.intensity.v") - 0.4) < 1e-9, ev("project.macros.intensity.v"))
-    check("a control that follows a macro says so", "Follows Speed (1.50×)" in pg.inner_text("#rightBody"), pg.locator("#rightBody .note.via:not([hidden])").all_inner_texts())
+    check("a control that follows a macro says so in the Content tab", "Follows Speed (1.50×)" in pg.inner_text("#rightBody"), pg.locator("#rightBody .note.via:not([hidden])").all_inner_texts())
     reset(); settle()
-    check("and doesn't once it is back to neutral", pg.locator("#rightBody .note.via:not([hidden])").count() == 0)
+    check("and doesn't once it is back to neutral; the slider there follows", pg.locator("#rightBody .note.via:not([hidden])").count() == 0 and "1.00×" in sec.inner_text())
     sec.locator(".mshared .mfold").click(); settle()
+    sec = W.locator(".mports .mmacros")
     shared = sec.locator(".msub .row")
     check("the shared controls open, each off", shared.count() == 8 and all("off" in (shared.nth(i).get_attribute("class") or "") for i in range(8)))
-    a = sec.locator(".row", has=pg.locator(".mlbl", has_text="Angle"))
+    a = sec.locator(".row", has=W.locator(".mlbl", has_text="Angle"))
     s2 = a.locator("input[type=range]"); s2.fill("0.75"); s2.dispatch_event("input"); settle()
     check("moving one turns it on, and the effect's angle says it follows", ev("project.macros.angle.on") and "off" not in (a.get_attribute("class") or "") and "Follows Angle" in pg.inner_text("#rightBody"))
     a.locator("input[type=checkbox]").uncheck(); settle()
     check("its tick turns it off", not ev("project.macros.angle.on") and "Follows Angle" not in pg.inner_text("#rightBody"))
     c1 = sec.locator(".row.mcolor").first
     c1.locator(".mfold").click(); settle()
+    sec = W.locator(".mports .mmacros"); c1 = sec.locator(".row.mcolor").first
     parts = sec.locator(".msub").first.locator(".row .lbl").all_inner_texts()
     check("Color 1 opens to its hue, saturation and value", parts[1:] == ["Hue", "Saturation", "Value"], parts)
     sec.locator(".msub").first.locator(".seg button", has_text="RGB").click(); settle()
+    sec = W.locator(".mports .mmacros"); c1 = sec.locator(".row.mcolor").first
     parts = sec.locator(".msub").first.locator(".row .lbl").all_inner_texts()
     check("or red, green and blue, without switching it on", parts[1:] == ["Red", "Green", "Blue"] and ev("project.macros.color1.mode") == "rgb" and not ev("project.macros.color1.on"), parts)
-    g = sec.locator(".msub").first.locator(".row", has=pg.locator(".lbl", has_text="Green")).locator("input[type=range]")
+    g = sec.locator(".msub").first.locator(".row", has=W.locator(".lbl", has_text="Green")).locator("input[type=range]")
     ev("setMacro('color1', { h: 0, s: 1, v: 1, on: false })"); settle(); g.fill("1"); g.dispatch_event("input"); settle()
     check("moving green makes it yellow, and on", [round(x * 255) for x in ev("macroRgb(project.macros.color1)")] == [255, 255, 0] and ev("project.macros.color1.on"))
-    sw = c1.locator(".cswatch")
-    check("its swatch shows it", "#FFFF00" in sw.inner_text(), sw.inner_text())
-    sec.locator(".sec.macros h3 .mfold, h3 .mfold").first.click(); settle()
-    check("folded, the section keeps one line, which says what is in use", pg.locator("#rightBody .sec.macros .row").count() == 0 and "Color 1" in pg.inner_text("#rightBody .sec.macros h3"), pg.inner_text("#rightBody .sec.macros h3"))
-    pg.reload(); pg.wait_for_function("window.olm && olm.bridge.connected"); ev("ui.rightTab = 'content'; renderRight()"); settle()
-    check("and stays folded the next time", pg.locator("#rightBody .sec.macros .row").count() == 0 and not ev("ui.macrosOpen"))
-    ev("ui.macrosOpen = true; ui.macroOpen = []; savePrefs(); renderRight()"); reset(); settle()
+    check("its swatch shows it", "#FFFF00" in c1.locator(".cswatch").inner_text(), c1.locator(".cswatch").inner_text())
+
+    # ---------- an effect's colour while it follows Color 1
+    fx = pg.locator("#rightBody .row", has=pg.locator(".lbl", has_text="Bar color")).locator(".cswatch")
+    check("an effect's colour that follows Color 1 shows Color 1 while it is on", "#FFFF00" in fx.inner_text(), fx.inner_text())
+    ev("setMacro('color1', { h: 120 })"); settle()
+    check("and follows it when it moves", "#00FF00" in fx.inner_text(), fx.inner_text())
+    fx.click(); settle()
+    ev("ui.colorMode") == "hsv" or pg.locator(".cpop .seg button", has_text="HSV").click(); settle()
+    hue = lambda: pg.locator(".cpop .cpslider", has=pg.locator(".cpl", has_text="Hue")).locator("input[type=number]").input_value()
+    check("its picker opens on Color 1", hue() == "120", hue())
+    ev("setMacro('color1', { h: 240 })"); settle()
+    check("an open picker follows a macro moved from elsewhere (a fader)", hue() == "240" and pg.locator(".cpop input.mono").input_value() == "#0000FF", (hue(), pg.locator(".cpop input.mono").input_value()))
+    pg.locator(".cpop .cpchip").first.click(); settle()
+    check("a colour chosen there sets Color 1, and the layer keeps its own", ev("project.macros.color1.h") != 240 and ev("project.zones[0].layers[0].params['b-bars'] && project.zones[0].layers[0].params['b-bars'].color") in (None, [1, 1, 1, 1]),
+          (ev("project.macros.color1"), ev("project.zones[0].layers[0].params")))
+    ev("closeColorPicker(); setMacro('color1', { on: false })"); settle()
+    check("Color 1 off: it shows its own colour again", "#FFFFFF" in fx.inner_text(), fx.inner_text())
+    ev("ui.macroOpen = []; savePrefs()"); reset(); settle()
 
     # ---------- MIDI
-    ev("ui.midiOn = true; ui.midiVc = false")
+    ev("ui.midiOn = true; ui.midiVc = false; updateMidiUI()"); settle()
     def cc(n, v): ev(f"midiIn({{ port: 'K', ch: 1, type: 'cc', num: {n}, val: {v} }})"); time.sleep(0.03)
-    ev("midiSetLearn(true)"); cc(21, 10); settle(0.1)
-    pg.locator('#rightBody .mslot[data-midi="m:speed"]').click(); settle()
-    check("learning, a MIDI control goes onto the Speed slider (which stays where it was)", ev("project.midi.maps.some(w => w.key === 'midi:K:1:cc:21' && w.to === 'm:speed')") and ev("project.macros.speed.v") == 1)
-    c1 = pg.locator("#rightBody .row.mcolor").first; c1.locator(".mfold").click(); settle()
-    cc(22, 10); settle(0.1); pg.locator('#rightBody .mslot[data-midi="m:color1.0"]').click(); settle()
+    ev("midiSetLearn(true)"); cc(21, 10); settle(0.3)
+    new = W.locator(".mmap.new")
+    check("learning, the control moved shows at the top of the mappings, with a list to choose what it moves", new.count() == 1 and "CC 21" in new.inner_text()
+          and new.locator("select option").first.inner_text() == "Choose what it moves…", new.inner_text() if new.count() else "")
+    W.locator('.mmacros .mslot[data-midi="m:speed"]').click(); settle()
+    check("clicking the Speed slider in the MIDI window learns it (it stays where it was)", ev("project.midi.maps.some(w => w.key === 'midi:K:1:cc:21' && w.to === 'm:speed')") and ev("project.macros.speed.v") == 1
+          and W.locator(".mmap.new").count() == 0)
+    W.locator(".mmacros .row.mcolor").first.locator(".mfold").click(); settle()
+    cc(22, 10); settle(0.3)
+    W.locator(".mmap.new select").select_option("m:color1.0"); settle()
     ev("midiSetLearn(false)"); settle()
-    check("and another onto Color 1's hue", ev("project.midi.maps.some(w => w.key === 'midi:K:1:cc:22' && w.to === 'm:color1.0')"))
+    check("and another onto Color 1's hue, chosen from its list", ev("project.midi.maps.some(w => w.key === 'midi:K:1:cc:22' && w.to === 'm:color1.0')"), ev("project.midi.maps.map(w => w.key + '>' + w.to)"))
     for v in (60, 64, 100): cc(21, v)
     settle()
     check("with pickup, Speed follows the fader once it reaches 1×", abs(ev("project.macros.speed.v") - 200 / 127) < 1e-6, ev("project.macros.speed.v"))
     cc(22, 0); cc(22, 127); cc(22, 64); settle()
     check("the hue fader moves the hue and turns Color 1 on", abs(ev("project.macros.color1.h") - 64 / 127 * 360) < 1e-6 and ev("project.macros.color1.on"), ev("project.macros.color1"))
-    check("the slider shows where the fader is", pg.locator('#rightBody .mslot[data-midi="m:speed"] .fline').is_visible())
+    check("the slider in the MIDI window moves, and shows where the fader is, with its tag", W.locator('.mmacros .mslot[data-midi="m:speed"] .fline').is_visible()
+          and W.locator('.mmacros .mslot[data-midi="m:speed"] > .ftag').inner_text() == "CC 21"
+          and abs(float(W.locator('.mmacros .mslot[data-midi="m:speed"] input').input_value()) - 200 / 127) < 0.01)
     check("a mapping onto a macro is named after it", ev("midiTargetLabel('m:speed')") == "Speed" and ev("midiTargetLabel('m:color1.0')") in ("Color 1 · Hue", "Color 1 · Red"))
-    with pg.expect_popup() as pi: pg.click("#btnMidi")
-    W = pi.value; settle(0.6)
     opts = W.locator(".mmap select.mtarget").first.locator("optgroup[label=Macros] option").all_inner_texts()
     check("the MIDI window's list has the macros", opts[:3] == ["Speed", "Intensity", "Saturation"] and "Fade" in opts and any(o.startswith("Color 1 · ") for o in opts), opts)
     W.close()

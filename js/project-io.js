@@ -169,6 +169,7 @@ function hydrate(p) {
   });
   out.midi = fixMidi(p.midi);
   out.macros = fixMacros(p.macros);
+  out.macroLinks = fixMacroLinks(p.macroLinks, known);
   return out;
 }
 // The MIDI mappings: well-formed ones only, each with its own id. A mapping to a zone, scene or playlist that is gone
@@ -176,7 +177,9 @@ function hydrate(p) {
 function fixMidi(m) {
   const ids = new Set();
   const maps = (isObj(m) && Array.isArray(m.maps) ? m.maps : []).filter(w => isObj(w) && typeof w.key === 'string' && MIDI_KEY.test(w.key) && typeof w.to === 'string' && w.to && w.to.length < 300);
-  return { maps: maps.map(w => ({ id: uniqueId(isId(w.id) ? String(w.id) : null, ids), key: w.key, to: w.to, takeover: w.takeover === 'jump' ? 'jump' : 'pickup', mode: w.mode === 'hold' ? 'hold' : 'toggle' })) };
+  // order: the controls in the order the user put them (the others follow, by port, type and number)
+  const order = [...new Set((isObj(m) && Array.isArray(m.order) ? m.order : []).filter(k => typeof k === 'string' && MIDI_KEY.test(k)))];
+  return { maps: maps.map(w => ({ id: uniqueId(isId(w.id) ? String(w.id) : null, ids), key: w.key, to: w.to, takeover: w.takeover === 'jump' ? 'jump' : 'pickup', mode: w.mode === 'hold' ? 'hold' : 'toggle' })), order };
 }
 
 /* ---------- history + persistence ---------- */

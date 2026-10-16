@@ -1,16 +1,16 @@
 // openLedMapper · js/midi.js
 // MIDI in: the faders, knobs, buttons and pads of MIDI controllers drive the master, blackout, the zones' levels,
-// their scenes and their playlists. The mappings are part of the project (project.midi.maps, see newMidiMap); whether
-// MIDI is on and which ports are switched off belong to this computer (ui.midiOn, ui.midiOff). Learn: move a control,
-// then touch what it should move, or the other way round. Only the main window listens: a device on the network
-// (REMOTE_CLIENT) doesn't.
+// their scenes and their playlists, the macros, and the controls of the effects. The mappings are part of the project
+// (project.midi.maps, see newMidiMap); whether MIDI is on and which ports are switched off belong to this computer
+// (ui.midiOn, ui.midiOff). Learn: move a control, then touch what it should move, or the other way round. Only the
+// main window listens: a device on the network (REMOTE_CLIENT) doesn't.
 
 /* ---------- state ---------- */
 // status: 'off' (not asked for), 'asking', 'none' (no Web MIDI in this browser), 'blocked' (refused), 'ok'
 const midi = {
   status: 'off', access: null,
   ports: [],               // the inputs there are now: { name, state }
-  controls: new Map(),     // every control moved: key -> { last: 0–1, t }
+  controls: new Map(),     // every control moved: key -> { last: 0–1, t, range: whether it sent a value between the ends }
   learn: { on: false, target: null, pending: null },
   log: [],                 // the monitor: the latest messages first
   learnt: null,            // the control learnt last
@@ -27,8 +27,9 @@ const midiPortOn = name => !(ui.midiOff || []).includes(name);
 /* ---------- targets ---------- */
 // What a mapping drives, from its target: a fader (0 to 1), a toggle (on or off) or a trigger (a press does it).
 // Null when it is gone: a zone, scene or playlist deleted. m:<macro> is a macro (m:color1.0 to .2: the parts of a
-// colour, as its mode has them).
+// colour, as its mode has them); p:<source>:<control> a control of an effect.
 function midiTarget(t) {
+  if (t.startsWith('p:')) return effectTarget(t);
   if (t.startsWith('m:')) {
     const [id, i] = t.slice(2).split('.'), d = macroDef(id);
     if (!d || (d.kind === 'color') !== (i != null)) return null;
@@ -53,6 +54,35 @@ function midiTarget(t) {
   return null;
 }
 const midiTargetLabel = t => { const T = midiTarget(t); return T ? T.label : 'Missing'; };
+// p:<source>:<control>: one control of an effect, in every layer that plays it now; a scene played afterwards brings
+// its own value (a fader on Pickup then waits until it gets there). A number is a fader (a speed from still to full,
+// its direction kept; a list steps through its choices), a tick is on or off, an event plays on a press. Colours and
+// points are driven through the macros.
+function effectTarget(t) {
+  const i = t.indexOf(':', 2), src = i > 2 ? srcById(t.slice(2, i)) : null, name = t.slice(i + 1);
+  const inp = src && src.kind === 'isf' && controlsOf(src).find(x => x.NAME === name);
+  if (!inp) return null;
+  const label = `${src.name} · ${inp.LABEL || inp.NAME}`, layers = () => project.zones.flatMap(z => z.layers.filter(L => L.src === src.id));
+  const now = () => paramValue(layers()[0] || { params: {} }, src, inp);
+  const put = v => setEffectControl(src, inp.NAME, v);
+  if (inp.TYPE === 'bool') return { kind: 'toggle', label, get: () => (now() ? 1 : 0), set: v => put(!!v) };
+  if (inp.TYPE === 'event') {   // a moment on, as its Trigger button does: not a change to keep
+    const fire = v => { for (const L of layers()) setParam(L, src, inp.NAME, v); };
+    return { kind: 'trigger', label, get: () => 0, set: () => { fire(true); setTimeout(() => fire(false), 80); } };
+  }
+  if (inp.TYPE === 'long') {
+    const vals = inp.VALUES || [], n = vals.length - 1;
+    return n > 0 ? { kind: 'fader', label, get: () => Math.max(0, vals.indexOf(now())) / n, set: x => put(vals[Math.round(x * n)]) } : null;
+  }
+  if (inp.TYPE !== 'float' && inp.TYPE !== 'int') return null;
+  if (isSpeedInput(src, inp)) {
+    const M = speedMax(inp);
+    return { kind: 'fader', label, get: () => Math.min(1, Math.abs(now()) / M), set: x => put((now() < 0 ? -1 : 1) * x * M) };
+  }
+  const lo = inp.MIN ?? 0, hi = inp.MAX ?? 1;
+  return { kind: 'fader', label, get: () => (hi > lo ? clamp((now() - lo) / (hi - lo), 0, 1) : 0),
+    set: x => { const v = lo + x * (hi - lo); put(inp.TYPE === 'int' ? Math.round(v) : v); } };
+}
 function midiSetMaster(v) {
   project.settings.master = v;
   $('#master').value = v; $('#masterVal').textContent = pct(v);
@@ -117,14 +147,17 @@ function midiIn(m) {
   const entry = { time: (performance.now() - midi.t0) / 1000, port: m.port, key, val: m.val, to: [], note: '',
     text: m.type === 'cc' ? `CC ${m.num} · ch${m.ch}` : `Note ${m.type === 'off' ? 'off' : 'on'} ${m.num} · ch${m.ch}` };
   if (!midiPortOn(m.port)) { entry.note = 'port off'; midiLog(entry); return; }
-  if (m.type !== 'off') midi.controls.set(key, { last: m.type === 'on' ? 1 : c, t: performance.now() });
+  if (m.type !== 'off') {
+    const was = midi.controls.get(key);
+    midi.controls.set(key, { last: m.type === 'on' ? 1 : c, t: performance.now(), range: !!(was && was.range) || (m.type === 'cc' && m.val > 0 && m.val < 127) });
+  }
   if (midi.learn.on) {
     // A note off or a CC at 0 (a button let go, a fader at its bottom) never starts learning. The control learnt last
     // is done: its release or the rest of its move doesn't start it again, so the next click waits for a new control.
     // It goes to something clicked first, though.
     const start = m.type !== 'off' && !(m.type === 'cc' && m.val === 0);
     if (start && midi.learn.target) { midiConnect(key, midi.learn.target); entry.note = 'learnt'; }
-    else if (start && midi.learnt !== key) { midi.learn.pending = key; entry.note = 'learning: click what it should move'; }
+    else if (start && midi.learnt !== key) { midi.learn.pending = key; entry.note = 'learning: choose what it should move'; }
     else if (midi.learnt === key) entry.note = 'just learnt';
   } else {
     const ws = midiMapsFor(key);
@@ -164,8 +197,9 @@ function midiApply(w, c, type) {
       if (!w._picked) { w._last = c; return; }
     }
   }
-  w._last = c; w._picked = true; w._set = c;
+  w._last = c; w._picked = true;
   T.set(c);
+  w._set = T.get();   // where it went: a list or whole numbers go in steps
 }
 // Whether a fader mapped to t has picked it up: a slider shows the fader's line faint until it has
 function midiPicked(w) {
@@ -186,16 +220,32 @@ function midiLearnTarget(t) {
   else { midi.learn.target = midi.learn.target === t ? null : t; updateMidiUI(); }
 }
 // Learning a control onto something another control drives replaces that control (two on the same thing are set in
-// the MIDI window, from a mapping's list)
+// the MIDI window, from a mapping's list). A fader or knob learnt onto something that is on or off follows it (Hold:
+// on while it is past the middle); a button toggles it.
 function midiConnect(key, to) {
   midi.learn.pending = null; midi.learn.target = null;
   midi.learnt = key;
   if (project.midi.maps.some(w => w.key === key && w.to === to)) { toast(`${midiKeyLabel(key)} already does that.`); updateMidiUI(); return; }
-  const old = project.midi.maps.filter(w => w.to === to);
-  project.midi.maps = project.midi.maps.filter(w => w.to !== to);
-  project.midi.maps.push(newMidiMap(key, to));
+  const old = project.midi.maps.filter(w => w.to === to), w = midiNewMap(key, to);
+  project.midi.maps = project.midi.maps.filter(x => x.to !== to);
+  project.midi.maps.push(w);
   commit();
   toast(`${midiKeyFull(key)} → ${midiTargetLabel(to)}` + (old.length ? ` (instead of ${[...new Set(old.map(w => midiKeyLabel(w.key)))].join(', ')})` : ''));
+  updateMidiUI();
+}
+// A new mapping: a control that moved like a fader, onto something on or off, follows it (Hold)
+function midiNewMap(key, to) {
+  const w = newMidiMap(key, to), T = midiTarget(to), c = midi.controls.get(key);
+  if (T && T.kind === 'toggle' && c && c.range) w.mode = 'hold';
+  return w;
+}
+// A mapping made by hand (a wire drawn in the patch bay): another control on the same thing stays
+function midiAddMap(key, to) {
+  if (!midiTarget(to)) return;
+  if (project.midi.maps.some(w => w.key === key && w.to === to)) { toast(`${midiKeyLabel(key)} already does that.`); return; }
+  project.midi.maps.push(midiNewMap(key, to));
+  commit();
+  toast(`${midiKeyFull(key)} → ${midiTargetLabel(to)}`);
   updateMidiUI();
 }
 function midiSetMap(id, patch) {
@@ -207,5 +257,31 @@ function midiSetMap(id, patch) {
 }
 function midiDisconnect(id) {
   project.midi.maps = project.midi.maps.filter(w => w.id !== id);
+  commit(); updateMidiUI();
+}
+// A control not wanted any more: its mappings go, and it is forgotten until it moves again
+function midiForget(key) {
+  project.midi.maps = project.midi.maps.filter(w => w.key !== key);
+  project.midi.order = project.midi.order.filter(k => k !== key);
+  midi.controls.delete(key);
+  if (midi.learn.pending === key) midi.learn.pending = null;
+  commit(); updateMidiUI();
+}
+// The controls in order: as the user put them, then the others by port, type, channel and number
+function midiKeyOrder(keys) {
+  const at = new Map(project.midi.order.map((k, i) => [k, i])), parts = k => { const p = midiKeyParts(k); return [p.port, p.type, p.ch, p.num]; };
+  return [...new Set(keys)].filter(k => midiKeyParts(k)).sort((a, b) => {
+    const x = at.has(a) ? at.get(a) : Infinity, y = at.has(b) ? at.get(b) : Infinity;
+    if (x !== y) return x - y;
+    const p = parts(a), q = parts(b);
+    for (let i = 0; i < p.length; i++) if (p[i] !== q[i]) return p[i] < q[i] ? -1 : 1;
+    return 0;
+  });
+}
+// The controls put in this order (dragged in the patch bay); the mappings in the list follow it
+function midiSetOrder(keys) {
+  project.midi.order = [...new Set(keys)];
+  const at = new Map(project.midi.order.map((k, i) => [k, i]));
+  project.midi.maps = project.midi.maps.slice().sort((a, b) => (at.get(a.key) ?? 1e9) - (at.get(b.key) ?? 1e9));
   commit(); updateMidiUI();
 }

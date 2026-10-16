@@ -1,6 +1,6 @@
 # openLedMapper: detailed reference
 
-Everything openLedMapper 0.9.2 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything openLedMapper 0.9.8 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -275,30 +275,32 @@ Phones, tablets and other computers on the same network can use openLedMapper to
 
 ## Macros
 
-Macros move the same kind of control in every effect at once. They are at the top of the **Content** tab, folded to one line that says which are in use: click **Macros** to open them.
+Macros move the same kind of control in every effect at once. They are in the **MIDI window** (the MIDI button in the top bar), under the controllers, where a controller's faders are learnt onto them; their sliders work with the mouse too.
 
 - **Speed** makes every effect faster or slower: 1× in the middle leaves them as they are, 0 stops them where they are, 2× is twice as fast. It changes smoothly, as an effect's own speed does, and it works on effects whose speed is a rate or a tempo (Strobe, Breathe, Checker, Disco dots, Color hits) too.
 - **Intensity** is the level of every layer (100 % leaves them as they are). The master still comes after it.
 - **Saturation** scales the saturation of the effects that have one: at 0 they are grey.
-- **Color 1** and **Color 2**: tick one (or just move it) and every effect's first colour (Color 1) or second colour or background (Color 2) is that colour. The swatch opens the colour picker; the arrow opens a slider for each part of the colour, as hue, saturation and value, or as red, green and blue, which a MIDI fader can drive.
+- **Color 1** and **Color 2**: tick one (or just move it) and every effect's first colour (Color 1) or second colour or background (Color 2) is that colour. The swatch shows it; the arrow opens a slider for each part of the colour, as hue, saturation and value, or as red, green and blue, which a MIDI fader can drive.
 - **Shared controls** (folded): Angle, Softness, Scale, Count, Size, Width, Density and Fade. Ticked (or moved), each sets that control of every effect that has one to the same point of its own range: 50 % is the middle of each effect's range.
 
-**They go over each effect's own values, and never change them.** Scenes keep their own settings: a scene played while Color 1 is on is in Color 1, and when Color 1 is off again each effect has its own colour back. Under an effect's control in the Content tab, a blue note says when it follows a macro ("Follows Speed (1.40×)"). A source's thumbnail in the Sources list keeps its own look.
+**They go over each effect's own values, and never change them.** Scenes keep their own settings: a scene played while Color 1 is on is in Color 1, and when Color 1 is off again each effect has its own colour back. Under an effect's control in the Content tab, a blue note says when it follows a macro ("Follows Speed (1.40×)"). While Color 1 or Color 2 is on, an effect's colour that follows it shows that colour (what goes to the lights), and moves with it, open colour picker included; a colour chosen there sets the macro. The effect's own colour comes back when the macro is off. A source's thumbnail in the Sources list keeps its own look.
 
-**Like the master**, macros are saved in the project but are live controls: an undo leaves them where they are. Every slider of the macros can be learnt by a MIDI control (see MIDI). Programmers and operators on other devices can move them too; phones can't.
+**Like the master**, macros are saved in the project but are live controls: an undo leaves them where they are. Every slider of the macros can be learnt by a MIDI control (see MIDI). Devices logged in by remote control don't show the macros (yet), but they see their effect.
 
 An effect's control follows a macro by its name: `color`, `colorA` or `tint` follow Color 1; `colorB` or `background` Color 2; `speed` (and the rates of an effect's clocks) Speed; `saturation`, `angle`, `softness`, `scale`, `count`, `size`, `width`, `density` and `decay` the macro of that name. Your own ISF shaders follow by the same names. For Speed, a shader's `speed` must move it through `TIME * speed`, as the built-in ones do.
 
+**Choosing what an effect follows.** At the end of an effect's Parameters (in the Content tab), **Macros it follows** says how many of its controls follow a macro. Click it to open a list: each control that can follow one, with what it follows. Choose **Its own value** to take that control out of its macro (Plasma's speed stays where it is while Speed doubles the others), or another macro: a colour can follow Color 1 or Color 2, a speed only Speed, another number Saturation or one of the shared controls (Plasma's hue range can follow Width). A row you changed is blue; **As their names say** puts them all back. The choice is for that effect wherever it plays, is saved in the project, and undo works on it. An operator can see it but not change it.
+
 ## MIDI
 
-A MIDI controller (faders, knobs, buttons, pads: a nanoKONTROL, an APC, a Launchpad…) can play the project: the master, blackout, each zone's level, its scenes and its playlists.
+A MIDI controller (faders, knobs, buttons, pads: a nanoKONTROL, an APC, a Launchpad…) can play the project: the master, blackout, each zone's level, its scenes and its playlists, the macros, and any control of an effect.
 
 **Turning it on.** The MIDI button in the top bar (three faders, next to the remote button) turns MIDI on and opens the **MIDI window**: a window of its own, big, to put beside the main one or on another screen. The browser may ask once whether openLedMapper can use your MIDI devices: allow it. MIDI stays on the next time openLedMapper starts; **Turn off** in the MIDI window stops it. The MIDI window closes with openLedMapper; the MIDI button opens it again (or brings it to the front). MIDI works in Chrome, Edge and the openLedMapper app (Safari and Firefox have no MIDI).
 
-**Learning.** Press **Learn** in the MIDI window. A bar at the top of the main window says what to do, and everything a control can drive is outlined in yellow:
+**Learning.** Press **Learn** in the MIDI window. A bar at the top of the main window says what to do, and everything a control can drive is outlined in yellow, in both windows:
 
 1. Move a fader or a knob, or press a pad, on your controller.
-2. Click what it should move, in the main window: the **Master** slider, **Blackout**, a zone's level slider (in the Scenes panel, the Content tab or the Inspector), a **scene**, a **playlist's tab**, or a **macro**'s slider (Speed, Intensity, a part of Color 1…).
+2. It shows at the top of the mappings, marked **new**, with a list: choose what it should move there. Or click what it should move: a **macro**'s slider in the MIDI window (Speed, Intensity, a part of Color 1…), or in the main window the **Master** slider, **Blackout**, a zone's level slider (in the Scenes panel, the Content tab or the Inspector), a **scene**, a **playlist's tab**, or a **control of an effect** in the Content tab's Parameters (a slider, a tick, a list, a Trigger button).
 
 Or the other way round: click something first, then move the control. Clicking while learning only picks: the scene doesn't play and the slider doesn't move. Once a control is learnt it is done: letting go of a button, or the rest of a fader's move, doesn't start it again, so the next click waits for a new control. Learn stays on for the next one; **Esc** or **Stop learning** ends it.
 
@@ -307,10 +309,15 @@ A control can drive several things: to learn the same control onto a second thin
 **What each does.**
 
 - **Master** and **a zone's level** follow a fader or knob. With **Pickup** (the default), the value waits until the fader reaches it (or passes it), so nothing jumps when you touch a fader that was somewhere else; with **Jump** it goes where the fader is at once. A pad on a level turns it full on or off.
-- **Blackout** and **a playlist** are on or off: with **Toggle**, each press turns it over (a playlist plays, then pauses); with **Hold**, it is on while the pad is held.
+- **Blackout**, **a playlist** and an effect's tick are on or off: with **Toggle**, each press turns it over (a playlist plays, then pauses); with **Hold**, it is on while the pad is held. A fader or knob learnt onto one of them starts on **Follow** (Hold, for a control that sends values in between): on while it is past the middle. A button that only sends on and off starts on Toggle.
 - **A scene** plays on each press, with its own fade, and pauses the zone's playlist, as a click does. **Next scene** (chosen from a mapping's list) plays the zone's next scene, back to the first after the last.
+- **A control of an effect** moves in every layer that plays that effect now, in every zone, and its slider in the Content tab moves with it. A speed goes from still to full, keeping its direction; a list steps through its choices; a Trigger button plays on a press. A scene played afterwards brings its own value back, and a fader on Pickup waits until it gets there again. Colours are driven through Color 1 and Color 2 (see Macros). A control of an effect that isn't playing does nothing until it plays.
 
-**The MIDI window.** Along the top: **Learn** and what to do next, how many controllers are plugged in, and **Turn off**. On the left, your controllers, each with a light that blinks with its messages and a tick to ignore it. In the middle, the mappings: each control, what it drives (a list: Master, Blackout, or a zone's level, a scene, the next scene or a playlist), Pickup or Jump (Toggle or Hold), where the control is, and **×** to remove it. On the right, the **Monitor** (click its name to open it): every message, with what it moved. **Esc** stops learning and **⌘Z** undoes, in the MIDI window too.
+**The MIDI window.** Along the top: **Learn** and what to do next, how many controllers are plugged in, and **Turn off**. On the left, your controllers, each with a light that blinks with its messages and a tick to ignore it, and under them the macros (see Macros). In the middle, the mappings: each control, what it drives (a list: Master, Blackout, the macros, a zone's level, a scene, the next scene or a playlist, and the controls of the effects in the project), Pickup or Jump (Toggle, and Hold or Follow), where the control is, and **×** to remove it. On the right, the **Monitor** (click its name to open it): every message, with what it moved. **Esc** stops learning and **⌘Z** undoes, in the MIDI window too.
+
+**The patch bay.** **List** and **Patch bay**, at the top of the MIDI window, switch between two views of the same mappings. The patch bay shows them as wires: your mapped controls on the left (with where each one is; while learning, the control just moved too), what they can drive in the middle (Master and Blackout, the zones with their scenes and playlists, the macros), and the controls of your effects on the right. Each wire is a mapping; it glows while its control moves, and fades out once it stops. Click a wire to see its settings (Pickup or Jump; Toggle, and Hold or Follow) and to **Remove** it (or press **Delete**); click elsewhere to let it go. Zones and effects fold: a wire to a scene of a folded zone is dashed and ends at the zone, and an effect shows its mapped controls even when folded. Each row moves what it drives with the mouse too, and Learn works here as everywhere: move a control, then click a row (or the other way round). Drag a control up or down to put it in another place (the list follows the same order, and the project keeps it); **×** on a control forgets it and its mappings, until it moves again. **Drawing wires.** Drag from a control's dot (on its right) to a row, and it drives that row; or from a row's dot (on its left) to a control. A line follows the pointer and turns green over a row it fits. Another control on the same thing stays (Learn replaces it instead).
+
+**The macros' blue wires.** A macro's row says how many effect controls follow it (→ 11). Point at it and blue wires go from it to each of them; click its name to keep them drawn (Esc lets it go); point at an effect's control to see the one it follows. An effect's controls show the macro they follow in blue, colours included. Click a blue wire to choose what that control follows, or **Remove** it (Delete): that control keeps its own value. Drag from a macro's right-hand dot to an effect's control (or from the control's dot to the macro) to make it follow; one that can't follow that macro (a colour can follow Color 1 or 2, a speed only Speed) says so. It is the same choice as **Macros it follows** in the Content tab, for that effect wherever it plays.
 
 **The virtual controller.** At the bottom of the MIDI window, **Virtual controller** opens a controller on screen, to try MIDI without one: 8 faders (CC 21 to 28) and 8 pads (notes 36 to 43; keys **1** to **8** play them while the MIDI window is in front). It is listed with your controllers and learnt like them, and it works even where the browser has no MIDI. Under each fader and pad is what it drives. Click its name again to fold it away.
 
@@ -320,7 +327,7 @@ A control can drive several things: to learn the same control onto a second thin
 
 - The mappings are saved in the project, and undo works on them. Whether MIDI is on, and which controllers are ignored, belong to this computer.
 - Controllers are found by their name: plug them in or out at any time. A mapping learnt on a controller that isn't plugged in also answers the same control on another port, so a project made on a Mac works with the same controller on Windows, where its name is different.
-- A mapping to a scene, playlist or zone that has been deleted shows as **Missing** and does nothing. Point it at something else, or remove it.
+- A mapping to a scene, playlist, zone or shader that has been deleted shows as **Missing** and does nothing. Point it at something else, or remove it.
 - MIDI is read on this computer only: devices logged in by remote control don't listen to it. On Windows a MIDI port works in one program at a time: close it in other programs first.
 
 ## Network notes
@@ -360,7 +367,7 @@ Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture in
 The apps are an [Electron](https://www.electronjs.org/) window (`desktop/`) around the interface, with the Art-Net bridge (`openledmapper.py`, packed with PyInstaller by `openledmapper.spec`) running inside: the app starts it with `--embedded` and it stops when the app quits. GitHub builds them (`.github/workflows/release.yml`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
 
 1. Set `VERSION` in `openledmapper.py` (and the README title), and commit.
-2. Tag it with the same version and push the tag: `git tag v0.9.2 && git push origin v0.9.2`.
+2. Tag it with the same version and push the tag: `git tag v0.9.8 && git push origin v0.9.8`.
 
 The three apps are built, started once to check that they start the bridge and stop it again, and attached to a new release on the Releases page, in about 10 minutes. The app's version comes from `VERSION`; a tag that doesn't match it fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run.
 

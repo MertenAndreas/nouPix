@@ -673,9 +673,12 @@ body.remote-client #btnMidi { display: none; }
 .midi-open .ftag:not([hidden]), .midi-learning .ftag:not([hidden]) { display: block; }
 .master .ftag, #btnBlackout .ftag { top: auto; bottom: -11px; }
 #btnBlackout { position: relative; }
-.scene .ftag { top: auto; bottom: 6px; right: 8px; }
+.scene .t > .ftag { position: static; flex: none; font-weight: 500; }
 .ptab { position: relative; }
 .ptab .ftag { top: -9px; right: 6px; }
+.checkrow[data-midi], .btn[data-midi] { position: relative; }
+.row > .mslot { width: 100%; }
+.mslot > select { width: 100%; }
 /* learning: what a control can drive is outlined; the one picked pulses */
 body.midi-learning [data-midi] { outline: 1px dashed rgba(255, 210, 63, .6); outline-offset: 2px; cursor: crosshair; }
 body.midi-learning [data-midi]:hover { outline-style: solid; outline-color: var(--midi); }
@@ -695,8 +698,8 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .mwhint { flex: 1; min-width: 0; color: var(--text2); font-size: 12.5px; line-height: 1.4; }
 .mwhint.on { color: var(--midi); }
 .mwhint b { font-family: var(--mono); font-weight: 500; }
-.midipanel { min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr) 340px; }
-.midipanel.monshut { grid-template-columns: 280px minmax(0, 1fr) 130px; }
+.midipanel { min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) 320px; }
+.midipanel.monshut { grid-template-columns: 300px minmax(0, 1fr) 130px; }
 .midipanel.off { display: grid; place-items: center; }
 .moff { max-width: 480px; display: grid; gap: 12px; justify-items: start; padding: 20px; color: var(--text2); font-size: 14px; line-height: 1.5; }
 .moff p { margin: 0; }
@@ -716,8 +719,10 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .mlist { display: grid; gap: 5px; align-content: start; }
 /* a mapping on one line: the control, what it drives, how, where the control is, remove */
 .mmap { display: grid; grid-template-columns: 116px minmax(160px, 1fr) auto 70px 22px; align-items: center; gap: 10px; min-height: 36px; padding: 0 6px 0 12px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line2); }
-.mmap.hit { border-color: var(--midi); }
+.mmap { --heat: 0; box-shadow: inset 0 0 0 1px rgba(255, 210, 63, calc(var(--heat) * .9)); }
 .mmap.missing { border-style: dashed; }
+.mmap.new { grid-template-columns: 116px minmax(160px, 1fr) auto; border-color: var(--midi); box-shadow: 0 0 0 3px rgba(255, 210, 63, .14); }
+.mmap.new .mtarget { border-color: var(--midi); }
 .mmap.missing .mtarget { color: var(--warn); }
 .mmap .mk { font-family: var(--mono); font-size: 12px; color: var(--midi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mmap .mk small { margin-left: 6px; font-family: var(--ui); font-size: 10.5px; color: var(--muted); }
@@ -742,6 +747,84 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .mmon .d.go { color: var(--accent); }
 .mmon .d.learnt { color: var(--midi); }
 .mmon .note { font-family: var(--ui); padding: 0 4px; }
+/* the patch bay: controls, what they drive, the effects' controls; wires between them (ui-bay.js) */
+.bay { user-select: none; -webkit-user-select: none; position: relative; min-height: 0; display: grid; grid-template-columns: minmax(170px, .7fr) minmax(250px, 1fr) minmax(250px, 1fr); column-gap: 84px; padding: 0 16px; }
+.bcol { min-height: 0; overflow: auto; padding: 12px 2px 16px; display: flex; flex-direction: column; gap: 5px; scrollbar-width: thin; }
+.bcol h3 { position: sticky; top: -12px; z-index: 1; margin: 0; padding: 8px 0 6px; background: var(--bg0); font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.bcol .note { margin: 2px 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.bctl, .brow { position: relative; display: grid; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line2); }
+.bctl { grid-template-rows: 18px 10px; row-gap: 0; padding-top: 4px; padding-bottom: 4px; }
+.bctl .mk { font-family: var(--mono); font-size: 12px; color: var(--midi); }
+.bctl small { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bctl .cval { grid-column: 1 / -1; height: 3px; align-self: center; border-radius: 2px; background: var(--bg4); overflow: hidden; }
+.bctl .cbar { display: block; height: 100%; width: 0; background: var(--midi); }
+.bctl.loose { opacity: .7; }
+.bctl { grid-template-columns: 8px auto minmax(0, 1fr) 20px; cursor: grab; }
+.bctl .pgrip { width: 6px; height: 12px; opacity: .4; background-image: radial-gradient(currentColor 1px, transparent 1.2px); background-size: 3px 3px; color: var(--text2); }
+.bctl:hover .pgrip { opacity: .9; }
+.bctl .x { width: 20px; height: 20px; padding: 0; border: 0; border-radius: 3px; background: none; color: var(--muted); cursor: pointer; display: grid; place-items: center; opacity: 0; }
+.bctl:hover .x, .bctl .x:focus-visible { opacity: 1; }
+.bctl .x:hover { color: var(--danger); background: var(--danger-soft); }
+.bctl .x svg { width: 9px; height: 9px; }
+.bctl { transition: transform .16s cubic-bezier(.2, .75, .25, 1); }
+.bctl.dragging { opacity: 1; z-index: 2; cursor: grabbing; transition: none; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); border-color: var(--midi); }
+.bctl.dragging.settling { transition: transform .14s ease-out; }
+.bctl.new { border-color: var(--midi); box-shadow: 0 0 0 3px rgba(255, 210, 63, .14); }
+.brow { grid-template-columns: minmax(0, 1fr) minmax(70px, 120px); }
+.brow .nm { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brow .k { justify-self: end; font-size: 10.5px; color: var(--muted); }
+.brow .btn.sm { justify-self: end; min-width: 52px; }
+.brow .btn.on { border-color: var(--accent); color: var(--accent); }
+.brow input[type=range] { width: 100%; min-width: 0; }
+.brow.sub { min-height: 28px; background: var(--bg1); }
+.bhead { display: flex; }
+.bhead .nm { flex: 1; min-width: 0; }
+.bhead > input[type=range] { flex: 0 0 120px; }
+.bhead > .mfold { color: var(--muted); }
+.bsw { width: 34px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); justify-self: end; }
+.bgroup { display: grid; gap: 4px; }
+.bsub { display: grid; gap: 4px; margin-left: 14px; }
+.bmore { margin-left: 26px; font-size: 11px; color: var(--muted); }
+.bctl.lit, .brow.lit { border-color: var(--midi); }
+/* the dots wires join: out on a control's right, in on a target's left */
+.bdot { position: absolute; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: var(--bg0); border: 2px solid var(--line2); }
+.bdot.out { right: -6px; }
+.bdot.in { left: -6px; }
+.bctl:not(.loose) .bdot.out, .brow.midi-mapped > .bdot.in { border-color: var(--midi); }
+.bdot.alias { border-style: dashed; }
+.bay .ftag { display: none !important; }   /* the wires say it */
+.bwires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.bwires path { fill: none; }
+.bwires .wire { stroke: var(--midi); stroke-width: 1.6; opacity: .55; }
+.bwires .wire.fx { opacity: .4; }
+.bwires .wire.lit, .bwires .wire.sel { opacity: 1; stroke-width: 2.2; }
+.bwires .wire.link { stroke: var(--accent); opacity: .85; stroke-width: 1.6; }
+.bwires .wire.link.sel { stroke: var(--text); }
+.bwires .wire.draw { stroke: var(--text2); stroke-dasharray: 5 4; opacity: .9; stroke-width: 1.8; }
+.bwires .wire.draw.ok { stroke: var(--live); stroke-dasharray: none; }
+.bwires .wire.draw.no { stroke: var(--danger); }
+.bdot { cursor: crosshair; z-index: 1; }
+.bdot::after { content: ''; position: absolute; inset: -6px; }   /* easier to grab */
+.bdot.alias { cursor: default; }
+.bdot.out.mac { right: -6px; border-color: var(--accent); }
+.brow[data-mac] .nm { cursor: pointer; }
+.brow .fan { margin-left: 8px; font-family: var(--mono); font-size: 10px; color: var(--accent); }
+.brow.pinned { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(60, 200, 255, .15); }
+.brow .mtag { margin-left: 8px; padding: 0 5px; border-radius: 3px; font-size: 10px; color: var(--accent); background: rgba(60, 200, 255, .1); }
+.brow.link { grid-template-columns: minmax(0, 1fr) auto; }
+.bctl.dropok, .brow.dropok { border-color: var(--live); box-shadow: 0 0 0 2px rgba(80, 220, 140, .18); }
+.bctl.dropno, .brow.dropno { border-color: var(--danger); }
+.bpop .mtarget, .bpop select { width: 100%; height: 26px; }
+.bwires .glow { fill: none; stroke: var(--midi); stroke-width: 5; opacity: 0; filter: drop-shadow(0 0 3px rgba(255, 210, 63, .6)); }
+.bwires .wire.folded, .bwires .wire.edge { stroke-dasharray: 4 3; }
+.bwires .wire.sel { stroke: var(--text); }
+.bwires .hit { stroke: transparent; stroke-width: 12; pointer-events: stroke; cursor: pointer; }
+.bpop { position: absolute; z-index: 3; min-width: 250px; padding: 10px 12px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--line2); box-shadow: 0 10px 30px rgba(0, 0, 0, .45); display: grid; gap: 8px; font-size: 12.5px; }
+.bpop[hidden] { display: none; }
+.bpop .bph b { color: var(--midi); font-weight: 500; }
+.bpop .bpr { display: flex; align-items: center; gap: 8px; }
+.bpop .bpr .fill { flex: 1; }
+.mwhead > .seg { flex: none; }
 /* the virtual controller, at the bottom of the MIDI window: faders and pads; folded, its heading */
 .vc { background: var(--bg1); border-top: 1px solid var(--line); }
 .vchead { display: flex; align-items: center; gap: 14px; min-height: 36px; padding: 0 16px; }
@@ -777,4 +860,13 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .row.mshared { display: flex; align-items: center; gap: 8px; min-height: 22px; }
 .row.mshared .mfold { font-size: 12px; color: var(--text2); }
 .note.via { margin: -5px 0 0; font-size: 11px; color: var(--accent); }
+.row.mlinks { margin-top: 4px; }
+/* the macros in the MIDI window, under the controllers */
+.mcol h3.mmhead { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.mmacros { display: grid; gap: 7px; }
+.mmacros .note { margin: 0 0 4px; }
+.cswatch.still { cursor: default; }
+.cswatch.still:hover { border-color: var(--line2); color: var(--text2); }
+.row.mlinks .msum { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.row.mchg > .lbl { color: var(--accent); }
 .note.via[hidden] { display: none; }

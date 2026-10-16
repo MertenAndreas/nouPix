@@ -166,7 +166,18 @@ function openColorPicker(anchor, o) {
   // let a quick click elsewhere on a busy page go by before it is listened for, and the picker would stay open.
   document.addEventListener('pointerdown', off, true); addEventListener('keydown', esc, true);
   anchor.classList.add('open');
-  colorPop = { key: o.key, pop, close: () => {
+  // moved from elsewhere (a MIDI fader on a macro, a device): the picker follows, without a step of undo of its own
+  const sync = () => {
+    const c = o.get().slice(0, 3);
+    if (c.every((x, k) => Math.abs(x - rgb[k]) < 1e-4)) return;
+    rgb = c.map(x => clamp(x, 0, 1));
+    const n = rgbToHsv(...rgb);
+    hsv = [n[1] ? n[0] : hsv[0], n[2] ? n[1] : hsv[1], n[2]];
+    const sw = anchor.isConnected ? anchor : document.querySelector(`.cswatch[data-cp="${CSS.escape(o.key)}"]`);
+    if (sw && sw._show) sw._show(rgb);
+    refresh();
+  };
+  colorPop = { key: o.key, pop, sync, close: () => {
     pop.remove(); anchor.classList.remove('open');
     document.removeEventListener('pointerdown', off, true); removeEventListener('keydown', esc, true);
   } };

@@ -107,6 +107,8 @@ SUITES = [   # name, function, part of --quick
     ("values", simple("test_values.py", 8178, 300), True),
     ("midi", simple("test_midi.py", 8182, 400), True),
     ("macros", simple("test_macros.py", 8184, 400), True),
+    ("links", simple("test_links.py", 8186, 400), True),
+    ("bay", simple("test_bay.py", 8188, 400), True),
     ("profile", last_line("test_profile_move.py", [], 60, lambda l: "ALL PASS" in l), True),
 ]
 
@@ -114,6 +116,8 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     quick = "--quick" in args
     names = [a for a in args if not a.startswith("--")]
+    if "--midi" in args:   # a change to MIDI, the macros or the MIDI window only: their suites, and the page's files
+        names = names or ["static", "midi", "macros", "links", "bay"]
     todo = [s for s in SUITES if (s[0] in names if names else (s[2] or not quick))]
     print("Logs in", OUT)
     bad = 0

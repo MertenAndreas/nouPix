@@ -7,28 +7,14 @@
 # missing Web MIDI; a burst of messages; the virtual controller.
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from harness import CHROME_ARGS, start_bridge, app_error
+from harness import CHROME_ARGS, start_bridge, app_error, FAKE_MIDI
 from playwright.sync_api import sync_playwright
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8182
 fails = []
 def check(name, ok, detail=""):
     print(("PASS " if ok else "FAIL ") + name + ("  " + " ".join(str(detail).split())[:300] if detail != "" else ""), flush=True); ok or fails.append(name)
 
-# A Web MIDI stand-in: __midi.plug(name), unplug(name), send(name, bytes); asked counts requestMIDIAccess calls
-FAKE = """(() => {
-  const inputs = new Map(), access = { inputs, outputs: new Map(), onstatechange: null, sysexEnabled: false };
-  const fire = p => { if (access.onstatechange) access.onstatechange({ port: p }); };
-  const saved = JSON.parse(sessionStorage.getItem('fakeMidi') || '{}');
-  window.__midi = {
-    asked: 0, refuse: !!saved.refuse,
-    plug(name) { const p = { id: name, name, state: 'connected', type: 'input', onmidimessage: null }; inputs.set(name, p); fire(p); },
-    unplug(name) { const p = inputs.get(name); if (!p) return; p.state = 'disconnected'; inputs.delete(name); fire(p); },
-    send(name, bytes) { const p = inputs.get(name); if (p && p.onmidimessage) p.onmidimessage({ data: new Uint8Array(bytes) }); },
-  };
-  for (const n of saved.ports || []) window.__midi.plug(n);
-  if (saved.none) { Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: undefined }); return; }
-  Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: () => { window.__midi.asked++; return window.__midi.refuse ? Promise.reject(new Error('refused')) : Promise.resolve(access); } });
-})();"""
+FAKE = FAKE_MIDI
 K = "nanoKONTROL2"
 
 bridge = start_bridge(PORT)
@@ -128,7 +114,7 @@ try:
     check("clicked first, something else takes the same control", ev(f"project.midi.maps.some(w => w.key.endsWith('cc:13') && w.to === 'z:{other}')") and ev("midi.learn.target") is None, maps())
     ev("project.midi.maps = project.midi.maps.filter(w => !/cc:1[0-3]$/.test(w.key)); commit(); midiSetLearn(true)"); settle()
     check("while learning, the tags show on what is wired", pg.locator(".master .ftag").is_visible() and pg.locator(".master .ftag").inner_text() == "CC 7"
-          and tiles.nth(2).locator(".ftag").inner_text() == "Note 37")
+          and tiles.nth(2).locator(".ftag").inner_text() == "N37" and tiles.nth(2).locator(".ftag").get_attribute("title") == "Note 37 · ch1")
     W.keyboard.press("Escape"); settle()
     check("Esc stops learning, in the MIDI window too", not ev("midi.learn.on") and pg.locator("#midiLearnBar").is_hidden() and not ev("document.body.classList.contains('midi-learning')"))
     check("with the MIDI window open the tags show", pg.locator(".master .ftag").is_visible())

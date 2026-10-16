@@ -164,6 +164,7 @@ function sceneTile(z, sc, i, keys, look) {
   tile.querySelector('.s').prepend(fadeControl(tile, { name: sc.name, get: () => sc.fade, set: v => { sc.fade = v; } }));
   tile.style.setProperty('--tag', sc.tag);
   midiButton(tile, `sc:${z.id}:${sc.id}`);   // a MIDI pad can play it
+  tile.querySelector('.t').insertBefore(tile.querySelector(':scope > .ftag'), tile.querySelector('.t > .x'));   // its tag on the top line, before ⋯
   tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));
   onRightClick(tile, e => sceneMenu(at(e), z, sc));
   tile.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target === tile) { e.preventDefault(); goScene(z, sc, e.shiftKey); } });

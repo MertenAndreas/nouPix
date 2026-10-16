@@ -51,9 +51,17 @@ function carryOverStorage() {
     } catch (e) { /* storage off */ }
   }
 }
+// An element of this page or of a window it draws into (where `instanceof Element` is false: another window's)
+const isEl = x => !!x && x.nodeType === 1;
+// The window the user is working in: this page, or a window it draws into (the MIDI or the Scenes window), so
+// messages, menus and dialogs show where they are looking
+let uiDoc = document;
+function watchDoc(d) { for (const t of ['pointerdown', 'keydown', 'focusin']) d.addEventListener(t, () => { uiDoc = d; }, true); }
+const uiDocNow = () => (uiDoc !== document && uiDoc.defaultView && !uiDoc.defaultView.closed ? uiDoc : document);
+watchDoc(document);
 function toast(msg, kind = '') {
   const t = h('div', { class: 'toast ' + kind, role: 'status' }, msg);
-  $('#toasts').append(t);
+  ($('#toasts', uiDocNow()) || $('#toasts')).append(t);
   setTimeout(() => t.remove(), kind === 'err' ? 6000 : 3200);
 }
 function debounce(fn, ms) { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; }

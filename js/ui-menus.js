@@ -36,9 +36,11 @@ function importSvgDialog(file) {
 // Items: [label, action, { key, danger, disabled }], [label, null, { sub: items }] for a submenu, '-' for a line,
 // { head: text } for a title; false is left out.
 function menu(anchor, items) {
-  $$('.menu').forEach(m => m.remove());
+  // in the window it was opened from (this page, or the Scenes window)
+  const D = isEl(anchor) ? anchor.ownerDocument : uiDocNow(), W = D.defaultView, innerWidth = W.innerWidth, innerHeight = W.innerHeight;
+  for (const d of new Set([document, D])) $$('.menu', d).forEach(m => m.remove());
   const open = [];   // the menu and the submenus open from it, outermost first
-  const close = () => { open.splice(0).forEach(m => m.remove()); document.removeEventListener('pointerdown', off, true); removeEventListener('keydown', esc, true); removeEventListener('blur', close); removeEventListener('resize', close); };
+  const close = () => { open.splice(0).forEach(m => m.remove()); D.removeEventListener('pointerdown', off, true); W.removeEventListener('keydown', esc, true); W.removeEventListener('blur', close); W.removeEventListener('resize', close); };
   const off = e => { if (!open.some(m => m.contains(e.target))) close(); };
   const esc = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
   const show = (items, level, from) => {
@@ -55,25 +57,25 @@ function menu(anchor, items) {
       b.addEventListener('click', () => { if (o.sub) openSub(); else { close(); it[1](); } });
       return b;
     }));
-    document.body.append(m);
+    D.body.append(m);
     open.push(m);
     const w = m.offsetWidth, ht = m.offsetHeight;
     if (level > 0) {   // beside the item it opens from
       const r = from.getBoundingClientRect();
       m.style.left = (r.right + w - 2 > innerWidth - 8 ? Math.max(8, r.left - w + 2) : r.right - 2) + 'px';
       m.style.top = Math.max(8, Math.min(r.top - 5, innerHeight - ht - 8)) + 'px';
-    } else if (!(from instanceof Element)) {
+    } else if (!isEl(from)) {
       m.style.left = Math.max(8, Math.min(from.x, innerWidth - w - 8)) + 'px';
       m.style.top = Math.max(8, from.y + ht > innerHeight - 8 ? from.y - ht : from.y) + 'px';
     } else {
       const r = from.getBoundingClientRect();
-      m.style.left = Math.min(r.left, innerWidth - w - 8) + 'px';
+      m.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
       m.style.top = (r.bottom + 4 + ht > innerHeight - 8 ? Math.max(8, r.top - ht - 4) : r.bottom + 4) + 'px';
     }
   };
   show(items, 0, anchor);
   // At once, as the colour picker: what opened it (a click, a right-click, a key) is past its pointerdown and keydown
-  document.addEventListener('pointerdown', off, true); addEventListener('keydown', esc, true); addEventListener('blur', close); addEventListener('resize', close);
+  D.addEventListener('pointerdown', off, true); W.addEventListener('keydown', esc, true); W.addEventListener('blur', close); W.addEventListener('resize', close);
 }
 // Right-click on el opens the menu fn(e) builds
 function onRightClick(el, fn) {

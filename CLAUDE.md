@@ -22,7 +22,7 @@ order by `<script src>` tags at the end of `index.html`:
 |---|---|---|
 | `vendor/isf.js` | ISF shader renderer by VIDVOX (third party, unchanged) | `interactiveShaderFormat` |
 | `builtins.js` | The 32 built-in effects, as ISF code and categories (data) | `BUILTINS` |
-| `util.js` | Helpers used everywhere: elements, numbers and text, local storage, toasts, error reports, icons | `$` `$$` `h` `clamp` `wrap180` `wrap360` `pct` `fmtN` `store` `toast` `debounce` `report` `replacer` `MOD` |
+| `util.js` | Helpers used everywhere: elements, numbers and text, local storage, toasts, error reports, icons; the window the user works in (`uiDoc`: this page, or the MIDI or Scenes window), where toasts, menus and dialogs show | `$` `$$` `h` `isEl` `clamp` `wrap180` `wrap360` `pct` `fmtN` `store` `toast` `uiDocNow` `watchDoc` `debounce` `report` `replacer` `MOD` |
 | `model.js` | The project and its parts: constants (`CURVES`, `CURVE_STRENGTH`), defaults, the `project` and `ui` state, factories, groups, selection, look-ups by id | `project` `ui` `blankProject` `newFixture` `fxBits` `fxCurve` `curveParam` `newZone` `newLayer` `newPlaylist` `newStep` `newController` `selected` `selUnits` `fxById` `markGeom` `markPatch` |
 | `macros.js` | Macros: their list (`MACROS`: Speed, Intensity, Saturation, Color 1 and 2, the shared controls), defaults and repair, which control of an effect follows which (by name, or as chosen for that effect in `project.macroLinks`), a value with its macro on it, colour parts | `MACROS` `macroDef` `defaultMacros` `fixMacros` `macroRoles` `macroChoices` `macroRolesOf` `fixMacroLinks` `macroActive` `macroOver` `macroPart` `macroPartPatch` |
 | `geometry.js` | Mapping math: each fixture's pixel positions, lengths, bounds, distances; moving, turning, scaling a fixture and the frame around several | `computePoints` `rebuildGeometry` `computeBB` `rotateFixture` `scaleFixture` `frameOf` `snap45` |
@@ -35,12 +35,12 @@ order by `<script src>` tags at the end of `index.html`:
 | `playlists.js` | Playlists: a zone plays some of its scenes in turn on the frame clock; which fade a step uses; play, pause, next, the end; the state devices see | `playlistTick` `playPlaylist` `togglePlaylist` `pausePlaylist` `resumePlaylist` `stepPlaylist` `playlistManual` `stepFade` `playingList` `playElapsed` `playState` |
 | `midi.js` | MIDI in: Web MIDI and its ports, messages, the mappings' targets (master, blackout, zone level, scene, next scene, playlist, macro, a control of an effect), pickup and jump, toggle and hold (Follow for a fader, the default when one is learnt onto something on or off), learn | `midi` `startMidi` `setMidiOn` `midiMessage` `midiIn` `midiTarget` `effectTarget` `midiApply` `midiSetLearn` `midiLearnTarget` `midiConnect` `midiSetMap` `midiDisconnect` |
 | `actions.js` | What the user can do, whichever button, key or menu asks: fixtures, selection, align/turn/resize, copy and paste, zones, layers, scenes, playlists, controllers, macros and what an effect follows, an effect's control set everywhere it plays, adding sources from files | `addFixture` `deleteSel` `duplicateSel` `groupSel` `alignSel` `rotateSel` `pasteFixtures` `addZone` `addLayer` `goScene` `storeScene` `playlistDo` `addPlaylist` `addToPlaylist` `moveStep` `deleteController` `setMacro` `setMacroLink` `setEffectControl` |
-| `ui-forms.js` | Building blocks for the panels: rows, inputs, sliders (a value typed on double-click, Shift + scroll in notches), segmented buttons, lists that reorder by dragging and their move animation, rows that scroll sideways with ‹ › (`hscroller`), scroll positions kept when a panel is drawn anew (`keepScroll`, `data-keep`) | `row` `numRow` `sliderRow` `shiftWheel` `notchFrom` `seg` `checkRow` `reorderable` `flipRows` `hscroller` `keepScroll` |
+| `ui-forms.js` | Building blocks for the panels: rows, inputs, sliders (a value typed on double-click, Shift + scroll in notches), segmented buttons, lists that reorder by dragging and their move animation, rows that scroll sideways with ‹ › (`hscroller`), scroll positions kept when a panel is drawn anew (`keepScroll`, `data-keep`), a window this page draws into dressed like it (`dressWindow`) | `row` `numRow` `sliderRow` `shiftWheel` `notchFrom` `seg` `checkRow` `reorderable` `flipRows` `hscroller` `keepScroll` `dressWindow` |
 | `ui-color.js` | The colour picker for shader colour controls: wheel and intensity, RGB, HSV, hex, lighting presets, recent colours | `colorRow` `openColorPicker` `hsvToRgb` `rgbToHsv` |
 | `ui-stage.js` | The stage canvas: view and zoom, drawing, zones on the stage, hit testing, handles, tools, pointer, pixel finder, guide image | `drawView` `fitView` `setTool` `hitFixture` `dragHandle` `endDrag` `defaultFixtureAt` |
 | `ui-lists.js` | The left column: fixture list (groups, badges, drag and drop) and source list (categories, search) | `renderFxList` `renderSrcList` |
 | `ui-inspector.js` | The right panel: fixture (with resolution, dimming curve, its Gamma or Strength slider and the graph, which follows the slider live), multi-selection, group and zone inspectors, Content tab (shader angles with buttons every 45°), video controls, Settings | `renderRight` `onSelection` `showRight` `dimmingRows` `strengthRow` `curveGraph` `isAngle` `anglePresets` |
-| `ui-dock.js` | The bottom dock: scenes (with the fade time on each scene's button), patch and controller editor, Art-Net nodes, DMX monitor | `renderDock` `onPatchChanged` `refreshScenes` `fadeControl` `autoPatch` |
+| `ui-dock.js` | The bottom dock: scenes (with the fade time on each scene's button), patch and controller editor, Art-Net nodes, DMX monitor; the Scenes window (the scenes and playlists in a popup this page draws into, `olm-scenes`; the Scenes tab says where they are meanwhile) | `renderDock` `onPatchChanged` `refreshScenes` `fadeControl` `autoPatch` `openScenesWindow` `drawScenesWindow` `scenesDoc` `scenesRoots` |
 | `ui-playlists.js` | The playlists in the Scenes panel: tabs folded to one line or open, steps (with their own fades, moved by dragging or Alt ← →), step editor, + Add, the New playlist window (order with ↑ ↓, a fade per step), the playlist menu | `playlistArea` `newPlaylistDialog` `playlistMenu` `shiftStep` `drawPlaylistProgress` |
 | `ui-menus.js` | The menu system and every menu, the SVG import dialog, copy/cut/paste keys | `menu` `fixtureMenu` `canvasMenu` `projectMenu` … |
 | `ui-remote.js` | Remote control in the interface: the top-bar button and menu, the Settings section, the waiting screen on devices, `lockPanel` for operators | `updateRemoteUI` `remoteMenu` `remoteSection` `remoteOverlay` `lockPanel` |
@@ -140,7 +140,9 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   secure" setting; the page's full screen button covers the rest.
 - **MIDI** is read by the main window only: a device (`REMOTE_CLIENT`) has no MIDI button and ignores MIDI. The MIDI window
   is a popup (`window.open('', 'olm-midi')`) that the main window draws into with its own code, so the engine stays in
-  one place; it closes with the main window. The desktop app lets that one popup open (`setWindowOpenHandler`).
+  one place; it closes with the main window. So is the Scenes window (`olm-scenes`). The desktop app lets those two
+  popups open (`setWindowOpenHandler`). Elements moved into a popup belong to its window: test them with `isEl`, not
+  `instanceof Element`; anything that looks things up in the Scenes panel goes through `scenesRoots()`.
 - **The operator's lock** is in the interface (`mappingLocked()`: stage, keys, menus, lists, `lockPanel`) for
   convenience, and in `contentOf` for real.
 
@@ -188,7 +190,8 @@ the virtual controller. `test_macros.py` checks the macros: what follows what, S
 Saturation, the colours, the shared controls, scenes and thumbnails, files and undo, the Macros section, MIDI onto a
 macro and a colour's part, devices. `test_links.py` checks what an effect follows as chosen (engine, files, undo, the
 fold, the operator's lock), MIDI onto an effect's controls (learn, pickup and jump, every layer, scenes, speed, lists,
-ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. `test_bay.py` checks the patch bay
+ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. `test_scenes_window.py` checks the Scenes window (opening, playing, levels both ways, menus,
+dialogs and messages there, keys, MIDI learn and tags, closing every way). `test_bay.py` checks the patch bay
 (the switch, columns, wires, folding, a wire's settings, Remove and Delete, undo, learn, the rows, forgetting and ordering
 controls, drawing wires either way, the macros' blue wires: pointed at, pinned, picked, removed, drawn, refused). The simulated Web MIDI
 is `FAKE_MIDI` in `harness.py`. `test_playlist.py` checks playlists

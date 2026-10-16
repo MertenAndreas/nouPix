@@ -115,8 +115,10 @@ function deleteZone(z) {
 function setZoneOpacity(z, v, from) {
   z.opacity = v;
   if (REMOTE_CLIENT && from) remoteOp({ op: 'opacity', zone: z.id, value: v });   // live on the main computer while it moves
-  for (const el of $$(`[data-zone-op="${z.id}"]`)) if (el !== from) el.value = v;
-  for (const el of $$(`[data-zone-pct="${z.id}"]`)) el.textContent = pct(v);
+  for (const d of [document, scenesDoc()]) if (d) {   // here and in the Scenes window
+    for (const el of $$(`[data-zone-op="${z.id}"]`, d)) if (el !== from) el.value = v;
+    for (const el of $$(`[data-zone-pct="${z.id}"]`, d)) el.textContent = pct(v);
+  }
 }
 function fixturesInZone(z) {
   const out = [];

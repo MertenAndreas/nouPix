@@ -189,6 +189,17 @@ function hscroller(el, keep) {
   requestAnimationFrame(show);
   return box;
 }
+// A window this page draws into (the MIDI window, the Scenes window): the same fonts and styles, its title and class;
+// messages, menus and dialogs asked for there show there (watchDoc)
+function dressWindow(w, title, cls) {
+  const d = w.document;
+  d.head.replaceChildren(...$$('head link[rel=stylesheet], head link[rel=preconnect], head link[rel=icon]').map(l => { const c = d.createElement('link'); c.rel = l.rel; c.href = l.href; return c; }));
+  d.title = title;
+  d.body.className = cls;
+  d.body.replaceChildren();
+  watchDoc(d);
+  return d;
+}
 // The scrolling parts of a panel stay where they were when it is drawn anew (a scene played, a playlist moving on)
 function keepScroll(root, draw) {
   const at = new Map($$('[data-keep]', root).map(el => [el.dataset.keep, [el.scrollLeft, el.scrollTop]]));

@@ -844,6 +844,11 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .bpop .bpr { display: flex; align-items: center; gap: 8px; }
 .bpop .bpr .fill { flex: 1; }
 .mwhead > .seg { flex: none; }
+/* the Scenes window: the scenes panel filling it; the bottom panel's Scenes tab meanwhile says where they are */
+body.sceneswin { height: 100vh; overflow: hidden; }
+body.sceneswin > .dockbody { height: 100%; }
+.scenesaway { height: 100%; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--text2); font-size: 13px; }
+.scenesaway p { margin: 0; }
 /* the virtual controller, at the bottom of the MIDI window: faders and pads; folded, its heading */
 .vc { background: var(--bg1); border-top: 1px solid var(--line); }
 .vchead { display: flex; align-items: center; gap: 14px; min-height: 36px; padding: 0 16px; }

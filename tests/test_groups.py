@@ -1,5 +1,5 @@
 # Fixture groups: list, selection on the stage, dragging in and out, patching, ungroup, duplicate, delete,
-# Arrange with groups, save and load
+# Arrange with groups, save and load; a group's dimmer (Inspector, list, output, file, undo, MIDI)
 import os, sys, time, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import CHROME_ARGS, start_bridge
@@ -255,6 +255,37 @@ with sync_playwright() as p:
     demo(); pg.click("#btnRight"); time.sleep(0.2)
     li_fx("Panel A").dblclick(); time.sleep(0.3)
     check("double-clicking a fixture to rename it opens the hidden panel", ev("getComputedStyle(document.querySelector('aside.right')).display") != "none" and ev("document.activeElement.id") == "fxName")
+    # ---- a group's dimmer: in the Inspector, over its fixtures' own, saved, undone, driven by MIDI
+    demo()
+    G = ev("olm.project.groups[0].id"); GN = ev("olm.project.groups[0].name")
+    inG = ev(f"olm.project.fixtures.find(f => f.group === '{G}').id"); out = ev(f"olm.project.fixtures.find(f => f.group !== '{G}').id")
+    ev("(() => { const p = olm.project; p.zones = [p.zones.at(-1)]; p.zones[0].layers = [newLayer('b-solid')]; p.zones[0].layers[0].params['b-solid'] = { color: [1, 1, 1, 1] }; commit(); })()")
+    ev(f"olm.ui.sel = new Set(olm.project.fixtures.filter(f => f.group === '{G}').map(f => f.id)); onSelection(); olm.ui.rightTab = 'inspector'; showRight(true); renderRight()"); time.sleep(0.5)
+    disp = lambda fid: ev(f"Math.max(...olm.project.fixtures.find(f => f.id === '{fid}')._disp.slice(0, 3))")
+    d0, o0 = disp(inG), disp(out)
+    row = pg.locator("#rightBody .row", has=pg.locator(".lbl", has_text="Dimmer"))
+    check("the group's Inspector has a Dimmer, at 100 %", row.count() == 1 and row.locator(".sval").inner_text() == "100%" and d0 > 200, (row.count(), d0))
+    r = row.locator("input[type=range]"); r.fill("0.5"); r.dispatch_event("input"); r.dispatch_event("change"); time.sleep(0.5)
+    check("at 50 % its fixtures give half, the others don't change", abs(disp(inG) - d0 * 0.5) <= 1 and disp(out) == o0, (d0, disp(inG), o0, disp(out)))
+    check("the list shows the group dimmed", li_grp(GN).locator(".gdim").inner_text() == "50%" and li_grp(GN).locator(".gdim").is_visible())
+    saved = ev("JSON.parse(serialize()).groups")
+    check("saved in the project", any(g.get("level") == 0.5 for g in saved), saved)
+    ev("undo()"); time.sleep(0.4)
+    check("undo brings it back to 100 %, and the file has no level then", ev(f"groupLevel(groupById('{G}'))") == 1 and all("level" not in g for g in ev("JSON.parse(serialize()).groups")) and abs(disp(inG) - d0) <= 1)
+    ev("redo()"); time.sleep(0.3)
+    # MIDI: learnt by clicking the Dimmer slider, then a fader drives it
+    ev(f"olm.ui.sel = new Set(olm.project.fixtures.filter(f => f.group === '{G}').map(f => f.id)); onSelection(); renderRight()"); time.sleep(0.3)
+    ev("ui.midiOn = true; midiSetLearn(true)"); ev("midiIn({ port: 'K', ch: 1, type: 'cc', num: 9, val: 40 })"); time.sleep(0.2)
+    pg.locator("#rightBody .row:has(.lbl:text-is('Dimmer')) .mslot").click(); time.sleep(0.3)
+    check("learning: a fader goes onto the group's dimmer (named after the group)", ev(f"project.midi.maps.some(w => w.to === 'gr:{G}')") and ev(f"midiTargetLabel('gr:{G}')") == GN + " dimmer")
+    ev(f"midiSetLearn(false); project.midi.maps.find(w => w.to === 'gr:{G}').takeover = 'jump'")
+    ev("midiIn({ port: 'K', ch: 1, type: 'cc', num: 9, val: 127 })"); time.sleep(0.4)
+    check("the fader moves it, and the slider and the list follow", ev(f"groupLevel(groupById('{G}'))") == 1 and row.locator(".sval").inner_text() == "100%" and li_grp(GN).locator(".gdim").is_hidden())
+    ev("midiIn({ port: 'K', ch: 1, type: 'cc', num: 9, val: 0 })"); time.sleep(0.4)
+    check("down to 0: its fixtures are dark", disp(inG) == 0 and disp(out) == o0 and row.locator(".sval").inner_text() == "0%")
+    ev(f"(() => {{ const g = groupById('{G}'); project.groups = project.groups.filter(x => x !== g); for (const f of project.fixtures) if (f.group === g.id) delete f.group; commit(); }})()"); time.sleep(0.3)
+    check("a mapping to a group that is gone is missing", ev(f"midiTarget('gr:{G}')") is None and ev(f"midiTargetLabel('gr:{G}')") == "Missing")
+
     check("no page errors", not errs, errs[:3])
     br.close()
 bridge.terminate(); bridge.communicate()

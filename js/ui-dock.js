@@ -243,13 +243,14 @@ function sceneTile(z, sc, i, keys, look) {
 }
 function renderScenes(body, inWindow = false) {
   const fadeIn = numInput(project.settings, 'fade', { min: 0, max: 60, step: 0.1, aria: 'Fade time for new scenes', onCommit: commit });
-  fadeIn.style.width = '56px';
-  const bar = h('div', { class: 'bar' },
-    h('label', { class: 'checkrow', title: 'Fade time given to scenes you store from now on' }, 'New scenes fade in', fadeIn, 's'),
-    h('span', { class: 'fill' }),
-    h('span', { class: 'muted' }, 'Click: fade · Shift-click: cut · Drag a fade time to change it · Keys 1–9: scenes of the selected zone · Upper zones cover lower ones'),
-    inWindow ? h('button', { class: 'btn sm', type: 'button', title: 'Close this window: the scenes go back to the bottom panel', onclick: closeScenesWindow }, 'Back to the panel')
-      : h('button', { class: 'btn sm', type: 'button', title: 'The scenes and playlists in a window of their own, to put on another screen', onclick: openScenesWindow }, 'Open in a window'));
+  Object.assign(fadeIn.style, { width: '52px', height: '22px' });
+  // one line: the fade for new scenes, the hints (cut to fit; all of them on hover), and the window button
+  const hint = 'Click: fade · Shift-click: cut · Drag a fade time to change it · Keys 1–9: scenes of the selected zone · Upper zones cover lower ones';
+  const bar = h('div', { class: 'bar sbar' },
+    h('label', { class: 'sfade', title: 'Fade time given to scenes you store from now on' }, 'New scenes fade', fadeIn, 's'),
+    h('span', { class: 'shint', title: hint }, hint),
+    inWindow ? h('button', { class: 'btn sm icon', type: 'button', html: ICONS.panel, title: 'Back to the panel: close this window, the scenes go back to the bottom panel', 'aria-label': 'Back to the panel', onclick: closeScenesWindow })
+      : h('button', { class: 'btn sm icon', type: 'button', html: ICONS.popout, title: 'Open in a window: the scenes and playlists in a window of their own, to put on another screen', 'aria-label': 'Open in a window', onclick: openScenesWindow }));
   const rows = h('div', { class: 'zonerows', 'data-keep': 'zonerows' });
   const sel = selZone();
   for (const z of project.zones.slice().reverse()) {

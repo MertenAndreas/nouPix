@@ -120,6 +120,13 @@ function setZoneOpacity(z, v, from) {
     for (const el of $$(`[data-zone-pct="${z.id}"]`, d)) el.textContent = pct(v);
   }
 }
+// A group's dimmer, from its slider or a MIDI control; every slider showing it follows
+function setGroupLevel(g, v, from) {
+  v = clamp(v, 0, 1);
+  if (v < 1) g.level = v; else delete g.level;
+  for (const el of $$(`[data-group-lv="${g.id}"]`)) if (el !== from) el.value = v;
+  for (const el of $$(`[data-group-pct="${g.id}"]`)) { el.textContent = pct(v); if (el.classList.contains('gdim')) el.hidden = v >= 1; }
+}
 function fixturesInZone(z) {
   const out = [];
   let px = 0;

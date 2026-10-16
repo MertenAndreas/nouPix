@@ -1,6 +1,6 @@
 # openLedMapper: detailed reference
 
-Everything openLedMapper 0.9.10 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything openLedMapper 0.9.11 does, in detail (the version shows next to the app name, top left). This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -89,7 +89,8 @@ A group keeps fixtures together, for example the strips of one sign or the rings
 - **Ungroup** (the same button, or `Ctrl Shift G`) keeps the fixtures where they are. With one fixture selected, the Inspector's **Group** menu moves it into a group or out of one.
 - **Ctrl D** on a group makes a new group of copies. **Delete** deletes its fixtures, and **Ctrl Z** brings them back. A group with no fixtures left disappears.
 - **Arrange** with one group selected lines up its fixtures with each other. With several groups (and fixtures) selected, each group moves as one block, and a group with a locked fixture stays put.
-- Grouping organises the list and the selection; on its own it doesn't change the patch or the output. There is one level: a fixture is in one group at most, and groups don't go inside other groups. Groups are saved in the project.
+- **The group's dimmer**, in the Inspector when a group is selected, dims all its fixtures at once, over each one's own dimmer and under the master. A dimmed group shows how far in the list (60%). A MIDI fader can drive it: learn it by clicking the Dimmer slider, or choose it under **Groups** in the MIDI window. It is saved in the project, and undo works on it.
+- Apart from its dimmer, grouping organises the list and the selection; on its own it doesn't change the patch or the output. There is one level: a fixture is in one group at most, and groups don't go inside other groups. Groups are saved in the project.
 
 ## Zones
 
@@ -155,7 +156,7 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 - **edited** on the current scene means the layers changed since you recalled it.
 - New scenes get the fade time set in the panel. Scenes are saved in the project; **Ctrl Z** undoes a delete.
 - When a zone has more scenes than fit, its row scrolls sideways (the zone stays on the left): **‹ ›** at its ends move it a few scenes at a time, and its edges fade where there are more. The same goes for a playlist's steps. Playing a scene leaves the panel where you scrolled it.
-- **Open in a window** (top right of the Scenes panel) puts the scenes and playlists in a window of their own, to put on another screen: everything works there as in the panel (its menus, dialogs and messages show in that window), keys **1–9** play the selected zone's scenes, **B** blacks out, and **Ctrl Z** undoes. Meanwhile the Scenes tab says where they are, with **Show the window** and **Back here**; **Back to the panel** in the window, or closing it, brings them back. It closes with openLedMapper.
+- **Open in a window** (the ⧉ button, top right of the Scenes panel) puts the scenes and playlists in a window of their own, to put on another screen: everything works there as in the panel (its menus, dialogs and messages show in that window), keys **1–9** play the selected zone's scenes, **B** blacks out, and **Ctrl Z** undoes. Meanwhile the Scenes tab says where they are, with **Show the window** and **Back here**; **Back to the panel** in the window, or closing it, brings them back. It closes with openLedMapper.
 
 ## Playlists
 
@@ -302,7 +303,7 @@ A MIDI controller (faders, knobs, buttons, pads: a nanoKONTROL, an APC, a Launch
 **Learning.** Press **Learn** in the MIDI window. A bar at the top of the main window says what to do, and everything a control can drive is outlined in yellow, in both windows:
 
 1. Move a fader or a knob, or press a pad, on your controller.
-2. It shows at the top of the mappings, marked **new**, with a list: choose what it should move there. Or click what it should move: a **macro**'s slider in the MIDI window (Speed, Intensity, a part of Color 1…), or in the main window the **Master** slider, **Blackout**, a zone's level slider (in the Scenes panel, the Content tab or the Inspector), a **scene**, a **playlist's tab**, or a **control of an effect** in the Content tab's Parameters (a slider, a tick, a list, a Trigger button).
+2. It shows at the top of the mappings, marked **new**, with a list: choose what it should move there. Or click what it should move: a **macro**'s slider in the MIDI window (Speed, Intensity, a part of Color 1…), or in the main window the **Master** slider, **Blackout**, a group's **Dimmer** (in the Inspector), a zone's level slider (in the Scenes panel, the Content tab or the Inspector), a **scene**, a **playlist's tab**, or a **control of an effect** in the Content tab's Parameters (a slider, a tick, a list, a Trigger button).
 
 Or the other way round: click something first, then move the control. Clicking while learning only picks: the scene doesn't play and the slider doesn't move. Once a control is learnt it is done: letting go of a button, or the rest of a fader's move, doesn't start it again, so the next click waits for a new control. Learn stays on for the next one; **Esc** or **Stop learning** ends it.
 
@@ -369,7 +370,7 @@ Art-Net only (no sACN/E1.31 yet). No Syphon, Spout or NDI: use window capture in
 The apps are an [Electron](https://www.electronjs.org/) window (`desktop/`) around the interface, with the Art-Net bridge (`openledmapper.py`, packed with PyInstaller by `openledmapper.spec`) running inside: the app starts it with `--embedded` and it stops when the app quits. GitHub builds them (`.github/workflows/release.yml`) on Windows, an Apple silicon Mac and an Intel Mac. To publish a version:
 
 1. Set `VERSION` in `openledmapper.py` (and the README title), and commit.
-2. Tag it with the same version and push the tag: `git tag v0.9.10 && git push origin v0.9.10`.
+2. Tag it with the same version and push the tag: `git tag v0.9.11 && git push origin v0.9.11`.
 
 The three apps are built, started once to check that they start the bridge and stop it again, and attached to a new release on the Releases page, in about 10 minutes. The app's version comes from `VERSION`; a tag that doesn't match it fails the build. To build without releasing, run **Build apps** from the Actions tab: the apps are kept as downloads of that run.
 

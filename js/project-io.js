@@ -118,7 +118,8 @@ function hydrate(p) {
   out.groups = (Array.isArray(p.groups) ? p.groups : []).filter(isObj).map((g, i) => ({
     id: uniqueId(isId(g.id) ? String(g.id) : null, grpIds), name: typeof g.name === 'string' ? g.name : 'Group ' + (i + 1),
     tag: typeof g.tag === 'string' ? g.tag : TAGS[(i + 2) % TAGS.length], open: g.open !== false,
-    ...(numOr(g.rot, 0) ? { rot: numOr(g.rot, 0) } : {}) }));
+    ...(numOr(g.rot, 0) ? { rot: numOr(g.rot, 0) } : {}),
+    ...(numOr(g.level, 1) < 1 ? { level: clamp(numOr(g.level, 1), 0, 1) } : {}) }));   // its dimmer, kept only when down
   normalizeGroups(out);
   const builtins = builtinSources(), srcIds = new Set(builtins.map(s => s.id));
   const custom = (Array.isArray(p.sources) ? p.sources : []).filter(s => isObj(s) && !s.builtin && isId(s.id) && !srcIds.has(s.id) && srcIds.add(s.id));

@@ -39,6 +39,10 @@ function midiTarget(t) {
   }
   if (t === 'master') return { kind: 'fader', label: 'Master', get: () => project.settings.master, set: midiSetMaster };
   if (t === 'blackout') return { kind: 'toggle', label: 'Blackout', get: () => (ui.blackout ? 1 : 0), set: v => { if (!!v !== ui.blackout) toggleBlackout(); } };
+  if (t.startsWith('gr:')) {   // a group's dimmer
+    const g = groupById(t.slice(3));
+    return g ? { kind: 'fader', label: groupName(g) + ' dimmer', get: () => groupLevel(g), set: v => { setGroupLevel(g, v); remoteChanged(); commitSoft(); } } : null;
+  }
   const [k, zid, id] = t.split(':'), z = zid ? zoneById(zid) : null;
   if (!z) return null;
   if (k === 'z') return { kind: 'fader', label: z.name + ' level', get: () => z.opacity, set: v => { setZoneOpacity(z, v); remoteChanged(); commitSoft(); } };

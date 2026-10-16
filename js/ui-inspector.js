@@ -259,9 +259,15 @@ function groupSection(g, sel) {
   const px = sel.reduce((a, f) => a + pixelCount(f), 0);
   const nameIn = textInput(g, 'name', { id: 'grpName', aria: 'Group name', onInput: () => renderFxList(), onCommit: commit });
   const sw = tagSwatches(g, 'Group colour');
+  // its dimmer, over the fixtures' own: a MIDI fader can drive it
+  const lv = { get v() { return groupLevel(g); }, set v(x) { setGroupLevel(g, x, dim.querySelector('input[type=range]')); } };
+  const dim = sliderRow('Dimmer', lv, 'v', { fmt: pct, onInput: () => remoteChanged(), onCommit: commit, midi: 'gr:' + g.id });
+  dim.querySelector('input[type=range]').dataset.groupLv = g.id;
+  dim.querySelector('.sval').dataset.groupPct = g.id;
+  dim.title = `Dims every fixture of ${groupName(g)}, over each one's own dimmer and under the master`;
   return sec(null,
     h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: g.tag } }, icon('group')), 'Group'),
-    row('Name', nameIn), row('Colour', sw),
+    row('Name', nameIn), row('Colour', sw), dim,
     h('p', { class: 'note' }, sel.length === 1 ? `1 fixture · ${fmtN(px)} pixels. Drop fixtures on the group's name in the list to add them.`
       : `${sel.length} fixtures · ${fmtN(px)} pixels. To edit just one of them, double-click it on the stage or click it in the list.`));
 }

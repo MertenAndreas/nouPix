@@ -25,7 +25,8 @@ function groupRow(g, m, whole) {
   const li = h('li', { class: 'grp' + (whole ? ' sel' : '') + (g.open ? '' : ' shut'), draggable: true, 'data-group': g.id,
     title: `${groupName(g)} · group of ${m.length} · ${fmtN(px)} px\nClick to select all of it. Drag it to move it, or onto a patch output. Drop fixtures on it to add them.` },
     chev, h('span', { class: 'ty' }, icon('group')),
-    h('span', { class: 'nm' }, groupName(g), h('span', { class: 'cnt' }, m.length), m.every(f => f.locked) ? h('span', { class: 'muted glock', title: 'Locked' }, icon('lock')) : null),
+    h('span', { class: 'nm' }, groupName(g), h('span', { class: 'cnt' }, m.length), m.every(f => f.locked) ? h('span', { class: 'muted glock', title: 'Locked' }, icon('lock')) : null,
+      h('span', { class: 'gdim', 'data-group-pct': g.id, hidden: groupLevel(g) >= 1, title: 'Its dimmer (in the Inspector)' }, pct(groupLevel(g)))),   // dimmed: how far
     h('span', { class: 'meta' }, fmtN(px) + 'px'), groupBadge(m));
   li.style.setProperty('--gtag', g.tag);
   li.addEventListener('click', e => {

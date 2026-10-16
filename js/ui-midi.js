@@ -192,6 +192,7 @@ function midiTargetSelect(w, pick = to => midiSetMap(w.id, { to })) {
     h('optgroup', { label: 'Macros' }, MACROS.map(d => d.kind === 'color'
       ? MACRO_PARTS[project.macros[d.id].mode].map(([, name], i) => opt(`m:${d.id}.${i}`, `${d.label} · ${name}`))
       : opt('m:' + d.id, d.label))),
+    project.groups.length ? h('optgroup', { label: 'Groups' }, project.groups.map(g => opt('gr:' + g.id, groupName(g) + ' dimmer'))) : null,
     project.zones.slice().reverse().map(z => h('optgroup', { label: z.name },
       opt('z:' + z.id, z.name + ' level'),
       z.scenes.map(sc => opt(`sc:${z.id}:${sc.id}`, `${z.name} · ${sc.name}`)),

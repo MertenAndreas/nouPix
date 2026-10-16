@@ -271,8 +271,26 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .nodes, .monitor, .scenepanel { height: 100%; display: flex; flex-direction: column; min-height: 0; }
 .nodes .bar, .monitor .bar, .scenepanel .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 7px 12px; border-bottom: 1px solid var(--line); color: var(--text2); font-size: 12px; }
 .bar .fill { flex: 1; }
-.zonerows { flex: 1; overflow: auto; padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 6px; }
-.scenerow { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px; margin: 0 -5px; border-radius: 8px; overflow-x: auto; }
+.zonerows { flex: 1; overflow: auto; padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
+.zonerows::-webkit-scrollbar { width: 8px; }
+.zonerows::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 4px; }
+.zonerows::-webkit-scrollbar-track { background: transparent; }
+.scenerow { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px; margin: 0 -5px; border-radius: 8px; }
+.scenerow > .hscroll { flex: 1; }
+.stiles { display: flex; align-items: center; gap: 8px; }
+/* a row that scrolls sideways (hscroller): no scroll bar; where there is more, its edge fades and a ‹ or › shows */
+.hscroll { position: relative; display: flex; min-width: 0; }
+.hscroll > .hsx { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; scroll-behavior: auto; }
+.hscroll > .hsx::-webkit-scrollbar { display: none; }
+.hscroll.canl > .hsx { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px); mask-image: linear-gradient(90deg, transparent 0, #000 44px); }
+.hscroll.canr > .hsx { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent 100%); mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent 100%); }
+.hscroll.canl.canr > .hsx { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%); }
+.harrow { position: absolute; top: 50%; z-index: 2; width: 26px; height: 26px; margin-top: -13px; padding: 0; border: 1px solid var(--line2); border-radius: 50%; background: var(--bg2); color: var(--text2); display: none; place-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+.harrow:hover { color: var(--text); border-color: var(--accent); }
+.harrow svg { width: 12px; height: 12px; }
+.harrow.l { left: 2px; } .harrow.l svg { transform: rotate(90deg); }
+.harrow.r { right: 2px; } .harrow.r svg { transform: rotate(-90deg); }
+.hscroll.canl > .harrow.l, .hscroll.canr > .harrow.r { display: grid; }
 .zoneblock { flex: none; margin: 0 -5px; border-radius: 8px; }
 .zoneblock.sel { background: var(--accent-soft); }
 .zoneblock .scenerow { margin: 0; }
@@ -391,7 +409,8 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .ptb:hover:not(:disabled) { border-color: #3a4150; background: var(--bg4); }
 .ptb:disabled { opacity: .35; cursor: default; }
 .ptb.playing { background: var(--live); border-color: var(--live); color: #062012; }
-.psteps { display: flex; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; padding: 2px; }
+.psteps { display: flex; gap: 6px; flex: 1; min-width: 0; padding: 2px; }
+.plrow > .hscroll { flex: 1; }
 .pstep { position: relative; flex: none; width: 118px; height: 44px; display: grid; align-content: space-between; padding: 4px 6px 7px 7px; border-radius: 5px; background: var(--bg3); border: 1px solid var(--line2); border-left: 3px solid var(--tag, var(--line2)); cursor: pointer; overflow: hidden; user-select: none; }
 .pstep:hover { background: var(--bg4); }
 .pstep .t { display: flex; align-items: center; gap: 5px; min-width: 0; font-weight: 600; font-size: 12px; }

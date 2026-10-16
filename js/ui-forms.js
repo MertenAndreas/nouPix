@@ -168,6 +168,37 @@ function sliderRow(text, obj, key, o = {}) {
   binders.push(() => { if (document.activeElement !== r) show(); });
   return row(o.label || text, wrap);
 }
+// A row that scrolls sideways (scenes, a playlist's steps): no scroll bar, its edges fade where there is more, and
+// ‹ › buttons there scroll it a few tiles at a time. keep: a name, so the row stays where it was when it is drawn
+// anew (keepScroll).
+function hscroller(el, keep) {
+  el.classList.add('hsx');
+  if (keep) el.dataset.keep = keep;
+  const go = d => el.scrollBy({ left: d * Math.max(120, el.clientWidth * 0.75), behavior: 'smooth' });
+  const left = h('button', { class: 'harrow l', type: 'button', tabindex: -1, title: 'Scroll left', 'aria-label': 'Scroll left', html: ICONS.chev, onclick: e => { e.stopPropagation(); go(-1); } });
+  const right = h('button', { class: 'harrow r', type: 'button', tabindex: -1, title: 'Scroll right', 'aria-label': 'Scroll right', html: ICONS.chev, onclick: e => { e.stopPropagation(); go(1); } });
+  const box = h('div', { class: 'hscroll' }, el, left, right);
+  const show = () => {
+    const max = el.scrollWidth - el.clientWidth;
+    box.classList.toggle('canl', el.scrollLeft > 2);
+    box.classList.toggle('canr', el.scrollLeft < max - 2);
+  };
+  el._hshow = show;
+  el.addEventListener('scroll', show, { passive: true });
+  if (window.ResizeObserver) new ResizeObserver(show).observe(el);
+  requestAnimationFrame(show);
+  return box;
+}
+// The scrolling parts of a panel stay where they were when it is drawn anew (a scene played, a playlist moving on)
+function keepScroll(root, draw) {
+  const at = new Map($$('[data-keep]', root).map(el => [el.dataset.keep, [el.scrollLeft, el.scrollTop]]));
+  draw();
+  for (const el of $$('[data-keep]', root)) {
+    const s = at.get(el.dataset.keep);
+    if (s) { el.scrollLeft = s[0]; el.scrollTop = s[1]; }
+    if (el._hshow) el._hshow();
+  }
+}
 function seg(options, value, onChange) {
   const el = h('div', { class: 'seg', role: 'group' });
   for (const [v, l] of options) {

@@ -11,15 +11,18 @@ function renderDock() {
   $('#btnDock').title = ui.dockCollapsed ? 'Expand panel' : 'Collapse panel';
   const body = $('#dockBody');
   const keep = body.firstElementChild && body.querySelector('.ctrl-edit') ? body.querySelector('.ctrl-edit').scrollTop : 0;
-  body.replaceChildren();
+  keepScroll(body, () => {
+    body.replaceChildren();
+    if (ui.dockCollapsed) return;
+    if (ui.dockTab === 'scenes') renderScenes(body);
+    else if (ui.dockTab === 'patch') {
+      renderPatch(body);
+      if (mappingLocked()) { const ce = body.querySelector('.ctrl-edit'); if (ce) lockPanel(ce, 'Operator: you can see the patch but not change it.'); body.querySelectorAll('.ctrl-list .foot button').forEach(b => { b.disabled = true; }); }
+    }
+    else if (ui.dockTab === 'nodes') renderNodes(body);
+    else renderMonitor(body);
+  });
   if (ui.dockCollapsed) return;
-  if (ui.dockTab === 'scenes') renderScenes(body);
-  else if (ui.dockTab === 'patch') {
-    renderPatch(body);
-    if (mappingLocked()) { const ce = body.querySelector('.ctrl-edit'); if (ce) lockPanel(ce, 'Operator: you can see the patch but not change it.'); body.querySelectorAll('.ctrl-list .foot button').forEach(b => { b.disabled = true; }); }
-  }
-  else if (ui.dockTab === 'nodes') renderNodes(body);
-  else renderMonitor(body);
   replayFlip();
   const ce = body.querySelector('.ctrl-edit'); if (ce) ce.scrollTop = keep;
   updateMidiUI();
@@ -188,7 +191,7 @@ function renderScenes(body) {
     h('label', { class: 'checkrow', title: 'Fade time given to scenes you store from now on' }, 'New scenes fade in', fadeIn, 's'),
     h('span', { class: 'fill' }),
     h('span', { class: 'muted' }, 'Click: fade · Shift-click: cut · Drag a fade time to change it · Keys 1–9: scenes of the selected zone · Upper zones cover lower ones'));
-  const rows = h('div', { class: 'zonerows' });
+  const rows = h('div', { class: 'zonerows', 'data-keep': 'zonerows' });
   const sel = selZone();
   for (const z of project.zones.slice().reverse()) {
     const look = lookOf(z.layers);
@@ -207,7 +210,9 @@ function renderScenes(body) {
       h('div', { class: 'zt' }, zoneTag(z), h('span', { class: 'nm' }, z.name), h('span', { class: 'mono muted', 'data-zone-pct': z.id }, pct(z.opacity)), lists),
       h('div', { class: 'zc' }, zoneOpacityInput(z, 80),
         h('button', { class: 'btn sm', type: 'button', title: `Store ${z.name}'s current layers as a new scene`, onclick: e => { e.stopPropagation(); storeScene(z); } }, '+ Store')));
-    const r = h('div', { class: 'scenerow' + (z === sel ? ' sel' : '') }, head);
+    // the zone's head stays put; its scenes scroll sideways beside it
+    const tiles = h('div', { class: 'stiles' });
+    const r = h('div', { class: 'scenerow' + (z === sel ? ' sel' : '') }, head, hscroller(tiles, 'scenes:' + z.id));
     head.title += '\nDrag it to change the order of the zones.';
     reorderable(head, r, 'zone', () => [z.id], ([id], after) => moveZoneTo(id, z, after));
     onRightClick(head, e => zoneMenu(e, z));
@@ -220,8 +225,8 @@ function renderScenes(body) {
     });
     r.addEventListener('dragleave', e => { if (!r.contains(e.relatedTarget)) r.classList.remove('drop-in'); });
     r.addEventListener('drop', e => { r.classList.remove('drop-in'); const d = e.dataTransfer.getData(dragType('scene')); if (!d || e.defaultPrevented) return; e.preventDefault(); moveScene(d, z); });
-    z.scenes.forEach((sc, i) => r.append(sceneTile(z, sc, i, z === sel, look)));
-    if (!z.scenes.length) r.append(h('span', { class: 'rowhint' }, `No scenes yet. Set up ${z.name}'s layers in the Content tab, then + Store.`));
+    z.scenes.forEach((sc, i) => tiles.append(sceneTile(z, sc, i, z === sel, look)));
+    if (!z.scenes.length) tiles.append(h('span', { class: 'rowhint' }, `No scenes yet. Set up ${z.name}'s layers in the Content tab, then + Store.`));
     rows.append(h('div', { class: 'zoneblock' + (z === sel ? ' sel' : ''), 'data-zone': z.id }, r, playlistArea(z)));
   }
   if (!project.zones.length) rows.append(h('div', { class: 'empty' }, 'No zones. Add one in the Content tab, or draw one with the Zone tool (Z).'));

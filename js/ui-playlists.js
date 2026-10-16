@@ -112,7 +112,7 @@ function playlistLane(z, pl) {
   const end = selectEl([['loop', 'Loop'], ['stop', 'Stop'], ...z.playlists.filter(o => o !== pl).map(o => [o.id, 'Then play ' + o.name])], pl.end, v => { pl.end = v; commit(); }, { aria: 'At the end' });
   const auto = h('input', { type: 'checkbox', checked: pl.autoplay, 'aria-label': 'Play when the project opens', onchange: e => setPlaylistAutoplay(z, pl, e.target.checked) });
   const lane = h('div', { class: 'plane' },
-    h('div', { class: 'plrow' }, trans, steps),
+    h('div', { class: 'plrow' }, trans, hscroller(steps, `steps:${z.id}:${pl.id}`)),
     h('div', { class: 'pfoot' },
       h('span', { class: 'pstatus' + (cur && !p.on ? ' paused' : ''), 'data-pl-status': z.id + ':' + pl.id }, playlistStatus(z, pl)),
       h('span', { class: 'grp' }, 'Fades', fadeMode, fadeAll, fadeAll ? 's' : null),

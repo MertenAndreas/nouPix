@@ -1,4 +1,5 @@
-# UI flows on the demo project (zones): scene dialog, edited badge, drag reorder, video source handling
+# UI flows on the demo project (zones): scene dialog, edited badge, drag reorder, video source handling; the Scenes
+# panel keeping its scroll when a scene fires, and its rows scrolling with ‹ ›
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import start_bridge, CHROME_ARGS
@@ -80,6 +81,24 @@ with sync_playwright() as p:
     }""")
     check("replacing a video file stops and frees the old one", rel["replaced"] == {"wasPlaying": True, "oldPaused": True, "oldReleased": True, "newPlaying": True, "newIsOther": True, "oldUrlRevoked": True}, rel["replaced"])
     check("removing a video source stops and frees its video", rel["removed"] == {"paused": True, "released": True, "gone": True}, rel["removed"])
+    # ---------- the Scenes panel keeps where it was scrolled; rows of many scenes scroll with ‹ ›
+    pg.evaluate("""(() => { olm.loadProject(demoProject()); for (const z of project.zones) { while (z.scenes.length < 12) storeScene(z); }
+      ui.dockTab = 'scenes'; ui.dockCollapsed = false; ui.dockH = 260; renderDock(); })()"""); time.sleep(0.8)
+    st = lambda: pg.evaluate("[...document.querySelectorAll('#dockBody .stiles')].map(e => Math.round(e.scrollLeft))")
+    zr = lambda: pg.evaluate("Math.round(document.querySelector('#dockBody .zonerows').scrollTop)")
+    pg.evaluate("(() => { const zr = document.querySelector('#dockBody .zonerows'); zr.scrollTop = zr.scrollHeight; })()"); time.sleep(0.2)
+    last = pg.locator("#dockBody .zoneblock").last
+    check("a row with more scenes than fit shows › (not ‹), and no scroll bar", last.locator(".hscroll.canr").count() == 1 and last.locator(".hscroll.canl").count() == 0
+          and pg.evaluate("getComputedStyle(document.querySelector('#dockBody .stiles')).scrollbarWidth") == "none")
+    last.locator(".harrow.r").click(); time.sleep(0.8)
+    check("› scrolls it a few scenes along, and then ‹ shows", st()[-1] > 100 and last.locator(".hscroll.canl").count() == 1, st())
+    b_st, b_zr = st(), zr()
+    tiles = last.locator(".scene"); box = last.locator(".stiles").bounding_box()
+    i = next(i for i in range(tiles.count()) if (lambda b: b["x"] + b["width"] > box["x"] + box["width"] - 30)(tiles.nth(i).bounding_box()))
+    tb = tiles.nth(i).bounding_box(); pg.mouse.click(tb["x"] + 20, tb["y"] + 15); time.sleep(0.6)
+    check("firing a scene keeps the panel where it was, across and down", st() == b_st and zr() == b_zr and b_zr > 0, (b_st, b_zr, st(), zr()))
+    check("the zone's head stays put while its scenes scroll", abs(last.locator(".zhead").bounding_box()["x"] - pg.locator("#dockBody .zoneblock").first.locator(".zhead").bounding_box()["x"]) < 1)
+
     check("no page errors", not errs, errs[:3])
     br.close()
 bridge.terminate(); bridge.communicate()

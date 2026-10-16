@@ -4,7 +4,7 @@
 # top bar and the Scenes panel, without moving or playing what is touched; master and zone levels with pickup and
 # jump; blackout and playlists as toggles or held; scenes and the next scene on a press; ports switched off; the same
 # controller under another port name; mappings saved, undone, removed, missing; the line and the tags; refused and
-# missing Web MIDI; a burst of messages.
+# missing Web MIDI; a burst of messages; the virtual controller.
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import CHROME_ARGS, start_bridge, app_error
@@ -195,7 +195,7 @@ try:
 
     # ---------- the MIDI tab
     check("the MIDI window lists the mappings", W.locator(".mmap").count() == len(maps()) and W.locator(".mmap select.mtarget").first.evaluate("s => s.selectedOptions[0].textContent") == "Master")
-    W.locator(".mfold").click(); settle()
+    W.locator(".mmoncol .mfold").click(); settle()
     cc(7, 127); settle()
     check("the monitor shows each message and what it moves", "CC 7 · ch1" in W.inner_text("#midiMon") and "→ Master" in W.inner_text("#midiMon"))
     ev("Object.defineProperty(document, 'hidden', { configurable: true, get: () => true })")
@@ -247,9 +247,42 @@ try:
     boot()
     check("(it isn't asked for)", ev("__midi.asked") == 0 and ev("midi.status") == "off")
 
+    # ---------- the virtual controller
+    W = window()
+    check("the virtual controller starts folded", W.locator(".vc").count() == 1 and W.locator(".vc.open").count() == 0 and W.locator(".vtrack").count() == 0)
+    W.click(".vchead .mfold"); settle()
+    check("open, it has 8 faders and 8 pads, and shows as a controller", W.locator(".vtrack").count() == 8 and W.locator(".vpad").count() == 8
+          and "Virtual controller" in W.inner_text(".mports") and ev("ui.midiVc"))
+    def vfader(i, frac):
+        t = W.locator(".vtrack").nth(i); b = t.bounding_box(); x = b["x"] + b["width"] / 2
+        W.mouse.move(x, b["y"] + b["height"] / 2); W.mouse.down(); W.mouse.move(x, b["y"] + 8 + (1 - frac) * (b["height"] - 16), steps=6); W.mouse.up(); settle(0.15)
+    def vpad(i):
+        p = W.locator(".vpad").nth(i); b = p.bounding_box(); W.mouse.move(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2); W.mouse.down(); settle(0.05); W.mouse.up(); settle(0.15)
+    W.click(".btn.learn"); settle(0.3); vfader(7, 0.5)
+    check("learning, a virtual fader waits for its target like a real one", (ev("midi.learn.pending") or "").endswith("Virtual controller:1:cc:28"), ev("midi.learn"))
+    zz = ev("project.zones[0].id"); pg.locator(f'.mslot[data-midi="z:{zz}"]').first.click(); settle()
+    dock("scenes"); vpad(4); pg.locator(f'.scene[data-zone="{zz}"]').first.click(); settle()
+    W.keyboard.press("Escape"); settle()
+    check("a virtual fader and pad learnt onto a zone's level and a scene", ev(f"project.midi.maps.some(w => w.key === 'midi:Virtual controller:1:cc:28' && w.to === 'z:{zz}')")
+          and ev("project.midi.maps.some(w => w.key === 'midi:Virtual controller:1:note:40' && w.to.startsWith('sc:'))"), maps())
+    check("each control shows what it drives", ev(f"zoneById('{zz}').name") in W.locator(".vf").nth(7).locator(".tg").inner_text())
+    ev(f"zoneById('{zz}').opacity = 1; setZoneOpacity(zoneById('{zz}'), 1)"); vfader(7, 0.3); settle()
+    check("with pickup, the zone waits for the fader", ev(f"zoneById('{zz}').opacity") == 1)
+    vfader(7, 1.0); vfader(7, 0.4); settle()
+    check("then follows it", abs(ev(f"zoneById('{zz}').opacity") - ev("vcVals.get(28)") / 127) < 1e-6 and 0.3 < ev(f"zoneById('{zz}').opacity") < 0.5, ev(f"zoneById('{zz}').opacity"))
+    sc0 = ev(f"zoneById('{zz}').scenes[0].id"); ev(f"goScene(zoneById('{zz}'), zoneById('{zz}').scenes[1], true)"); settle()
+    W.keyboard.down("5"); settle(0.1); W.keyboard.up("5"); settle(0.3)
+    check("key 5 plays pad 5", ev(f"zoneById('{zz}').scene") == sc0)
+    check("its notes on and off show in the monitor", ev("midi.log.slice(0, 2).map(e => e.text)") == ["Note off 40 · ch1", "Note on 40 · ch1"], ev("midi.log.slice(0, 2).map(e => e.text)"))
+    W.click(".vchead .mfold"); settle()
+    check("folded again, it takes one line, and is remembered", W.locator(".vtrack").count() == 0 and not ev("ui.midiVc") and ev("store.get('openledmapper.ui', {}).midiVc") is False)
+    W.click(".vchead .mfold"); settle()
+
     # ---------- refused, missing
     boot("{ ports: ['nanoKONTROL2'], refuse: true }"); W = window(); settle(0.3)
     check("MIDI refused by the browser says how to allow it", ev("midi.status") == "blocked" and "refused" in W.inner_text(".mports") and pg.locator("#btnMidi.warn").count() == 1)
+    W.locator(".vpad").first.click(); settle()
+    check("the virtual controller works anyway", "works anyway" in W.inner_text(".mports") and ev("midi.log[0].port") == "Virtual controller")
     ev("setMidiOn(false)"); boot("{ none: true }"); W = window(); settle(0.3)
     check("a browser without MIDI says so", ev("midi.status") == "none" and "no MIDI" in W.inner_text(".mports"))
     ev("setMidiOn(false)")

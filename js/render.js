@@ -233,7 +233,7 @@ function renderLook(layers, slot, z) {
     const c = renderSource(srcById(L.src), L, z.w, z.h);
     if (!c) continue;
     if (slot === 0 && preview && preview.layer === L) drawPreview(c, z);
-    mixer.layer(slot, c, BLEND_IDX[L.blend] || 0, L.opacity);
+    mixer.layer(slot, c, BLEND_IDX[L.blend] || 0, L.opacity * project.macros.intensity.v);   // the Intensity macro
   }
 }
 function drawPreview(c, z) {

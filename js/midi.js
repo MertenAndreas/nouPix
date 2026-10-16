@@ -19,13 +19,23 @@ const midi = {
 function midiKeyParts(key) { const m = MIDI_KEY.exec(key); return m ? { port: m[1], ch: +m[2], type: m[3], num: +m[4] } : null; }
 const midiKeyLabel = key => { const k = midiKeyParts(key); return k ? `${k.type === 'cc' ? 'CC' : 'Note'} ${k.num}` : '?'; };
 const midiKeyFull = key => { const k = midiKeyParts(key); return k ? `${midiKeyLabel(key)} · ch${k.ch}` : '?'; };
-const midiPortLive = name => midi.ports.some(p => p.name === name && p.state !== 'disconnected');
+// The virtual controller (on screen, in the MIDI window) is a port too, there while it is shown
+const MIDI_VIRTUAL = 'Virtual controller';
+const midiPortLive = name => (name === MIDI_VIRTUAL ? !!(ui.midiOn && ui.midiVc) : midi.ports.some(p => p.name === name && p.state !== 'disconnected'));
 const midiPortOn = name => !(ui.midiOff || []).includes(name);
 
 /* ---------- targets ---------- */
 // What a mapping drives, from its target: a fader (0 to 1), a toggle (on or off) or a trigger (a press does it).
-// Null when it is gone: a zone, scene or playlist deleted.
+// Null when it is gone: a zone, scene or playlist deleted. m:<macro> is a macro (m:color1.0 to .2: the parts of a
+// colour, as its mode has them).
 function midiTarget(t) {
+  if (t.startsWith('m:')) {
+    const [id, i] = t.slice(2).split('.'), d = macroDef(id);
+    if (!d || (d.kind === 'color') !== (i != null)) return null;
+    if (i == null) return { kind: 'fader', label: d.label, get: () => project.macros[id].v / macroMax(d), set: x => setMacro(id, { v: x * macroMax(d) }) };
+    const part = MACRO_PARTS[project.macros[id].mode][+i];
+    return part ? { kind: 'fader', label: `${d.label} · ${part[1]}`, get: () => macroPart(project.macros[id], +i), set: x => setMacroPart(id, +i, x) } : null;
+  }
   if (t === 'master') return { kind: 'fader', label: 'Master', get: () => project.settings.master, set: midiSetMaster };
   if (t === 'blackout') return { kind: 'toggle', label: 'Blackout', get: () => (ui.blackout ? 1 : 0), set: v => { if (!!v !== ui.blackout) toggleBlackout(); } };
   const [k, zid, id] = t.split(':'), z = zid ? zoneById(zid) : null;

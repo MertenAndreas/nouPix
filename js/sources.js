@@ -56,18 +56,38 @@ function runtimeOf(src) {
   try { R.loadSource(code); } catch (e) { R.valid = false; R.error = e.message; }
   if (!R.valid) { rt.error = (R.errorLine ? 'Line ' + R.errorLine + ': ' : '') + String(R.error || 'Shader did not compile'); return rt; }
   rt.speed = (rt.hdr.INPUTS || []).find(i => isSpeedInput(src, i, code)) || null;
-  // OLM_CLOCKS: { "phase": { "FROM": "rate", "SCALE": 1, "WRAP": 1024 } } makes the float input "phase" the running
-  // total of rate × SCALE over time, per layer, so a rate slider speeds the pattern up or down without a jump
-  // (as speed does through TIME), and a shader can have several such rates. WRAP keeps the total small for the GPU.
-  rt.clocks = null;
-  if (isObj(rt.hdr.OLM_CLOCKS)) for (const [name, c] of Object.entries(rt.hdr.OLM_CLOCKS)) {
-    const from = isObj(c) && (rt.hdr.INPUTS || []).find(i => i.NAME === c.FROM && i.TYPE === 'float');
-    if (from && (rt.hdr.INPUTS || []).some(i => i.NAME === name)) (rt.clocks = rt.clocks || {})[name] = { from, scale: numOr(c.SCALE, 1), wrap: Math.max(0, numOr(c.WRAP, 0)) };
-  }
+  rt.clocks = clocksOf(rt.hdr);
   rt.roles = macroRoles(rt);   // which macro each control follows
   R.setDateUniforms = function () { this.setValue('TIME', isfTime ?? layerTime ?? clockT); this.setValue('TIMEDELTA', clockDT); this.setValue('FRAMEINDEX', frameIndex); };
   rt.R = R;
   return rt;
+}
+// OLM_CLOCKS: { "phase": { "FROM": "rate", "SCALE": 1, "WRAP": 1024 } } makes the float input "phase" the running
+// total of rate × SCALE over time, per layer, so a rate slider speeds the pattern up or down without a jump
+// (as speed does through TIME), and a shader can have several such rates. WRAP keeps the total small for the GPU.
+function clocksOf(hdr) {
+  let clocks = null;
+  if (isObj(hdr.OLM_CLOCKS)) for (const [name, c] of Object.entries(hdr.OLM_CLOCKS)) {
+    const from = isObj(c) && (hdr.INPUTS || []).find(i => i.NAME === c.FROM && i.TYPE === 'float');
+    if (from && (hdr.INPUTS || []).some(i => i.NAME === name)) (clocks = clocks || {})[name] = { from, scale: numOr(c.SCALE, 1), wrap: Math.max(0, numOr(c.WRAP, 0)) };
+  }
+  return clocks;
+}
+// What macroRolesOf needs of an effect (its header, speed, clocks and the macros its controls follow by name), without
+// compiling it: its runtime when it has one, else the same read from its header (for the patch bay, for an effect
+// that only a scene plays)
+const lightRts = new Map();
+function effectRt(src) {
+  const rt = runtimes.get(src.id);
+  if (rt && rt.R) return rt;
+  const code = sourceCode(src), c = lightRts.get(src.id);
+  if (c && c.code === code) return c;
+  const hdr = headerOf(src) || { INPUTS: [] }, l = { code, hdr };
+  l.speed = (hdr.INPUTS || []).find(i => isSpeedInput(src, i, code)) || null;
+  l.clocks = clocksOf(hdr);
+  l.roles = macroRoles(l);
+  lightRts.set(src.id, l);
+  return l;
 }
 // Free a source's compiled shader: its GPU programs, and the textures of its passes. Not its vertex buffers:
 // the ISF renderers share one context and all draw with the vertex buffer set up last, which may be this one.

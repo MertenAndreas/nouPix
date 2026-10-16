@@ -226,12 +226,26 @@ function midiConnect(key, to) {
   midi.learn.pending = null; midi.learn.target = null;
   midi.learnt = key;
   if (project.midi.maps.some(w => w.key === key && w.to === to)) { toast(`${midiKeyLabel(key)} already does that.`); updateMidiUI(); return; }
-  const old = project.midi.maps.filter(w => w.to === to), w = newMidiMap(key, to), T = midiTarget(to), c = midi.controls.get(key);
-  if (T && T.kind === 'toggle' && c && c.range) w.mode = 'hold';
+  const old = project.midi.maps.filter(w => w.to === to), w = midiNewMap(key, to);
   project.midi.maps = project.midi.maps.filter(x => x.to !== to);
   project.midi.maps.push(w);
   commit();
   toast(`${midiKeyFull(key)} → ${midiTargetLabel(to)}` + (old.length ? ` (instead of ${[...new Set(old.map(w => midiKeyLabel(w.key)))].join(', ')})` : ''));
+  updateMidiUI();
+}
+// A new mapping: a control that moved like a fader, onto something on or off, follows it (Hold)
+function midiNewMap(key, to) {
+  const w = newMidiMap(key, to), T = midiTarget(to), c = midi.controls.get(key);
+  if (T && T.kind === 'toggle' && c && c.range) w.mode = 'hold';
+  return w;
+}
+// A mapping made by hand (a wire drawn in the patch bay): another control on the same thing stays
+function midiAddMap(key, to) {
+  if (!midiTarget(to)) return;
+  if (project.midi.maps.some(w => w.key === key && w.to === to)) { toast(`${midiKeyLabel(key)} already does that.`); return; }
+  project.midi.maps.push(midiNewMap(key, to));
+  commit();
+  toast(`${midiKeyFull(key)} → ${midiTargetLabel(to)}`);
   updateMidiUI();
 }
 function midiSetMap(id, patch) {

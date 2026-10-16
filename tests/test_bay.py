@@ -2,7 +2,8 @@
 # controls, what they drive and the effects in three columns; a wire for each mapping (dashed into a folded group,
 # bright while its control moves); a wire picked shows its settings (Pickup or Jump, Toggle and Follow) and is
 # removed by its button or Delete; learning by clicking a row; the rows' sliders and buttons; folding; a control
-# forgotten (×) and the controls put in order by dragging; both views showing the same mappings.
+# forgotten (×) and the controls put in order by dragging; wires drawn by dragging, either way round; the macros'
+# blue wires to the effects' controls (pointed at, pinned, picked, removed, drawn, refused); both views the same.
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import CHROME_ARGS, start_bridge, app_error, FAKE_MIDI
@@ -133,6 +134,58 @@ try:
     check("the wires follow it", W.locator(".bwires path.wire").count() == ev("project.midi.maps.filter(w => midiTarget(w.to)).length"))
     saved = ev("JSON.parse(serialize()).midi.order")
     check("saved in the file", saved and saved[0].endswith("note:41"), saved)
+
+    # ---------- drawing wires: a control to a target, a target to a control
+    def draw(a_sel, b_sel, steps=8):
+        W.locator(a_sel).first.scroll_into_view_if_needed(); W.locator(b_sel).first.scroll_into_view_if_needed(); settle(0.2)
+        a = W.locator(a_sel).first.bounding_box(); b = W.locator(b_sel).first.bounding_box()
+        W.mouse.move(a["x"] + a["width"] / 2, a["y"] + a["height"] / 2); W.mouse.down()
+        W.mouse.move(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2, steps=steps)
+        mid = W.locator(".bwires path.draw").count()
+        W.mouse.up(); settle(0.5)
+        return mid
+    n0 = ev("project.midi.maps.length")
+    drawn = draw('.bay [data-out="midi:nanoKONTROL2:1:cc:2"]', '.bay .brow[data-t="m:saturation"] .nm')
+    check("a wire drawn from a control's dot to a row maps it (a line follows the pointer)", drawn == 1 and ev("project.midi.maps.some(w => w.key.endsWith('cc:2') && w.to === 'm:saturation')")
+          and ev("project.midi.maps.length") == n0 + 1 and ev("project.midi.maps.some(w => w.key.endsWith('cc:2') && w.to === 'm:speed')"), maps())
+    cc(4, 30); cc(4, 70); settle(0.3)   # it moves like a fader
+    draw('.bay [data-in="blackout"]', '.bay .bctl[data-key="midi:nanoKONTROL2:1:cc:4"] .mk')
+    check("and the other way round: from a target's dot to a control; another control on it stays", ev("project.midi.maps.filter(w => w.to === 'blackout').length") == 2, maps())
+    check("drawn onto something on or off, a fader follows it (it moved like one)", ev("project.midi.maps.find(w => w.to === 'blackout' && w.key.endsWith('cc:4')).mode") == "hold")
+    W.keyboard.press("Control+z"); W.keyboard.press("Control+z"); settle(0.5)
+    check("each wire drawn is a step of undo", ev("project.midi.maps.length") == n0, maps())
+
+    # ---------- the macros' blue wires to the effects' controls
+    W.locator('.bay [data-g="fx:b-bars"]').count() or None
+    sp = W.locator('.bay [data-mac="speed"]')
+    check("a macro's row says how many effect controls follow it", "→" in sp.locator(".fan").inner_text(), sp.locator(".fan").inner_text())
+    sp.locator(".nm").hover(); settle(0.3)
+    n = W.locator(".bwires path.link").count()
+    check("pointing at it draws its links, in blue", n >= 3, n)
+    W.mouse.move(5, 5); settle(0.3)
+    check("and they go when the pointer leaves", W.locator(".bwires path.link").count() == 0)
+    sp.locator(".nm").click(); W.mouse.move(5, 5); settle(0.3)
+    check("clicking its name keeps them drawn", W.locator(".bwires path.link").count() == n and "pinned" in sp.get_attribute("class"))
+    FXS = FX.split(":")[1]
+    W.locator(f'.bay [data-group="fx:{FXS}"] .mfold').count() and None
+    if "fx:" + FXS not in ev("ui.bayOpen"): W.locator(f'.bay [data-group="fx:{FXS}"] .mfold').click(); settle(0.5)
+    spd = f"p:{FXS}:speed"
+    check("an open effect shows which macro each control follows", W.locator(f'.bay .brow[data-t="{spd}"] .mtag').inner_text() == "Speed")
+    lid = f"l:{FXS}|speed"
+    W.locator(f'.bwires path.hit[data-wire="{lid}"]').click(force=True); settle(0.4)
+    pop = W.locator("#bayPop")
+    check("clicking a blue wire: what that control follows, and Remove", pop.is_visible() and "follows" in pop.inner_text() and pop.locator("select").input_value() == "speed", pop.inner_text())
+    W.keyboard.press("Delete"); settle(0.5)
+    check("Delete takes it out of the macro (its own value), a step of undo", ev(f"project.macroLinks['{FXS}'] && project.macroLinks['{FXS}'].speed") == "" and W.locator(f'.bay .brow[data-t="{spd}"] .mtag').count() == 0)
+    drawn = draw('.bay [data-mout="speed"]', f'.bay .brow[data-t="{spd}"] .nm')
+    check("a blue wire drawn from the macro's dot to the control links it again", ev(f"(project.macroLinks['{FXS}'] || {{}}).speed") is None and W.locator(f'.bay .brow[data-t="{spd}"] .mtag').inner_text() == "Speed", ev("project.macroLinks"))
+    other = ev(f"controlsOf(srcById('{FXS}')).find(i => i.TYPE === 'float' && i.NAME !== 'speed' && !macroRolesOf(srcById('{FXS}'), effectRt(srcById('{FXS}')))[i.NAME]).NAME")
+    draw(f'.bay [data-in="p:{FXS}:{other}"]', '.bay [data-mac="width"] .nm')
+    check("from an effect's control to a shared macro: it follows it", ev(f"project.macroLinks['{FXS}']['{other}']") == "width", ev("project.macroLinks"))
+    draw(f'.bay [data-in="p:{FXS}:{other}"]', '.bay [data-mac="speed"] .nm')
+    check("a control that can't follow that macro says so, and nothing changes", ev(f"project.macroLinks['{FXS}']['{other}']") == "width" and "can't follow Speed" in pg.inner_text("body"), pg.inner_text("body")[-200:])
+    W.mouse.move(5, 5); W.keyboard.press("Escape"); settle(0.3)
+    check("Esc lets the macro go", W.locator(".bwires path.link").count() == 0 and W.locator(".bay .brow.pinned").count() == 0)
 
     # ---------- the list shows the same
     W.locator(".mwhead .seg button", has_text="List").click(); settle(0.5)

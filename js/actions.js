@@ -410,17 +410,17 @@ function setMacroPart(id, i, x) { const m = project.macros[id]; if (m && macroDe
 // Which macro a control of an effect follows (a macro's id, or '' for none), for that effect wherever it plays. What
 // its name makes it follow is the default, and isn't kept.
 function setMacroLink(src, name, id) {
-  const rt = runtimeOf(src), o = Object.assign({}, project.macroLinks[src.id]);
+  const rt = effectRt(src), o = Object.assign({}, project.macroLinks[src.id]);
   if (id === ((rt.roles && rt.roles[name]) || '')) delete o[name]; else o[name] = id;
   project.macroLinks = Object.assign({}, project.macroLinks, { [src.id]: o });
   if (!Object.keys(o).length) delete project.macroLinks[src.id];
-  commit(); renderRight();
+  commit(); renderRight(); updateMidiUI();
 }
 function resetMacroLinks(src) {
   const all = Object.assign({}, project.macroLinks);
   delete all[src.id];
   project.macroLinks = all;
-  commit(); renderRight();
+  commit(); renderRight(); updateMidiUI();
 }
 
 /* ---------- effects ---------- */

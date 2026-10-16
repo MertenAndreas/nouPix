@@ -66,8 +66,8 @@ function openMidiWindow() {
   w.addEventListener('keydown', e => {
     if (e.key === 'Escape' && midi.learn.on) midiSetLearn(false);
     // the patch bay: Delete removes the wire picked, Esc lets it go
-    if (bay.sel && !typingIn(e.target) && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); const id = bay.sel; bay.sel = null; midiDisconnect(id); }
-    if (bay.sel && e.key === 'Escape') { bay.sel = null; bayWires(); }
+    if (bay.sel && !typingIn(e.target) && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); bayRemoveSel(); }
+    if ((bay.sel || bay.pin) && e.key === 'Escape') { bay.sel = null; bay.pin = null; bayWires(); }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
     // keys 1 to 8 play the virtual controller's pads
     const pad = /^[1-8]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && ui.midiOn && ui.midiVc && !typingIn(e.target) && VC_PADS[+e.key - 1];

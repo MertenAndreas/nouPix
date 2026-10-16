@@ -748,7 +748,7 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .mmon .d.learnt { color: var(--midi); }
 .mmon .note { font-family: var(--ui); padding: 0 4px; }
 /* the patch bay: controls, what they drive, the effects' controls; wires between them (ui-bay.js) */
-.bay { position: relative; min-height: 0; display: grid; grid-template-columns: minmax(170px, .7fr) minmax(250px, 1fr) minmax(250px, 1fr); column-gap: 84px; padding: 0 16px; }
+.bay { user-select: none; -webkit-user-select: none; position: relative; min-height: 0; display: grid; grid-template-columns: minmax(170px, .7fr) minmax(250px, 1fr) minmax(250px, 1fr); column-gap: 84px; padding: 0 16px; }
 .bcol { min-height: 0; overflow: auto; padding: 12px 2px 16px; display: flex; flex-direction: column; gap: 5px; scrollbar-width: thin; }
 .bcol h3 { position: sticky; top: -12px; z-index: 1; margin: 0; padding: 8px 0 6px; background: var(--bg0); font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .bcol .note { margin: 2px 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
@@ -798,6 +798,23 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .bwires .wire { stroke: var(--midi); stroke-width: 1.6; opacity: .55; }
 .bwires .wire.fx { opacity: .4; }
 .bwires .wire.lit, .bwires .wire.sel { opacity: 1; stroke-width: 2.2; }
+.bwires .wire.link { stroke: var(--accent); opacity: .85; stroke-width: 1.6; }
+.bwires .wire.link.sel { stroke: var(--text); }
+.bwires .wire.draw { stroke: var(--text2); stroke-dasharray: 5 4; opacity: .9; stroke-width: 1.8; }
+.bwires .wire.draw.ok { stroke: var(--live); stroke-dasharray: none; }
+.bwires .wire.draw.no { stroke: var(--danger); }
+.bdot { cursor: crosshair; z-index: 1; }
+.bdot::after { content: ''; position: absolute; inset: -6px; }   /* easier to grab */
+.bdot.alias { cursor: default; }
+.bdot.out.mac { right: -6px; border-color: var(--accent); }
+.brow[data-mac] .nm { cursor: pointer; }
+.brow .fan { margin-left: 8px; font-family: var(--mono); font-size: 10px; color: var(--accent); }
+.brow.pinned { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(60, 200, 255, .15); }
+.brow .mtag { margin-left: 8px; padding: 0 5px; border-radius: 3px; font-size: 10px; color: var(--accent); background: rgba(60, 200, 255, .1); }
+.brow.link { grid-template-columns: minmax(0, 1fr) auto; }
+.bctl.dropok, .brow.dropok { border-color: var(--live); box-shadow: 0 0 0 2px rgba(80, 220, 140, .18); }
+.bctl.dropno, .brow.dropno { border-color: var(--danger); }
+.bpop .mtarget, .bpop select { width: 100%; height: 26px; }
 .bwires .glow { fill: none; stroke: var(--midi); stroke-width: 5; opacity: 0; filter: drop-shadow(0 0 3px rgba(255, 210, 63, .6)); }
 .bwires .wire.folded, .bwires .wire.edge { stroke-dasharray: 4 3; }
 .bwires .wire.sel { stroke: var(--text); }

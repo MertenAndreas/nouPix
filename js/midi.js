@@ -157,7 +157,7 @@ function midiIn(m) {
     // It goes to something clicked first, though.
     const start = m.type !== 'off' && !(m.type === 'cc' && m.val === 0);
     if (start && midi.learn.target) { midiConnect(key, midi.learn.target); entry.note = 'learnt'; }
-    else if (start && midi.learnt !== key) { midi.learn.pending = key; entry.note = 'learning: click what it should move'; }
+    else if (start && midi.learnt !== key) { midi.learn.pending = key; entry.note = 'learning: choose what it should move'; }
     else if (midi.learnt === key) entry.note = 'just learnt';
   } else {
     const ws = midiMapsFor(key);

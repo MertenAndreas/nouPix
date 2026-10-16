@@ -28,8 +28,8 @@ function midiControlOf(w) {
 }
 function markMidi() {
   if (!project) return;
-  const maps = project.midi.maps, L = midi.learn;
-  for (const el of $$('[data-midi]')) {
+  const maps = project.midi.maps, L = midi.learn, D = midiDoc();
+  for (const el of $$('[data-midi]').concat(D ? $$('[data-midi]', D) : [])) {
     const t = el.dataset.midi, ws = maps.filter(w => w.to === t);
     el.classList.toggle('midi-mapped', !!ws.length);
     el.classList.toggle('midi-pick', L.on && L.target === t);
@@ -70,6 +70,7 @@ function openMidiWindow() {
   });
   w.addEventListener('keyup', e => { const pad = /^[1-8]$/.test(e.key) && VC_PADS[+e.key - 1]; if (pad) vcPad(pad, false); });
   w.addEventListener('pagehide', () => { if (midiWin === w) { midiWin = null; updateMidiUI(); } });
+  midiCapture(d);   // learning picks the macros drawn there, as in the main window
   midiSig = '';
   updateMidiUI();
 }
@@ -97,10 +98,10 @@ function midiBlink() {
 // What to do next while learning (and how to start)
 function midiHint() {
   const L = midi.learn;
-  return !L.on ? ['Press Learn, move a control on your controller, then click what it should move in the main window.']
-    : L.pending ? [h('b', null, midiKeyFull(L.pending)), ' moved: now click what it should move in the main window.']
+  return !L.on ? ['Press Learn, move a control on your controller, then choose what it should move.']
+    : L.pending ? [h('b', null, midiKeyFull(L.pending)), ' moved: choose what it should move in its list, or click it here or in the main window.']
       : L.target ? ['Now move the control for ', h('b', null, midiTargetLabel(L.target)), '.']
-        : ['Move a control on your controller, then click what it should move in the main window: Master, Blackout, a zone\'s level, a scene, a playlist, a macro. Or the other way round.'];
+        : ['Move a control on your controller, then choose what it should move: in its list, a macro here, or anything in the main window (Master, Blackout, a zone\'s level, a scene, a playlist, an effect\'s control). Or the other way round.'];
 }
 function midiRedraw() {
   if (!project || REMOTE_CLIENT) return;
@@ -117,14 +118,17 @@ function midiRedraw() {
   markMidi();
   const D = midiDoc();
   if (!D) return;
+  D.body.classList.toggle('midi-open', true);
+  D.body.classList.toggle('midi-learning', L.on);
   if ((midiTabSig() !== midiSig || !$('.midipanel', D)) && !vcHeld) renderMidiWindow(D);
   else midiTabUpdate(D);
+  markMidi();   // again, for what the MIDI window has just drawn
 }
 // What the MIDI window is built from; when it changes, it is built again
 const midiTabSig = () => JSON.stringify([ui.midiOn, midi.status, midi.ports, ui.midiOff, ui.midiMon, ui.midiVc, midi.learn,
   project.midi.maps.map(w => [w.id, w.key, w.to, w.takeover, w.mode, midiTargetLabel(w.to)]),
   project.zones.map(z => [z.id, z.name, z.scenes.map(s => [s.id, s.name]), z.playlists.map(p => [p.id, p.name])]),
-  project.macros.color1.mode, project.macros.color2.mode, midiEffects()]);
+  project.macros.color1.mode, project.macros.color2.mode, midiEffects(), ui.macroOpen]);
 // The effects in the project: in a zone's layers or in its scenes (so a playlist moving on doesn't change the list)
 const midiEffects = () => [...new Set(project.zones.flatMap(z => z.layers.concat(...z.scenes.map(sc => sc.layers)).map(L => L.src)))].filter(id => { const s = id && srcById(id); return s && s.kind === 'isf'; }).sort();
 
@@ -134,7 +138,7 @@ function renderMidiWindow(D) {
   const L = midi.learn, n = midi.ports.filter(p => p.state !== 'disconnected').length;
   const head = h('header', { class: 'mwhead' },
     h('span', { class: 'mwtitle', html: $('#btnMidi svg').outerHTML }, 'MIDI'),
-    ui.midiOn ? h('button', { class: 'btn learn' + (L.on ? ' on' : ''), type: 'button', 'aria-pressed': String(L.on), title: 'Learn: move a control, then click what it should move in the main window. Esc stops.', onclick: () => midiSetLearn(!L.on) }, L.on ? 'Learning' : 'Learn') : null,
+    ui.midiOn ? h('button', { class: 'btn learn' + (L.on ? ' on' : ''), type: 'button', 'aria-pressed': String(L.on), title: 'Learn: move a control, then choose what it should move. Esc stops.', onclick: () => midiSetLearn(!L.on) }, L.on ? 'Learning' : 'Learn') : null,
     ui.midiOn ? h('span', { class: 'mwhint' + (L.on ? ' on' : '') }, midiHint()) : h('span', { class: 'fill' }),
     ui.midiOn && midi.status === 'ok' ? h('span', { class: 'pill' + (n ? ' ok' : ' warn') }, h('span', { class: 'dot' }), `${n} controller${n === 1 ? '' : 's'}`) : null,
     ui.midiOn ? h('button', { class: 'btn sm ghost', type: 'button', title: 'Stop listening to MIDI on this computer', onclick: () => setMidiOn(false) }, 'Turn off') : null);
@@ -166,17 +170,19 @@ function midiPorts() {
     }),
     note ? h('p', { class: 'note' + (midi.status === 'blocked' || midi.status === 'none' ? ' warn' : '') }, note) : null,
     midi.status === 'blocked' && midi.error ? h('p', { class: 'note' }, 'The browser says: ' + midi.error) : null,
-    (midi.status === 'blocked' || midi.status === 'none') ? h('p', { class: 'note' }, 'The virtual controller, at the bottom of this window, works anyway.') : null);
+    (midi.status === 'blocked' || midi.status === 'none') ? h('p', { class: 'note' }, 'The virtual controller, at the bottom of this window, works anyway.') : null,
+    h('h3', { class: 'mmhead' }, 'Macros'), macrosPanel());
 }
 // What a mapping can drive, as a list: Master, Blackout, then each zone's level, scenes, next scene and playlists
-function midiTargetSelect(w) {
+// What a mapping drives, as a list; pick: what choosing does (by default the mapping drives that instead)
+function midiTargetSelect(w, pick = to => midiSetMap(w.id, { to })) {
   const opt = (t, label) => h('option', { value: t, selected: w.to === t }, label);
   // the effects of the project (and the one this mapping drives), with the controls a MIDI control can move
   const ids = new Set(midiEffects());
   if (w.to.startsWith('p:')) ids.add(w.to.slice(2, w.to.indexOf(':', 2)));
   const fx = [...ids].map(srcById).filter(src => src && src.kind === 'isf');
-  return h('select', { class: 'mtarget', 'aria-label': `What ${midiKeyFull(w.key)} drives`, title: 'What it drives', onchange: e => midiSetMap(w.id, { to: e.target.value }) },
-    midiTarget(w.to) ? null : h('option', { value: w.to, selected: true }, 'Missing: it was deleted'),
+  return h('select', { class: 'mtarget', 'aria-label': `What ${midiKeyFull(w.key)} drives`, title: 'What it drives', onchange: e => { if (e.target.value) pick(e.target.value); } },
+    !w.to ? h('option', { value: '', selected: true }, 'Choose what it moves…') : midiTarget(w.to) ? null : h('option', { value: w.to, selected: true }, 'Missing: it was deleted'),
     opt('master', 'Master'), opt('blackout', 'Blackout'),
     h('optgroup', { label: 'Macros' }, MACROS.map(d => d.kind === 'color'
       ? MACRO_PARTS[project.macros[d.id].mode].map(([, name], i) => opt(`m:${d.id}.${i}`, `${d.label} · ${name}`))
@@ -204,8 +210,12 @@ function midiMaps() {
       h('span', { class: 'cval' }, h('i', { class: 'cbar' })),
       h('button', { class: 'x', type: 'button', title: 'Remove this mapping', 'aria-label': `Remove ${midiKeyFull(w.key)} to ${T ? T.label : 'missing'}`, onclick: () => midiDisconnect(w.id) }, icon('x')));
   });
+  // learning: the control just moved, at the top, with its list to choose what it moves
+  const key = midi.learn.on && midi.learn.pending;
+  const fresh = key ? h('div', { class: 'mmap new', title: midiKeyParts(key).port }, h('span', { class: 'mk' }, midiKeyFull(key), h('small', null, 'new')),
+    midiTargetSelect({ key, to: '' }, to => midiConnect(key, to)), h('span', { class: 'muted' }, 'or click it')) : null;
   return h('div', { class: 'mcol mmaps' }, h('h3', null, maps.length ? `Mappings · ${maps.length}` : 'Mappings'),
-    h('div', { class: 'mlist' }, ...rows, maps.length ? null : h('p', { class: 'note' }, 'None yet. Press Learn, move a fader, knob or pad, then click what it should move in the main window.')));
+    h('div', { class: 'mlist' }, fresh, ...rows, maps.length || key ? null : h('p', { class: 'note' }, 'None yet. Press Learn, move a fader, knob or pad, then choose what it should move.')));
 }
 // The monitor folds to its heading
 function midiMonitor() {
@@ -217,6 +227,7 @@ function midiMonitor() {
 }
 // What changes with each message: the bars of the mapped controls, the controllers' lights, the monitor
 function midiTabUpdate(D) {
+  for (const b of macroBinders) b();
   for (const el of $$('.mmap', D)) {
     const w = project.midi.maps.find(x => x.id === el.dataset.map), c = w && midiControlOf(w), bar = el.querySelector('.cbar');
     if (bar) bar.style.width = c ? c.last * 100 + '%' : '0';
@@ -297,6 +308,21 @@ function midiVc() {
 // While learning, a touch on something MIDI can drive picks it, and does nothing else (a scene doesn't play, a
 // slider doesn't move)
 const midiPickEl = e => midi.learn.on && e.target.closest && e.target.closest('[data-midi]');
+// While learning, a touch on anything marked data-midi picks it, and does nothing else (a slider stays where it was)
+function midiCapture(doc) {
+  doc.addEventListener('pointerdown', e => {
+    const el = midiPickEl(e);
+    if (!el) return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.target.type === 'range') e.target._midiKeep = e.target.value;
+    midiLearnTarget(el.dataset.midi);
+  }, true);
+  for (const t of ['click', 'dblclick', 'input', 'change']) doc.addEventListener(t, e => {
+    if (!midiPickEl(e)) return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.target._midiKeep != null) e.target.value = e.target._midiKeep;
+  }, true);
+}
 function initMidiUI() {
   if (ui.dockTab === 'midi') ui.dockTab = 'scenes';   // MIDI was a tab of the dock before it had its window
   if (REMOTE_CLIENT) return;
@@ -307,17 +333,6 @@ function initMidiUI() {
   });
   document.body.append(h('div', { class: 'midibar', id: 'midiLearnBar', hidden: true, role: 'status' }, h('span'),
     h('button', { class: 'btn sm', type: 'button', onclick: () => midiSetLearn(false) }, 'Stop learning')));
-  document.addEventListener('pointerdown', e => {
-    const el = midiPickEl(e);
-    if (!el) return;
-    e.preventDefault(); e.stopPropagation();
-    if (e.target.type === 'range') e.target._midiKeep = e.target.value;
-    midiLearnTarget(el.dataset.midi);
-  }, true);
-  for (const t of ['click', 'dblclick', 'input', 'change']) document.addEventListener(t, e => {
-    if (!midiPickEl(e)) return;
-    e.preventDefault(); e.stopPropagation();
-    if (e.target._midiKeep != null) e.target.value = e.target._midiKeep;   // a slider touched stays where it was
-  }, true);
+  midiCapture(document);
   addEventListener('keydown', e => { if (e.key === 'Escape' && midi.learn.on && !typingIn(e.target) && !$('.menu')) midiSetLearn(false); });
 }

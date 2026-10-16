@@ -44,8 +44,8 @@ order by `<script src>` tags at the end of `index.html`:
 | `ui-playlists.js` | The playlists in the Scenes panel: tabs folded to one line or open, steps (with their own fades, moved by dragging or Alt ← →), step editor, + Add, the New playlist window (order with ↑ ↓, a fade per step), the playlist menu | `playlistArea` `newPlaylistDialog` `playlistMenu` `shiftStep` `drawPlaylistProgress` |
 | `ui-menus.js` | The menu system and every menu, the SVG import dialog, copy/cut/paste keys | `menu` `fixtureMenu` `canvasMenu` `projectMenu` … |
 | `ui-remote.js` | Remote control in the interface: the top-bar button and menu, the Settings section, the waiting screen on devices, `lockPanel` for operators | `updateRemoteUI` `remoteMenu` `remoteSection` `remoteOverlay` `lockPanel` |
-| `ui-macros.js` | The Macros section at the top of the Content tab (folding, colour parts in HSV or RGB, the shared controls), the "Follows Speed" note under an effect's control, "Macros it follows" in an effect's Parameters (what each control follows, for that effect), the Content tab's values refreshed once a frame | `macrosSection` `macroFollows` `macroLinksFold` `syncContentSoon` `updateMacrosUI` |
-| `ui-midi.js` | MIDI in the interface: the top-bar button, the MIDI window (a popup this page draws into: Learn, controllers, mappings, monitor, the virtual controller: on-screen faders and pads sent through `midiIn` as port `MIDI_VIRTUAL`), the learn bar, learning by touching anything marked `data-midi`, the yellow line and tags on what a control drives | `updateMidiUI` `openMidiWindow` `renderMidiWindow` `midiSlot` `midiButton` `markMidi` `initMidiUI` |
+| `ui-macros.js` | The macros panel of the MIDI window (colour parts in HSV or RGB, the shared controls folded; its own binders, `macroBinders`), the "Follows Speed" note under an effect's control, "Macros it follows" in an effect's Parameters (what each control follows, for that effect), the Content tab's values and an open colour picker refreshed once a frame | `macrosPanel` `macroFollows` `macroLinksFold` `syncContentSoon` `updateMacrosUI` |
+| `ui-midi.js` | MIDI in the interface: the top-bar button, the MIDI window (a popup this page draws into: Learn, controllers and the macros under them, mappings (while learning, the control just moved at the top with a list to choose its target), monitor, the virtual controller: on-screen faders and pads sent through `midiIn` as port `MIDI_VIRTUAL`), the learn bar, learning by touching anything marked `data-midi` in either window (`midiCapture`), the yellow line and tags on what a control drives | `updateMidiUI` `openMidiWindow` `renderMidiWindow` `midiSlot` `midiButton` `markMidi` `initMidiUI` |
 | `app.js` | Top bar and status bar, wiring buttons and keys, the frame loop, `boot()`, and `window.olm` | `initUI` `onKey` `renderAll` `boot` |
 
 ### How the files fit together
@@ -102,7 +102,9 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   layers' own values; an effect's control follows a macro by its name (`macroRoles`, kept as `rt.roles`), or as chosen
   for that effect: `project.macroLinks[source][control]` is a macro's id or `''` for none (only what differs from the
   name is kept; part of the project and of undo; an operator's copy keeps the main window's). `macroRolesOf` merges
-  the two, worked out again when that effect's object of choices is a new one (so `setMacroLink` replaces it).
+  the two, worked out again when that effect's object of choices is a new one (so `setMacroLink` replaces it). The
+  macros' sliders are in the MIDI window only (devices can still send `{op: 'macro'}`, but show none); in the Content
+  tab, an effect's colour that follows a colour macro that is on shows and sets that macro.
 - A MIDI mapping can drive a control of an effect (`p:<source>:<control>`, `effectTarget`): `setEffectControl` sets it
   in every layer that plays that effect now (a step of undo, like a zone level); scenes keep their own values. The
   Content tab's controls read the layer's value on each sync, so they follow.

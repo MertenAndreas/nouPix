@@ -56,10 +56,10 @@ const ui = {
   // MIDI on this computer: whether it is on, the ports switched off (by name), whether the MIDI window shows its
   // monitor and its virtual controller
   midiOn: false, midiOff: [], midiMon: false, midiVc: false,
-  // the Macros section of the Content tab: open or folded, and the parts of it opened ('color1', 'color2', 'shared')
-  macrosOpen: false, macroOpen: [],
+  // the parts of the macros opened ('color1', 'color2', 'shared'; 'links': what an effect follows, in its Parameters)
+  macroOpen: [],
 };
-const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'macrosOpen', 'macroOpen'];
+const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'macroOpen'];
 let geomDirty = true, patchDirty = true;
 const markGeom = () => { geomDirty = true; };
 const markPatch = () => { patchDirty = true; };

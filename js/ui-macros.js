@@ -1,18 +1,19 @@
 // openLedMapper · js/ui-macros.js
-// The Macros section at the top of the Content tab: Speed, Intensity and Saturation; Color 1 and Color 2 (the
-// colour picker, on or off, and opened, a slider for each part, HSV or RGB, for MIDI); and the shared controls
-// (Angle, Softness…), folded. Every slider can be learnt by a MIDI control. Under an effect's control, a note says
-// which macro it follows while that macro changes it; in its Parameters, which macro each control follows can be
-// chosen for that effect.
+// The macros, in the MIDI window (under the controllers): Speed, Intensity and Saturation; Color 1 and Color 2 (on
+// or off, their swatch, and opened, a slider for each part, HSV or RGB); and the shared controls (Angle, Softness…),
+// folded. Every slider can be learnt by a MIDI control. In the Content tab: under an effect's control, a note says
+// which macro it follows while that macro changes it, a colour that follows one shows it, and in its Parameters,
+// which macro each control follows can be chosen for that effect.
 
 // The parts of the macros the user has opened: 'color1', 'color2', 'shared', and 'links' (in an effect's Parameters)
 const macroOpen = () => new Set(Array.isArray(ui.macroOpen) ? ui.macroOpen : []);
 function toggleMacroOpen(key) {
   const s = macroOpen();
   if (s.has(key)) s.delete(key); else s.add(key);
-  ui.macroOpen = [...s]; savePrefs(); renderRight();
+  ui.macroOpen = [...s]; savePrefs(); renderRight(); updateMidiUI();
 }
-// A binder runs at once too, so what it shows is right from the start, then on each syncInspector
+// A binder runs at once too, so what it shows is right from the start, then on each sync (of the Content tab, or of
+// the MIDI window for the macros drawn there)
 const bind = f => { binders.push(f); f(); };
 const foldBtn = (open, label, onclick, title) => h('button', { class: 'mfold' + (open ? ' open' : ''), type: 'button', 'aria-expanded': String(open), title, onclick }, icon('chev'), label);
 // A label with a tick that switches a colour or a shared control on and off
@@ -31,16 +32,14 @@ function macroSlider(id) {
     : id === 'saturation' ? 'Every effect\'s saturation: 100 % leaves them as they are.' : `Sets the ${d.label.toLowerCase()} of every effect that has one, each in its own range.`;
   return r;
 }
-// A colour macro: the picker and its switch; opened, a slider for each part, which a MIDI fader can drive
+// A colour macro: its switch and its swatch; opened, a slider for each part, which a MIDI fader can drive
 function macroColor(id) {
   const d = macroDef(id), open = macroOpen().has(id), m = project.macros[id];
-  const get = () => macroRgb(project.macros[id]).concat(1);
-  const set = c => { const [hh, s, v] = macroRgbHsv(c[0], c[1], c[2]); setMacro(id, { h: s > 0 && v > 0 ? hh : project.macros[id].h, s, v }); };
-  const r = colorRow(d.label, get, set, () => {}, 'macro-' + id);
-  const sw = r.querySelector('.cswatch');
-  r.firstChild.replaceWith(macroSwitch(id, foldBtn(open, d.label, () => toggleMacroOpen(id), open ? 'Fold its parts' : 'Its hue, saturation and value, for MIDI faders')));
+  const fill = h('i'), hex = h('span', { class: 'mono' });
+  const r = row(macroSwitch(id, foldBtn(open, d.label, () => toggleMacroOpen(id), open ? 'Fold its parts' : 'Its hue, saturation and value, for MIDI faders')),
+    h('span', { class: 'cswatch still', title: 'The colour the effects follow while it is on' }, fill, hex));
   r.classList.add('mcolor');
-  bind(() => { sw._show(get()); r.classList.toggle('off', !project.macros[id].on); });
+  bind(() => { const c = toHex(macroRgb(project.macros[id])); fill.style.background = c; hex.textContent = c; r.classList.toggle('off', !project.macros[id].on); });
   if (!open) return [r];
   const mode = seg([['hsv', 'HSV'], ['rgb', 'RGB']], m.mode, v => { setMacro(id, { mode: v, on: project.macros[id].on }); renderRight(); });
   const parts = MACRO_PARTS[m.mode].map(([k, name], i) => {
@@ -49,21 +48,22 @@ function macroColor(id) {
   });
   return [r, h('div', { class: 'msub' }, row('Sliders', mode), ...parts)];
 }
-function macrosSection() {
-  const open = !!ui.macrosOpen, shared = macroOpen().has('shared');
-  const sum = h('span', { class: 'msum' });
-  bind(() => { const on = MACROS.filter(d => macroActive(d.id)); sum.textContent = on.length ? on.map(d => d.kind === 'color' || d.kind === 'abs' ? d.label : `${d.label} ${macroText(d.id)}`).join(' · ') : 'none in use'; });
-  const head = h('h3', null, foldBtn(open, 'Macros', () => { ui.macrosOpen = !open; savePrefs(); renderRight(); }, open ? 'Fold the macros' : 'Speed, Intensity, colours… for every effect at once'), h('span', { class: 'fill' }), open ? null : sum);
-  if (!open) return h('div', { class: 'sec macros' }, head);
-  const abs = MACROS.filter(d => d.kind === 'abs');
+// The macros, for the MIDI window. Its binders are its own (macroBinders), run each time it is brought up to date, so
+// a fader moving a macro moves its slider there.
+let macroBinders = [];
+function macrosPanel() {
+  const shared = macroOpen().has('shared'), abs = MACROS.filter(d => d.kind === 'abs'), keep = binders;
+  binders = [];
   const nOn = h('span', { class: 'msum' });
   bind(() => { const n = abs.filter(d => project.macros[d.id].on).length; nOn.textContent = n ? `${n} on` : ''; });
-  return h('div', { class: 'sec macros' }, head,
+  const el = h('div', { class: 'mmacros' },
     h('p', { class: 'note' }, 'For every effect at once, over each one\'s own values: scenes keep theirs.'),
     macroSlider('speed'), macroSlider('intensity'), macroSlider('saturation'),
     ...macroColor('color1'), ...macroColor('color2'),
     h('div', { class: 'row mshared' }, foldBtn(shared, 'Shared controls', () => toggleMacroOpen('shared'), shared ? 'Fold them' : 'Angle, Softness, Scale, Count, Size, Width, Density, Fade'), nOn),
     shared ? h('div', { class: 'msub' }, abs.map(d => macroSlider(d.id))) : null);
+  macroBinders = binders; binders = keep;
+  return el;
 }
 // In an effect's Parameters, folded to one line: which macro each of its controls follows, for that effect wherever it
 // plays. A control follows the macro its name says, unless the user chooses another, or none.
@@ -92,12 +92,17 @@ function macroFollows(id) {
   bind(() => { const on = macroActive(id); el.hidden = !on; if (on) el.textContent = `Follows ${d.label}` + (d.kind === 'color' || d.kind === 'abs' ? '' : ` (${macroText(id)})`); });
   return el;
 }
-// The values shown in the Content tab, after something else moved them (a macro, a MIDI control), at most once a frame
+// The values shown in the Content tab and in an open colour picker, after something else moved them (a macro, a MIDI
+// control), at most once a frame
 let contentQueued = false;
 function syncContentSoon() {
   if (contentQueued) return;
   contentQueued = true;
-  requestAnimationFrame(() => { contentQueued = false; if (ui.rightTab === 'content' && !ui.rightHidden) syncInspector(); });
+  requestAnimationFrame(() => {
+    contentQueued = false;
+    if (ui.rightTab === 'content' && !ui.rightHidden) syncInspector();
+    if (colorPop && colorPop.sync) colorPop.sync();
+  });
 }
-// After a macro moves: its sliders, the notes and the swatches; and the MIDI marks
+// After a macro moves: its sliders in the MIDI window, the notes and the swatches of the Content tab, and the MIDI marks
 function updateMacrosUI() { updateMidiUI(); syncContentSoon(); }

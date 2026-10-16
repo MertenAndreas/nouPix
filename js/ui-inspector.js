@@ -378,7 +378,7 @@ function layersSection(z) {
 }
 function renderContentTab(body) {
   if (!mixer.ok) body.append(sec('Content', h('div', { class: 'errbox' }, 'WebGL is off or unavailable in this browser, so content cannot be rendered. Use Chrome or Edge with hardware acceleration on.')));
-  body.append(macrosSection(), zonesSection());
+  body.append(zonesSection());
   const z = selZone();
   if (!z) return;
   body.append(layersSection(z));
@@ -443,7 +443,20 @@ function renderContentTab(body) {
       } else if (inp.TYPE === 'event') {
         ctl.push(row(label, midiButton(h('button', { class: 'btn', type: 'button', onclick: () => { set(true); setTimeout(() => set(false), 80); } }, 'Trigger'), t)));
       } else if (inp.TYPE === 'color') {
-        ctl.push(colorRow(label, () => paramValue(L, src, inp), set, commit, `${L.id}:${src.id}:${inp.NAME}`));
+        // while it follows a colour macro that is on, it shows that colour (what goes out), and a colour chosen here
+        // sets the macro; the layer's own colour comes back when the macro is off
+        const via = () => (roles[inp.NAME] && macroActive(roles[inp.NAME]) ? roles[inp.NAME] : null);
+        const get = () => (via() ? macroRgb(project.macros[via()]).concat(1) : paramValue(L, src, inp));
+        const put = c => {
+          const id = via();
+          if (!id) { set(c); return; }
+          const [hh, s, v] = macroRgbHsv(c[0], c[1], c[2]);
+          setMacro(id, { h: s > 0 && v > 0 ? hh : project.macros[id].h, s, v });
+        };
+        const cr = colorRow(label, get, put, () => { if (!via()) commit(); }, `${L.id}:${src.id}:${inp.NAME}`);
+        const sw = cr.querySelector('.cswatch');
+        binders.push(() => sw._show(get()));
+        ctl.push(cr);
       } else if (inp.TYPE === 'point2D') {
         const pt = { x: holder.v[0], y: holder.v[1] };
         const up = () => set([pt.x, pt.y]);

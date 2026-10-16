@@ -183,7 +183,7 @@ try:
     draw(f'.bay [data-in="p:{FXS}:{other}"]', '.bay [data-mac="width"] .nm')
     check("from an effect's control to a shared macro: it follows it", ev(f"project.macroLinks['{FXS}']['{other}']") == "width", ev("project.macroLinks"))
     draw(f'.bay [data-in="p:{FXS}:{other}"]', '.bay [data-mac="speed"] .nm')
-    check("a control that can't follow that macro says so, and nothing changes", ev(f"project.macroLinks['{FXS}']['{other}']") == "width" and "can't follow Speed" in pg.inner_text("body"), pg.inner_text("body")[-200:])
+    check("a control that can't follow that macro says so, and nothing changes", ev(f"project.macroLinks['{FXS}']['{other}']") == "width" and "can't follow Speed" in W.inner_text("body"), W.inner_text("body")[-200:])   # the message shows in the window worked in
     W.mouse.move(5, 5); W.keyboard.press("Escape"); settle(0.3)
     check("Esc lets the macro go", W.locator(".bwires path.link").count() == 0 and W.locator(".bay .brow.pinned").count() == 0)
 

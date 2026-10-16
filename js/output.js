@@ -76,10 +76,10 @@ function buildOutput() {
   const s = project.settings;
   for (const U of universes) U.data.fill(0);
   const m = ui.blackout ? 0 : s.master;
-  const wm = s.whiteMode;
+  const wm = s.whiteMode, groups = new Map(project.groups.map(g => [g.id, groupLevel(g)]));
   for (const f of project.fixtures) {
     const col = f._col, disp = f._disp, n = f._n, tr = f.trim;
-    const dim = f.enabled ? m * f.dimmer : 0;
+    const dim = f.enabled ? m * f.dimmer * (f.group != null ? groups.get(f.group) ?? 1 : 1) : 0;   // and its group's dimmer
     const kr = dim * tr[0], kg = dim * tr[1], kb = dim * tr[2], kw = tr[3];
     const o = f._out;
     if (!o) { for (let j = 0; j < 3 * n; j += 3) { disp[j] = col[j] * kr; disp[j + 1] = col[j + 1] * kg; disp[j + 2] = col[j + 2] * kb; } continue; }

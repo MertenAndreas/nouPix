@@ -89,9 +89,16 @@ function playlistTab(z, pl, open) {
     if (ui.zone !== z.id) selectZone(z); else renderDock();
   };
   midiButton(t, `pl:${z.id}:${pl.id}`);   // a MIDI pad can play and pause it
-  t.addEventListener('click', toggleOpen);
+  // Folding an open tab waits out a double-click: folding shrinks the panel, which can scroll, and the second click
+  // would land on whatever moved under it.
+  let foldSoon = 0;
+  t.addEventListener('click', e => {
+    if (!isOpen) return toggleOpen();
+    if (e.detail > 1) return;
+    foldSoon = setTimeout(toggleOpen, 260);
+  });
   t.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target === t) { e.preventDefault(); toggleOpen(); } });
-  t.addEventListener('dblclick', () => { ui.playlistRename = pl.id; ui.playlistOpen[z.id] = pl.id; renderDock(); });
+  t.addEventListener('dblclick', () => { clearTimeout(foldSoon); ui.playlistRename = pl.id; ui.playlistOpen[z.id] = pl.id; renderDock(); });
   onRightClick(t, e => playlistMenu(at(e), z, pl));
   return t;
 }
@@ -112,7 +119,7 @@ function playlistLane(z, pl) {
   const end = selectEl([['loop', 'Loop'], ['stop', 'Stop'], ...z.playlists.filter(o => o !== pl).map(o => [o.id, 'Then play ' + o.name])], pl.end, v => { pl.end = v; commit(); }, { aria: 'At the end' });
   const auto = h('input', { type: 'checkbox', checked: pl.autoplay, 'aria-label': 'Play when the project opens', onchange: e => setPlaylistAutoplay(z, pl, e.target.checked) });
   const lane = h('div', { class: 'plane' },
-    h('div', { class: 'plrow' }, trans, steps),
+    h('div', { class: 'plrow' }, trans, hscroller(steps, `steps:${z.id}:${pl.id}`)),
     h('div', { class: 'pfoot' },
       h('span', { class: 'pstatus' + (cur && !p.on ? ' paused' : ''), 'data-pl-status': z.id + ':' + pl.id }, playlistStatus(z, pl)),
       h('span', { class: 'grp' }, 'Fades', fadeMode, fadeAll, fadeAll ? 's' : null),
@@ -177,7 +184,7 @@ function shiftStep(z, pl, st, d, fromEditor = false) {
   const i = pl.steps.indexOf(st);
   if (i + d < 0 || i + d >= pl.steps.length) return;
   moveStep(z, pl, st.id, i + d);
-  const box = $(`#dockBody .plist[data-zone="${z.id}"]`);
+  const box = scenesRoots().map(r => $(`.plist[data-zone="${z.id}"]`, r)).find(Boolean);
   if (!box) return;
   const btn = fromEditor && $(`.peditor button[data-mv="${d}"]`, box), t = $(`.pstep[data-step="${st.id}"]`, box);
   if (btn && !btn.disabled) btn.focus(); else if (t) t.focus();
@@ -216,7 +223,7 @@ function playlistMenu(anchor, z, pl) {
   const p = z._play, on = playingList(z) === pl && p.on, others = z.playlists.filter(o => o !== pl);
   const end = v => () => { pl.end = v; commit(); };
   menu(anchor, [
-    !(anchor instanceof Element) && { head: `${pl.name} · ${z.name}` },
+    !isEl(anchor) && { head: `${pl.name} · ${z.name}` },
     [on ? 'Pause' : 'Play', () => playlistDo(z, pl, 'toggle'), { disabled: !pl.steps.length }],
     ['Rename', () => { ui.playlistRename = pl.id; ui.playlistOpen[z.id] = pl.id; renderDock(); }],
     ['Duplicate', () => duplicatePlaylist(z, pl)],
@@ -306,14 +313,14 @@ function newPlaylistDialog(z, only = null) {
         h('label', { class: 'checkrow' }, auto, 'Play when the project opens'),
         h('p', { class: 'note' }, 'The ticked scenes are the steps, in this order: ↑ ↓ (or Alt ↑ ↓) move a scene earlier or later. A fade typed here is the step\'s own, in this playlist only: the scene keeps its fade. Left empty, the step fades like the scene (or with One for all). A play time counts from the moment a step starts, its fade in included, until the next step starts.')),
       h('footer', null, h('button', { class: 'btn', type: 'button', onclick: close }, 'Cancel'), h('button', { class: 'btn primary', type: 'button', onclick: save }, 'Create playlist'))));
-  document.body.append(bg);
+  uiDocNow().body.append(bg);   // in the window it was asked for from
   name.focus(); name.select();
 }
 
 /* ---------- every frame ---------- */
 // How far the playing steps are: their bars, the playing tab's line, and the words that count down
 function drawPlaylistProgress() {
-  for (const el of $$('#dockBody .plist')) {
+  for (const el of scenesRoots().flatMap(r => $$('.plist', r))) {
     const z = zoneById(el.dataset.zone), pl = z && playingList(z), p = z && z._play;
     if (!pl) continue;
     const st = pl.steps[p.i], el2 = st ? Math.min(1, playElapsed(z) / st.time) : 0;

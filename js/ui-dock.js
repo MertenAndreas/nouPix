@@ -11,17 +11,22 @@ function renderDock() {
   $('#btnDock').title = ui.dockCollapsed ? 'Expand panel' : 'Collapse panel';
   const body = $('#dockBody');
   const keep = body.firstElementChild && body.querySelector('.ctrl-edit') ? body.querySelector('.ctrl-edit').scrollTop : 0;
-  body.replaceChildren();
-  if (ui.dockCollapsed) return;
-  if (ui.dockTab === 'scenes') renderScenes(body);
-  else if (ui.dockTab === 'patch') {
-    renderPatch(body);
-    if (mappingLocked()) { const ce = body.querySelector('.ctrl-edit'); if (ce) lockPanel(ce, 'Operator: you can see the patch but not change it.'); body.querySelectorAll('.ctrl-list .foot button').forEach(b => { b.disabled = true; }); }
-  }
-  else if (ui.dockTab === 'nodes') renderNodes(body);
-  else renderMonitor(body);
+  keepScroll(body, () => {
+    body.replaceChildren();
+    if (ui.dockCollapsed) return;
+    if (ui.dockTab === 'scenes' && scenesWinOpen()) renderScenesAway(body);
+    else if (ui.dockTab === 'scenes') renderScenes(body);
+    else if (ui.dockTab === 'patch') {
+      renderPatch(body);
+      if (mappingLocked()) { const ce = body.querySelector('.ctrl-edit'); if (ce) lockPanel(ce, 'Operator: you can see the patch but not change it.'); body.querySelectorAll('.ctrl-list .foot button').forEach(b => { b.disabled = true; }); }
+    }
+    else if (ui.dockTab === 'nodes') renderNodes(body);
+    else renderMonitor(body);
+  });
+  if (ui.dockCollapsed) { drawScenesWindow(); return; }
   replayFlip();
   const ce = body.querySelector('.ctrl-edit'); if (ce) ce.scrollTop = keep;
+  drawScenesWindow();
   updateMidiUI();
 }
 function onPatchChanged() { schedulePanels(); }
@@ -41,26 +46,81 @@ function schedulePanels() {
 // While a slider or a fade is dragged, something is dragged and dropped, or a field is typed in, in the Scenes panel,
 // a redraw from elsewhere (a playlist moving on, another device) waits until it is over
 let scenesHeld = false, scenesDragging = false, scenesPending = false;
-const scenesBusy = () => scenesHeld || scenesDragging || !!(typingIn(document.activeElement) && document.activeElement.closest('#dockBody'));
+const scenesBusy = () => scenesHeld || scenesDragging || [document, scenesDoc()].some(d => d && typingIn(d.activeElement) && d.activeElement.closest('#dockBody'));
 function refreshScenes() {
-  if (ui.dockTab !== 'scenes' || ui.dockCollapsed) return;
+  const here = ui.dockTab === 'scenes' && !ui.dockCollapsed;
+  if (!here && !scenesWinOpen()) return;
   if (scenesBusy()) { scenesPending = true; return; }
   scenesPending = false;
-  renderDock();
+  if (here) renderDock(); else drawScenesWindow();
 }
 const scenesLetGo = () => { if (scenesPending) setTimeout(() => { if (scenesPending && !scenesBusy()) refreshScenes(); }); };
-document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('#dockBody input[type=range], #dockBody .fd')) scenesHeld = true; }, true);
-document.addEventListener('dragstart', e => { if (e.target.closest && e.target.closest('#dockBody')) scenesDragging = true; }, true);
-for (const t of ['pointerup', 'pointercancel']) document.addEventListener(t, () => { if (scenesHeld) { scenesHeld = false; scenesLetGo(); } }, true);
-for (const t of ['dragend', 'drop']) document.addEventListener(t, () => { if (scenesDragging) { scenesDragging = false; scenesLetGo(); } }, true);
-document.addEventListener('focusout', e => { if (e.target.closest && e.target.closest('#dockBody')) scenesLetGo(); }, true);
+// in this page, and in the Scenes window when it opens
+function watchScenes(d) {
+  d.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('#dockBody input[type=range], #dockBody .fd')) scenesHeld = true; }, true);
+  d.addEventListener('dragstart', e => { if (e.target.closest && e.target.closest('#dockBody')) scenesDragging = true; }, true);
+  for (const t of ['pointerup', 'pointercancel']) d.addEventListener(t, () => { if (scenesHeld) { scenesHeld = false; scenesLetGo(); } }, true);
+  for (const t of ['dragend', 'drop']) d.addEventListener(t, () => { if (scenesDragging) { scenesDragging = false; scenesLetGo(); } }, true);
+  d.addEventListener('focusout', e => { if (e.target.closest && e.target.closest('#dockBody')) scenesLetGo(); }, true);
+}
+watchScenes(document);
+
+/* ---------- the Scenes window ---------- */
+// The scenes and playlists can have a window of their own, to put on another screen. This page draws it, as it does
+// the MIDI window: it closes with this page, and meanwhile the Scenes tab of the bottom panel says where they are.
+let scenesWin = null;
+const scenesWinOpen = () => !!(scenesWin && !scenesWin.closed);
+const scenesDoc = () => (scenesWinOpen() ? scenesWin.document : null);
+// Where the scenes are drawn now: the bottom panel's, the Scenes window's
+const scenesRoots = () => [$('#dockBody'), scenesDoc() && $('#dockBody', scenesDoc())].filter(Boolean);
+function openScenesWindow() {
+  if (scenesWinOpen()) { scenesWin.focus(); return; }
+  const w = window.open('', 'olm-scenes', 'popup,width=1180,height=460');
+  if (!w) { toast('The Scenes window could not open: allow pop-up windows for this page.', 'err'); return; }
+  scenesWin = w;
+  const d = dressWindow(w, 'Scenes · openLedMapper', 'sceneswin');
+  d.body.append(h('div', { class: 'dockbody', id: 'dockBody' }), h('div', { class: 'toasts', id: 'toasts' }));
+  watchScenes(d);
+  midiCapture(d);   // learning picks a scene or a playlist there too
+  // the keys that play: 1–9 the selected zone's scenes (Shift cuts), B blackout; and undo, redo, save
+  w.addEventListener('keydown', e => {
+    if ($('.modal-bg', d) && e.key === 'Escape') { $('.modal-bg', d).remove(); return; }   // a dialog there, even from its field
+    if (typingIn(e.target) || $('.modal-bg', d)) return;
+    const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), digit = /^Digit([1-9])$/.exec(e.code);
+    if (e.key === 'Escape' && midi.learn.on) midiSetLearn(false);
+    else if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+    else if (mod && k === 'y') { e.preventDefault(); redo(); }
+    else if (mod && k === 's') { e.preventDefault(); saveProjectFile(); }
+    else if (!mod && digit) { const z = selZone(), sc = z && z.scenes[+digit[1] - 1]; if (sc) goScene(z, sc, e.shiftKey); }
+    else if (!mod && k === 'b') toggleBlackout();
+  });
+  w.addEventListener('pagehide', () => { if (scenesWin === w) { scenesWin = null; renderDock(); } });
+  renderDock();
+}
+function closeScenesWindow() { if (scenesWinOpen()) scenesWin.close(); scenesWin = null; renderDock(); }
+// The Scenes window doesn't outlive this page; one closed by its own button is noticed
+addEventListener('pagehide', () => { if (scenesWinOpen()) scenesWin.close(); });
+setInterval(() => { if (scenesWin && scenesWin.closed) { scenesWin = null; renderDock(); } }, 1000);
+function drawScenesWindow() {
+  const D = scenesDoc(), root = D && $('#dockBody', D);
+  if (!root) return;
+  keepScroll(root, () => { root.replaceChildren(); renderScenes(root, true); });
+}
+// The Scenes tab while the scenes have their own window
+function renderScenesAway(body) {
+  body.append(h('div', { class: 'scenesaway' },
+    h('p', null, 'The scenes and playlists are in their own window.'),
+    h('div', { class: 'actions' },
+      h('button', { class: 'btn primary', type: 'button', onclick: openScenesWindow }, 'Show the window'),
+      h('button', { class: 'btn', type: 'button', onclick: closeScenesWindow }, 'Back here'))));
+}
 function sceneMenu(anchor, z, sc) {
   const n = pl => pl.steps.filter(st => st.scene === sc.id).length;
   menu(anchor, [
-    !(anchor instanceof Element) && { head: `${sc.name} · ${z.name}` },
-    !(anchor instanceof Element) && ['Go to it' + (sc.fade > 0 ? ` (fade ${fmtV(sc.fade)} s)` : ''), () => goScene(z, sc)],
-    !(anchor instanceof Element) && sc.fade > 0 && ['Cut to it', () => goScene(z, sc, true), { key: '⇧click' }],
-    !(anchor instanceof Element) && '-',
+    !isEl(anchor) && { head: `${sc.name} · ${z.name}` },
+    !isEl(anchor) && ['Go to it' + (sc.fade > 0 ? ` (fade ${fmtV(sc.fade)} s)` : ''), () => goScene(z, sc)],
+    !isEl(anchor) && sc.fade > 0 && ['Cut to it', () => goScene(z, sc, true), { key: '⇧click' }],
+    !isEl(anchor) && '-',
     ['Add to playlist', null, { sub: [
       ...z.playlists.map(pl => [pl.name, () => { addToPlaylist(z, pl, sc.id); ui.playlistOpen[z.id] = pl.id; renderDock(); toast(`${sc.name} added to ${pl.name}.`); }, { key: n(pl) ? `in it ×${n(pl)}` : '' }]),
       z.playlists.length && '-',
@@ -93,7 +153,7 @@ function editScene(sc) {
         row('Color', sw),
         h('p', { class: 'note' }, 'The fade is how long the zone takes to change to this scene when you click it. 0 cuts straight to it. It can also be changed on the scene\'s button: drag its fade time sideways, or click it to type one.')),
       h('footer', null, h('button', { class: 'btn', type: 'button', onclick: close }, 'Cancel'), h('button', { class: 'btn primary', type: 'button', onclick: save }, 'Save'))));
-  document.body.append(bg);
+  uiDocNow().body.append(bg);   // in the window it was asked for from
   nameIn.focus(); nameIn.select();
 }
 // A fade time on a button (a scene's, a playlist step's): drag it sideways to change it (Shift = ×10), click it to type
@@ -181,14 +241,17 @@ function sceneTile(z, sc, i, keys, look) {
   });
   return tile;
 }
-function renderScenes(body) {
+function renderScenes(body, inWindow = false) {
   const fadeIn = numInput(project.settings, 'fade', { min: 0, max: 60, step: 0.1, aria: 'Fade time for new scenes', onCommit: commit });
-  fadeIn.style.width = '56px';
-  const bar = h('div', { class: 'bar' },
-    h('label', { class: 'checkrow', title: 'Fade time given to scenes you store from now on' }, 'New scenes fade in', fadeIn, 's'),
-    h('span', { class: 'fill' }),
-    h('span', { class: 'muted' }, 'Click: fade · Shift-click: cut · Drag a fade time to change it · Keys 1–9: scenes of the selected zone · Upper zones cover lower ones'));
-  const rows = h('div', { class: 'zonerows' });
+  Object.assign(fadeIn.style, { width: '52px', height: '22px' });
+  // one line: the fade for new scenes, the hints (cut to fit; all of them on hover), and the window button
+  const hint = 'Click: fade · Shift-click: cut · Drag a fade time to change it · Keys 1–9: scenes of the selected zone · Upper zones cover lower ones';
+  const bar = h('div', { class: 'bar sbar' },
+    h('label', { class: 'sfade', title: 'Fade time given to scenes you store from now on' }, 'New scenes fade', fadeIn, 's'),
+    h('span', { class: 'shint', title: hint }, hint),
+    inWindow ? h('button', { class: 'btn sm icon', type: 'button', html: ICONS.panel, title: 'Back to the panel: close this window, the scenes go back to the bottom panel', 'aria-label': 'Back to the panel', onclick: closeScenesWindow })
+      : h('button', { class: 'btn sm icon', type: 'button', html: ICONS.popout, title: 'Open in a window: the scenes and playlists in a window of their own, to put on another screen', 'aria-label': 'Open in a window', onclick: openScenesWindow }));
+  const rows = h('div', { class: 'zonerows', 'data-keep': 'zonerows' });
   const sel = selZone();
   for (const z of project.zones.slice().reverse()) {
     const look = lookOf(z.layers);
@@ -207,7 +270,9 @@ function renderScenes(body) {
       h('div', { class: 'zt' }, zoneTag(z), h('span', { class: 'nm' }, z.name), h('span', { class: 'mono muted', 'data-zone-pct': z.id }, pct(z.opacity)), lists),
       h('div', { class: 'zc' }, zoneOpacityInput(z, 80),
         h('button', { class: 'btn sm', type: 'button', title: `Store ${z.name}'s current layers as a new scene`, onclick: e => { e.stopPropagation(); storeScene(z); } }, '+ Store')));
-    const r = h('div', { class: 'scenerow' + (z === sel ? ' sel' : '') }, head);
+    // the zone's head stays put; its scenes scroll sideways beside it
+    const tiles = h('div', { class: 'stiles' });
+    const r = h('div', { class: 'scenerow' + (z === sel ? ' sel' : '') }, head, hscroller(tiles, 'scenes:' + z.id));
     head.title += '\nDrag it to change the order of the zones.';
     reorderable(head, r, 'zone', () => [z.id], ([id], after) => moveZoneTo(id, z, after));
     onRightClick(head, e => zoneMenu(e, z));
@@ -220,15 +285,15 @@ function renderScenes(body) {
     });
     r.addEventListener('dragleave', e => { if (!r.contains(e.relatedTarget)) r.classList.remove('drop-in'); });
     r.addEventListener('drop', e => { r.classList.remove('drop-in'); const d = e.dataTransfer.getData(dragType('scene')); if (!d || e.defaultPrevented) return; e.preventDefault(); moveScene(d, z); });
-    z.scenes.forEach((sc, i) => r.append(sceneTile(z, sc, i, z === sel, look)));
-    if (!z.scenes.length) r.append(h('span', { class: 'rowhint' }, `No scenes yet. Set up ${z.name}'s layers in the Content tab, then + Store.`));
+    z.scenes.forEach((sc, i) => tiles.append(sceneTile(z, sc, i, z === sel, look)));
+    if (!z.scenes.length) tiles.append(h('span', { class: 'rowhint' }, `No scenes yet. Set up ${z.name}'s layers in the Content tab, then + Store.`));
     rows.append(h('div', { class: 'zoneblock' + (z === sel ? ' sel' : ''), 'data-zone': z.id }, r, playlistArea(z)));
   }
   if (!project.zones.length) rows.append(h('div', { class: 'empty' }, 'No zones. Add one in the Content tab, or draw one with the Zone tool (Z).'));
   body.append(h('div', { class: 'scenepanel' }, bar, rows));
 }
 function drawSceneProgress() {
-  for (const el of $$('#dockBody .scene')) {
+  for (const el of scenesRoots().flatMap(r => $$('.scene', r))) {
     const z = zoneById(el.dataset.zone), f = z && z._fade;
     const w = f && f.scene === el.dataset.id ? (clamp((clockT - f.start) / f.dur, 0, 1) * 100).toFixed(1) + '%' : '0px';
     if (el.lastChild.style.width !== w) el.lastChild.style.width = w;

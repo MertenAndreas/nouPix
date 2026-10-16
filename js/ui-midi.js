@@ -28,8 +28,8 @@ function midiControlOf(w) {
 }
 function markMidi() {
   if (!project) return;
-  const maps = project.midi.maps, L = midi.learn, D = midiDoc();
-  for (const el of $$('[data-midi]').concat(D ? $$('[data-midi]', D) : [])) {
+  const maps = project.midi.maps, L = midi.learn, D = midiDoc(), S = scenesDoc();
+  for (const el of $$('[data-midi]').concat(D ? $$('[data-midi]', D) : [], S ? $$('[data-midi]', S) : [])) {
     const t = el.dataset.midi, ws = maps.filter(w => w.to === t);
     el.classList.toggle('midi-mapped', !!ws.length);
     el.classList.toggle('midi-pick', L.on && L.target === t);
@@ -57,12 +57,7 @@ function openMidiWindow() {
   const w = window.open('', 'olm-midi', 'popup,width=1180,height=760');
   if (!w) { toast('The MIDI window could not open: allow pop-up windows for this page.', 'err'); return; }
   midiWin = w;
-  const d = w.document;
-  // the same fonts and styles as this page
-  d.head.replaceChildren(...$$('head link[rel=stylesheet], head link[rel=preconnect], head link[rel=icon]').map(l => { const c = d.createElement('link'); c.rel = l.rel; c.href = l.href; return c; }));
-  d.title = 'MIDI · openLedMapper';
-  d.body.className = 'midiwin';
-  d.body.replaceChildren();
+  const d = dressWindow(w, 'MIDI · openLedMapper', 'midiwin');
   w.addEventListener('keydown', e => {
     if (e.key === 'Escape' && midi.learn.on) midiSetLearn(false);
     // the patch bay: Delete removes the wire picked, Esc lets it go
@@ -112,8 +107,7 @@ function midiHint() {
 function midiRedraw() {
   if (!project || REMOTE_CLIENT) return;
   const b = $('#btnMidi'), open = midiWinOpen(), L = midi.learn;
-  document.body.classList.toggle('midi-open', open);
-  document.body.classList.toggle('midi-learning', L.on);
+  for (const d of [document, scenesDoc()]) if (d) { d.body.classList.toggle('midi-open', open); d.body.classList.toggle('midi-learning', L.on); }
   b.classList.toggle('on', midi.status === 'ok'); b.classList.toggle('learning', L.on); b.classList.toggle('warn', midi.status === 'blocked');
   b.setAttribute('aria-pressed', String(open));
   const n = midi.ports.filter(p => p.state !== 'disconnected').length, m = project.midi.maps.length;
@@ -158,7 +152,7 @@ function renderMidiWindow(D) {
   } else if (ui.midiView === 'bay') body = bayView();
   else body = h('div', { class: 'midipanel' + (ui.midiMon ? '' : ' monshut') }, midiPorts(), midiMaps(), midiMonitor());
   const scrolled = $$('.bcol', D).map(c => [c.classList[1], c.scrollTop]);   // the bay's columns keep where they were
-  D.body.replaceChildren(head, body, ui.midiOn ? midiVc() : '');
+  D.body.replaceChildren(head, body, ui.midiOn ? midiVc() : '', h('div', { class: 'toasts', id: 'toasts' }));
   for (const [k, top] of scrolled) { const c = $('.bcol.' + k, D); if (c) c.scrollTop = top; }
   midiTabUpdate(D);
   if (ui.midiView === 'bay') midiWin.requestAnimationFrame(() => bayWires());   // once it is laid out
@@ -198,6 +192,7 @@ function midiTargetSelect(w, pick = to => midiSetMap(w.id, { to })) {
     h('optgroup', { label: 'Macros' }, MACROS.map(d => d.kind === 'color'
       ? MACRO_PARTS[project.macros[d.id].mode].map(([, name], i) => opt(`m:${d.id}.${i}`, `${d.label} · ${name}`))
       : opt('m:' + d.id, d.label))),
+    project.groups.length ? h('optgroup', { label: 'Groups' }, project.groups.map(g => opt('gr:' + g.id, groupName(g) + ' dimmer'))) : null,
     project.zones.slice().reverse().map(z => h('optgroup', { label: z.name },
       opt('z:' + z.id, z.name + ' level'),
       z.scenes.map(sc => opt(`sc:${z.id}:${sc.id}`, `${z.name} · ${sc.name}`)),

@@ -115,8 +115,17 @@ function deleteZone(z) {
 function setZoneOpacity(z, v, from) {
   z.opacity = v;
   if (REMOTE_CLIENT && from) remoteOp({ op: 'opacity', zone: z.id, value: v });   // live on the main computer while it moves
-  for (const el of $$(`[data-zone-op="${z.id}"]`)) if (el !== from) el.value = v;
-  for (const el of $$(`[data-zone-pct="${z.id}"]`)) el.textContent = pct(v);
+  for (const d of [document, scenesDoc()]) if (d) {   // here and in the Scenes window
+    for (const el of $$(`[data-zone-op="${z.id}"]`, d)) if (el !== from) el.value = v;
+    for (const el of $$(`[data-zone-pct="${z.id}"]`, d)) el.textContent = pct(v);
+  }
+}
+// A group's dimmer, from its slider or a MIDI control; every slider showing it follows
+function setGroupLevel(g, v, from) {
+  v = clamp(v, 0, 1);
+  if (v < 1) g.level = v; else delete g.level;
+  for (const el of $$(`[data-group-lv="${g.id}"]`)) if (el !== from) el.value = v;
+  for (const el of $$(`[data-group-pct="${g.id}"]`)) { el.textContent = pct(v); if (el.classList.contains('gdim')) el.hidden = v >= 1; }
 }
 function fixturesInZone(z) {
   const out = [];

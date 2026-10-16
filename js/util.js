@@ -51,9 +51,17 @@ function carryOverStorage() {
     } catch (e) { /* storage off */ }
   }
 }
+// An element of this page or of a window it draws into (where `instanceof Element` is false: another window's)
+const isEl = x => !!x && x.nodeType === 1;
+// The window the user is working in: this page, or a window it draws into (the MIDI or the Scenes window), so
+// messages, menus and dialogs show where they are looking
+let uiDoc = document;
+function watchDoc(d) { for (const t of ['pointerdown', 'keydown', 'focusin']) d.addEventListener(t, () => { uiDoc = d; }, true); }
+const uiDocNow = () => (uiDoc !== document && uiDoc.defaultView && !uiDoc.defaultView.closed ? uiDoc : document);
+watchDoc(document);
 function toast(msg, kind = '') {
   const t = h('div', { class: 'toast ' + kind, role: 'status' }, msg);
-  $('#toasts').append(t);
+  ($('#toasts', uiDocNow()) || $('#toasts')).append(t);
   setTimeout(() => t.remove(), kind === 'err' ? 6000 : 3200);
 }
 function debounce(fn, ms) { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; }
@@ -106,6 +114,7 @@ const ICONS = {
   groupAdd: '<svg viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 011-1h3.2l1.5 1.5h5.8a1 1 0 011 1v6.5a1 1 0 01-1 1H2.75a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M8 7.2v4M6 9.2h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   ungroup: '<svg viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 011-1h3.2l1.5 1.5h5.8a1 1 0 011 1v6.5a1 1 0 01-1 1H2.75a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round" stroke-dasharray="2.2 1.6"/><path d="M6 9.2h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   panel: '<svg viewBox="0 0 16 16"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10 3v10" stroke="currentColor" stroke-width="1.3"/><rect x="10.6" y="3.4" width="3" height="9.2" fill="currentColor" opacity=".45"/></svg>',
+  popout: '<svg viewBox="0 0 16 16"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.5 2H14v4.5M14 2L7.5 8.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   chev: '<svg viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 const icon = name => svgEl(ICONS[name]);

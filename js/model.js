@@ -93,6 +93,8 @@ function normalizeGroups(p = project) {
   p.groups = p.groups.filter(g => placed.has(g.id));   // a group with no fixtures left is gone
 }
 const groupName = g => g.name.trim() || 'Group';
+// A group's dimmer, 0 to 1, over its fixtures' own (the file has it only when it is down)
+const groupLevel = g => (g && g.level != null ? g.level : 1);
 function nextGroupName() { let n = 1; while (project.groups.some(g => g.name === 'Group ' + n)) n++; return 'Group ' + n; }
 // Selected groups whose fixtures are all selected count as one unit; the other selected fixtures one each
 function selUnits(sel = selected()) {

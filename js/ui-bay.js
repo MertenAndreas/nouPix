@@ -14,9 +14,10 @@ function bayToggle(key) {
   if (s.has(key)) s.delete(key); else s.add(key);
   ui.bayOpen = [...s]; savePrefs(); updateMidiUI();
 }
-// The controls in the bay: the mapped ones and the ones moved since MIDI came on, in the user's order (midiKeyOrder)
+// The controls in the bay, as in the list: the mapped ones, and while learning the one just moved; in the user's
+// order (midiKeyOrder)
 function bayKeys() {
-  const keys = project.midi.maps.map(w => w.key).concat([...midi.controls.keys()]);
+  const keys = project.midi.maps.map(w => w.key);
   if (midi.learn.on && midi.learn.pending) keys.push(midi.learn.pending);
   return midiKeyOrder(keys);
 }
@@ -68,34 +69,40 @@ function bayControls() {
         h('span', { class: 'cval' }, h('i', { class: 'cbar', 'data-cbar': key })), bayDot('out', key));
       bayDrag(row, key);
       return row;
-    }) : h('p', { class: 'note' }, 'Move a fader, knob or pad on your controller: it shows here. Then press Learn and click what it should move, or use the list view.'));
+    }) : h('p', { class: 'note' }, 'Press Learn and move a fader, knob or pad on your controller: it shows here. Then click what it should move.'));
 }
-// Dragging a control up or down puts it in another place (in the list view too); a line shows where it goes
+// Dragging a control up or down puts it in another place (in the list view too): it follows the pointer, the others
+// slide out of its way, and let go, it glides into its place. Its wires follow it.
+let bayDragging = false;
 function bayDrag(row, key) {
   row.addEventListener('pointerdown', e => {
     if (e.button !== 0 || e.target.closest('button') || midi.learn.on) return;
-    const col = row.closest('.bcol'), y0 = e.clientY;
-    let moved = false, to = null;
+    const doc = row.ownerDocument, rows = $$('.bctl', row.closest('.bcol')), from = rows.indexOf(row), y0 = e.clientY;
+    const tops = rows.map(r => r.getBoundingClientRect().top), step = rows.length > 1 ? tops[1] - tops[0] : 0;
+    let moved = false, to = from;
     const move = ev => {
-      if (!moved && Math.abs(ev.clientY - y0) < 5) return;
-      moved = true; row.classList.add('dragging');
-      to = null;
-      for (const r of $$('.bctl', col)) {
-        r.classList.remove('dropbefore', 'dropafter');
-        const b = r.getBoundingClientRect();
-        if (ev.clientY >= b.top && ev.clientY < b.bottom && r !== row) { to = { key: r.dataset.key, after: ev.clientY > b.top + b.height / 2 }; r.classList.add(to.after ? 'dropafter' : 'dropbefore'); }
-      }
+      if (!moved && Math.abs(ev.clientY - y0) < 4) return;
+      if (!moved) { moved = bayDragging = true; row.classList.add('dragging'); }
+      const dy = clamp(ev.clientY - y0, tops[0] - tops[from], tops[rows.length - 1] - tops[from]);
+      row.style.transform = `translateY(${dy}px)`;
+      to = step ? clamp(from + Math.round(dy / step), 0, rows.length - 1) : from;
+      rows.forEach((r, i) => { if (r !== row) r.style.transform = from < to && i > from && i <= to ? `translateY(${-step}px)` : to < from && i >= to && i < from ? `translateY(${step}px)` : ''; });
+      bayWires();
     };
     const up = () => {
-      row.ownerDocument.removeEventListener('pointermove', move); row.ownerDocument.removeEventListener('pointerup', up);
-      row.classList.remove('dragging');
-      for (const r of $$('.bctl', col)) r.classList.remove('dropbefore', 'dropafter');
-      if (!moved || !to) return;
-      const keys = bayKeys().filter(k => k !== key), i = keys.indexOf(to.key) + (to.after ? 1 : 0);
-      keys.splice(i, 0, key);
-      midiSetOrder(keys);
+      doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', up);
+      if (!moved) return;
+      // into its place, then the new order
+      row.classList.add('settling'); row.style.transform = `translateY(${(to - from) * step}px)`;
+      setTimeout(() => {
+        bayDragging = false;
+        if (to === from) { rows.forEach(r => { r.style.transform = ''; r.classList.remove('dragging', 'settling'); }); bayWires(); return; }
+        const keys = rows.map(r => r.dataset.key).filter(k => k !== key);
+        keys.splice(to, 0, key);
+        midiSetOrder(keys.concat(bayKeys().filter(k => !keys.includes(k))));
+      }, 140);
     };
-    row.ownerDocument.addEventListener('pointermove', move); row.ownerDocument.addEventListener('pointerup', up);
+    doc.addEventListener('pointermove', move); doc.addEventListener('pointerup', up);
   });
 }
 function bayTargets() {
@@ -174,9 +181,10 @@ function bayWires() {
     if (!ao || !end) continue;
     const a = bayXY(ao, box), b = bayXY(end.el, box);
     if (a.edge && b.edge) continue;
-    const sel = bay.sel === w.id, lit = sel || bay.hover === w.key || bay.hover === w.to, hot = performance.now() - (w._hit || 0) < 250;
-    const d = bayCurve(a, b), cls = ['wire', sel && 'sel', lit && 'lit', hot && 'hot', end.folded && 'folded', (a.edge || b.edge) && 'edge', w.to.startsWith('p:') && 'fx'].filter(Boolean).join(' ');
-    paths.push(`<path class="hit" data-wire="${w.id}" d="${d}"/><path class="${cls}" d="${d}"/>`);
+    const sel = bay.sel === w.id, lit = sel || bay.hover === w.key || bay.hover === w.to, heat = midiHeat(w);
+    const d = bayCurve(a, b), cls = ['wire', sel && 'sel', lit && 'lit', end.folded && 'folded', (a.edge || b.edge) && 'edge', w.to.startsWith('p:') && 'fx'].filter(Boolean).join(' ');
+    // while its control moves it glows, and fades out once it stops (no blinking when several move at once)
+    paths.push(`<path class="hit" data-wire="${w.id}" d="${d}"/>${heat ? `<path class="glow" d="${d}" style="opacity:${heat.toFixed(2)}"/>` : ''}<path class="${cls}" d="${d}"/>`);
     if (sel) mid = { x: a.x, y: a.y };   // its settings open under the control, clear of what it drives
   }
   svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
@@ -209,6 +217,7 @@ function bayPop(D, mid, box) {
 }
 // With each message: where each control is, each slider and button, and the wires (a hot one shows the control moving)
 function bayUpdate(D) {
+  if (bayDragging) return;
   for (const b of $$('.bay [data-cbar]', D)) { const c = midi.controls.get(b.dataset.cbar); b.style.width = c ? c.last * 100 + '%' : '0'; }
   for (const r of $$('.bay [data-bv]', D)) { const T = midiTarget(r.dataset.bv); if (T && D.activeElement !== r) r.value = T.get(); }
   for (const b of $$('.bay [data-bb]', D)) { const T = midiTarget(b.dataset.bb); if (T && T.kind === 'toggle') { b.textContent = T.get() > 0.5 ? 'On' : 'Off'; b.classList.toggle('on', T.get() > 0.5); } }

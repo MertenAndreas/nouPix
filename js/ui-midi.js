@@ -126,7 +126,7 @@ function midiRedraw() {
   if (!D) return;
   D.body.classList.toggle('midi-open', true);
   D.body.classList.toggle('midi-learning', L.on);
-  if ((midiTabSig() !== midiSig || !$('.midipanel, .bay', D)) && !vcHeld) renderMidiWindow(D);
+  if ((midiTabSig() !== midiSig || !$('.midipanel, .bay', D)) && !vcHeld && !bayDragging) renderMidiWindow(D);
   else midiTabUpdate(D);
   markMidi();   // again, for what the MIDI window has just drawn
 }
@@ -237,6 +237,14 @@ function midiMonitor() {
       h('span', { class: 'fill' }), open ? h('button', { class: 'btn sm ghost', type: 'button', onclick: () => { midi.log = []; midiLogShown = null; updateMidiUI(); } }, 'Clear') : null),
     open ? h('div', { class: 'mmon', id: 'midiMon' }) : null);
 }
+// How lit a mapping is: 1 while its control moves, fading to 0 over half a second after it stops. While any is still
+// fading, the MIDI window is brought up to date again, so it fades smoothly.
+let midiFadeT = 0;
+function midiHeat(w) {
+  const age = performance.now() - (w._hit || -1e9), heat = age < 120 ? 1 : Math.max(0, 1 - (age - 120) / 500);
+  if (heat > 0 && !midiFadeT) midiFadeT = setTimeout(() => { midiFadeT = 0; updateMidiUI(); }, 40);
+  return heat;
+}
 // What changes with each message: the bars of the mapped controls, the controllers' lights, the monitor
 function midiTabUpdate(D) {
   for (const b of macroBinders) b();
@@ -244,7 +252,7 @@ function midiTabUpdate(D) {
   for (const el of $$('.mmap', D)) {
     const w = project.midi.maps.find(x => x.id === el.dataset.map), c = w && midiControlOf(w), bar = el.querySelector('.cbar');
     if (bar) bar.style.width = c ? c.last * 100 + '%' : '0';
-    el.classList.toggle('hit', !!(w && w._hit && performance.now() - w._hit < 200));
+    el.style.setProperty('--heat', w ? midiHeat(w).toFixed(2) : 0);
   }
   for (const t of $$('.vtrack', D)) {
     const v = vcVals.get(+t.dataset.cc), x = v / 127;

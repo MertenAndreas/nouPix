@@ -24,17 +24,17 @@ order by `<script src>` tags at the end of `index.html`:
 | `builtins.js` | The 32 built-in effects, as ISF code and categories (data) | `BUILTINS` |
 | `util.js` | Helpers used everywhere: elements, numbers and text, local storage, toasts, error reports, icons | `$` `$$` `h` `clamp` `wrap180` `wrap360` `pct` `fmtN` `store` `toast` `debounce` `report` `replacer` `MOD` |
 | `model.js` | The project and its parts: constants (`CURVES`, `CURVE_STRENGTH`), defaults, the `project` and `ui` state, factories, groups, selection, look-ups by id | `project` `ui` `blankProject` `newFixture` `fxBits` `fxCurve` `curveParam` `newZone` `newLayer` `newPlaylist` `newStep` `newController` `selected` `selUnits` `fxById` `markGeom` `markPatch` |
-| `macros.js` | Macros: their list (`MACROS`: Speed, Intensity, Saturation, Color 1 and 2, the shared controls), defaults and repair, which control of an effect follows which (by name), a value with its macro on it, colour parts | `MACROS` `macroDef` `defaultMacros` `fixMacros` `macroRoles` `macroActive` `macroOver` `macroPart` `macroPartPatch` |
+| `macros.js` | Macros: their list (`MACROS`: Speed, Intensity, Saturation, Color 1 and 2, the shared controls), defaults and repair, which control of an effect follows which (by name, or as chosen for that effect in `project.macroLinks`), a value with its macro on it, colour parts | `MACROS` `macroDef` `defaultMacros` `fixMacros` `macroRoles` `macroChoices` `macroRolesOf` `fixMacroLinks` `macroActive` `macroOver` `macroPart` `macroPartPatch` |
 | `geometry.js` | Mapping math: each fixture's pixel positions, lengths, bounds, distances; moving, turning, scaling a fixture and the frame around several | `computePoints` `rebuildGeometry` `computeBB` `rotateFixture` `scaleFixture` `frameOf` `snap45` |
 | `patch.js` | Addressing: universe and channels of every pixel on its controller output (`BPP`: channels per pixel, doubled on 16-bit fixtures), conflicts | `computePatch` `ensurePatch` `universes` `addrOf` `BPP` `assign` `unassign` |
-| `sources.js` | Content sources: WebGL canvas, ISF runtimes (compiled when first played or drawn as a thumbnail; `headerOf` reads a header without compiling), parameters and speeds, images and videos (trim, loop, sound), the media format check, source thumbnails | `runtimeOf` `headerOf` `renderSource` `applyParams` `probeMedia` `attachMedia` `syncMedia` `videoTick` |
+| `sources.js` | Content sources: WebGL canvas, ISF runtimes (compiled when first played or drawn as a thumbnail; `headerOf` reads a header without compiling, `controlsOf` an effect's controls from it), parameters and speeds, images and videos (trim, loop, sound), the media format check, source thumbnails | `runtimeOf` `headerOf` `controlsOf` `isSpeedInput` `renderSource` `applyParams` `probeMedia` `attachMedia` `syncMedia` `videoTick` |
 | `render.js` | The GPU mixer (zones, layers, blend modes), looks and fades, recalling a scene, sampling the composition at every pixel, highlight and test patterns | `mixer` `renderContent` `loadSource` `startFade` `recallScene` `sampleMix` `testPattern` `setHighlight` |
 | `output.js` | Gamma, sampled colours to DMX channels (8-bit; 16-bit through `output16`: dimming curves shaped by gamma or strength, coarse then fine), the outgoing frame, the clock, the bridge connection | `buildOutput` `output16` `curveValue` `layoutFrame` `sendFrame` `tick` `startClock` `connectBridge` `bridge` |
 | `project-io.js` | Project files: repairing what is opened, undo history, autosave, open/save, CSV, SVG import, the demo | `hydrate` `serialize` `commit` `commitSoft` `undo` `redo` `loadProject` `importSvg` `demoProject` |
 | `remote.js` | Remote control: the host side (configure the bridge, send the project and the phones' state, apply devices' changes by role) and the client side (this page opened on a device at `/app`) | `remote` `REMOTE_CLIENT` `mappingLocked` `remoteChanged` `remoteFromDevice` `contentOf` `connectRemote` `remoteOp` |
 | `playlists.js` | Playlists: a zone plays some of its scenes in turn on the frame clock; which fade a step uses; play, pause, next, the end; the state devices see | `playlistTick` `playPlaylist` `togglePlaylist` `pausePlaylist` `resumePlaylist` `stepPlaylist` `playlistManual` `stepFade` `playingList` `playElapsed` `playState` |
-| `midi.js` | MIDI in: Web MIDI and its ports, messages, the mappings' targets (master, blackout, zone level, scene, next scene, playlist), pickup and jump, toggle and hold, learn | `midi` `startMidi` `setMidiOn` `midiMessage` `midiIn` `midiTarget` `midiApply` `midiSetLearn` `midiLearnTarget` `midiConnect` `midiSetMap` `midiDisconnect` |
-| `actions.js` | What the user can do, whichever button, key or menu asks: fixtures, selection, align/turn/resize, copy and paste, zones, layers, scenes, playlists, controllers, adding sources from files | `addFixture` `deleteSel` `duplicateSel` `groupSel` `alignSel` `rotateSel` `pasteFixtures` `addZone` `addLayer` `goScene` `storeScene` `playlistDo` `addPlaylist` `addToPlaylist` `moveStep` `deleteController` |
+| `midi.js` | MIDI in: Web MIDI and its ports, messages, the mappings' targets (master, blackout, zone level, scene, next scene, playlist, macro, a control of an effect), pickup and jump, toggle and hold (Follow for a fader, the default when one is learnt onto something on or off), learn | `midi` `startMidi` `setMidiOn` `midiMessage` `midiIn` `midiTarget` `effectTarget` `midiApply` `midiSetLearn` `midiLearnTarget` `midiConnect` `midiSetMap` `midiDisconnect` |
+| `actions.js` | What the user can do, whichever button, key or menu asks: fixtures, selection, align/turn/resize, copy and paste, zones, layers, scenes, playlists, controllers, macros and what an effect follows, an effect's control set everywhere it plays, adding sources from files | `addFixture` `deleteSel` `duplicateSel` `groupSel` `alignSel` `rotateSel` `pasteFixtures` `addZone` `addLayer` `goScene` `storeScene` `playlistDo` `addPlaylist` `addToPlaylist` `moveStep` `deleteController` `setMacro` `setMacroLink` `setEffectControl` |
 | `ui-forms.js` | Building blocks for the panels: rows, inputs, sliders (a value typed on double-click, Shift + scroll in notches), segmented buttons, lists that reorder by dragging and their move animation | `row` `numRow` `sliderRow` `shiftWheel` `notchFrom` `seg` `checkRow` `reorderable` `flipRows` |
 | `ui-color.js` | The colour picker for shader colour controls: wheel and intensity, RGB, HSV, hex, lighting presets, recent colours | `colorRow` `openColorPicker` `hsvToRgb` `rgbToHsv` |
 | `ui-stage.js` | The stage canvas: view and zoom, drawing, zones on the stage, hit testing, handles, tools, pointer, pixel finder, guide image | `drawView` `fitView` `setTool` `hitFixture` `dragHandle` `endDrag` `defaultFixtureAt` |
@@ -44,7 +44,7 @@ order by `<script src>` tags at the end of `index.html`:
 | `ui-playlists.js` | The playlists in the Scenes panel: tabs folded to one line or open, steps (with their own fades, moved by dragging or Alt ← →), step editor, + Add, the New playlist window (order with ↑ ↓, a fade per step), the playlist menu | `playlistArea` `newPlaylistDialog` `playlistMenu` `shiftStep` `drawPlaylistProgress` |
 | `ui-menus.js` | The menu system and every menu, the SVG import dialog, copy/cut/paste keys | `menu` `fixtureMenu` `canvasMenu` `projectMenu` … |
 | `ui-remote.js` | Remote control in the interface: the top-bar button and menu, the Settings section, the waiting screen on devices, `lockPanel` for operators | `updateRemoteUI` `remoteMenu` `remoteSection` `remoteOverlay` `lockPanel` |
-| `ui-macros.js` | The Macros section at the top of the Content tab (folding, colour parts in HSV or RGB, the shared controls), the "Follows Speed" note under an effect's control | `macrosSection` `macroFollows` `updateMacrosUI` |
+| `ui-macros.js` | The Macros section at the top of the Content tab (folding, colour parts in HSV or RGB, the shared controls), the "Follows Speed" note under an effect's control, "Macros it follows" in an effect's Parameters (what each control follows, for that effect), the Content tab's values refreshed once a frame | `macrosSection` `macroFollows` `macroLinksFold` `syncContentSoon` `updateMacrosUI` |
 | `ui-midi.js` | MIDI in the interface: the top-bar button, the MIDI window (a popup this page draws into: Learn, controllers, mappings, monitor, the virtual controller: on-screen faders and pads sent through `midiIn` as port `MIDI_VIRTUAL`), the learn bar, learning by touching anything marked `data-midi`, the yellow line and tags on what a control drives | `updateMidiUI` `openMidiWindow` `renderMidiWindow` `midiSlot` `midiButton` `markMidi` `initMidiUI` |
 | `app.js` | Top bar and status bar, wiring buttons and keys, the frame loop, `boot()`, and `window.olm` | `initUI` `onKey` `renderAll` `boot` |
 
@@ -68,7 +68,7 @@ order by `<script src>` tags at the end of `index.html`:
   `onPatchChanged`, `renderFxList`, `renderSrcList`, `refreshScenes`, `updateUndoButtons`, `updateBridgeUI`,
   `updateHighlightUI`, `showVersion`, `keepAwake`, `loadGuide`, and for remote control `updateRemoteUI`,
   `remoteOverlay`, `redrawStage`, for MIDI `updateMidiUI`, and for the macros `updateMacrosUI`. Keep it to that list. (`remote.js` and `midi.js` also call
-  the actions they carry out for devices and controllers: `goScene`, `setZoneOpacity`, `toggleBlackout`, `playlistDo`, `setMacro`.) `refreshScenes` waits while something in the
+  the actions they carry out for devices and controllers: `goScene`, `setZoneOpacity`, `toggleBlackout`, `playlistDo`, `setMacro`, `setEffectControl`.) `refreshScenes` waits while something in the
   Scenes panel is dragged or typed in, so a playlist moving on doesn't break the user's drag.
 - **Not strict mode.** The scripts run without `'use strict'`, as the app always has. Don't add the directive to a
   file without testing everything: it changes what some code does.
@@ -99,7 +99,13 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
 - Macros live in `project.macros` (`fixMacros` keeps every one, in range). They are live controls, like the master:
   `setMacro` saves them soon and tells the devices (in `remoteLive`), it is not a step of undo, and `restore` keeps the
   current ones (an undo, or a device's copy, doesn't move them). They apply as each layer draws and never change the
-  layers' own values; an effect's control follows a macro by its name (`macroRoles`, kept as `rt.roles`).
+  layers' own values; an effect's control follows a macro by its name (`macroRoles`, kept as `rt.roles`), or as chosen
+  for that effect: `project.macroLinks[source][control]` is a macro's id or `''` for none (only what differs from the
+  name is kept; part of the project and of undo; an operator's copy keeps the main window's). `macroRolesOf` merges
+  the two, worked out again when that effect's object of choices is a new one (so `setMacroLink` replaces it).
+- A MIDI mapping can drive a control of an effect (`p:<source>:<control>`, `effectTarget`): `setEffectControl` sets it
+  in every layer that plays that effect now (a step of undo, like a zone level); scenes keep their own values. The
+  Content tab's controls read the layer's value on each sync, so they follow.
 - Files: `{ format: 'openledmapper-project', version: 3, … }`. `hydrate` (project-io.js) repairs anything opened
   (older versions, Weft files, hand edits) so the rest of the code can trust the project. A new field gets its
   default there.
@@ -175,6 +181,9 @@ simulated in the page (Web MIDI replaced): turning it on, the MIDI window, ports
 hold, scenes, next scene, playlists, ignored ports, another port name, saving, undo, missing targets, the line and tags,
 the virtual controller. `test_macros.py` checks the macros: what follows what, Speed through the clocks, Intensity,
 Saturation, the colours, the shared controls, scenes and thumbnails, files and undo, the Macros section, MIDI onto a
-macro and a colour's part, devices. `test_playlist.py` checks playlists
+macro and a colour's part, devices. `test_links.py` checks what an effect follows as chosen (engine, files, undo, the
+fold, the operator's lock), MIDI onto an effect's controls (learn, pickup and jump, every layer, scenes, speed, lists,
+ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. The simulated Web MIDI
+is `FAKE_MIDI` in `harness.py`. `test_playlist.py` checks playlists
 (files, the panel folding and opening, timing and fades, the end, pause and resume, undo, editing while playing, the
 fade on a scene's button, play on open, the phone).

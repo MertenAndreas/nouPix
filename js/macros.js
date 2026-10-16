@@ -5,8 +5,8 @@
 // Width, Density, Fade): switched on, each sets that control of every effect to the same point of its own range.
 // They apply as each layer is drawn (applyParams in sources.js, renderLook in render.js), over the layers' own values,
 // which they never change: scenes keep working, and a macro switched off gives each effect its own value back. An
-// effect's control follows a macro by its name. They live in project.macros; like the master, they are live
-// controls, not steps of undo. Uses util.
+// effect's control follows a macro by its name, or as the user chose for that effect (project.macroLinks). The macros
+// live in project.macros; like the master, they are live controls, not steps of undo. Uses util.
 
 // kind: 'mult' multiplies (Speed, 1× in the middle), 'scale' scales (100 % leaves things as they are), 'color' sets a
 // colour when on, 'abs' sets a control to the same point of its range when on
@@ -97,6 +97,40 @@ function macroRoles(rt) {
     if (id) roles[inp.NAME] = id;
   }
   return roles;
+}
+// Which macros a control of an effect can follow: a colour, Color 1 or Color 2; its speed (or the rate a clock runs
+// at), Speed; another number, Saturation or one of the shared controls
+function macroChoices(rt, inp) {
+  if (inp.TYPE === 'color') return ['color1', 'color2'];
+  if (inp.TYPE !== 'float' && inp.TYPE !== 'int') return [];
+  if (rt.roles && rt.roles[inp.NAME] === 'speed') return ['speed'];
+  return MACROS.filter(d => d.kind === 'abs' || d.id === 'saturation').map(d => d.id);
+}
+// The macro each control of an effect follows: by its name (macroRoles), or as the user chose for that effect
+// (project.macroLinks[source]: a macro's id, or '' for none). Worked out again when that choice is a new object.
+function macroRolesOf(src, rt) {
+  const o = project.macroLinks[src.id];
+  if (rt.eff && rt.effFor === o) return rt.eff;
+  const out = Object.assign({}, rt.roles);
+  if (isObj(o)) for (const inp of rt.hdr.INPUTS || []) {
+    const id = o[inp.NAME];
+    if (id === '') delete out[inp.NAME];
+    else if (typeof id === 'string' && macroChoices(rt, inp).includes(id)) out[inp.NAME] = id;
+  }
+  rt.eff = out; rt.effFor = o;
+  return out;
+}
+// The links of a file: for each effect there, its controls' choices ('' for none, or a macro an effect can follow)
+function fixMacroLinks(l, known) {
+  const out = {}, ok = new Set(MACROS.filter(d => d.id !== 'intensity').map(d => d.id).concat(''));
+  if (!isObj(l)) return out;
+  for (const [src, o] of Object.entries(l)) {
+    if (!known.has(src) || !isObj(o)) continue;
+    const c = {};
+    for (const [name, id] of Object.entries(o)) if (typeof id === 'string' && ok.has(id) && name.length < 100) c[name] = id;
+    if (Object.keys(c).length) out[src] = c;
+  }
+  return out;
 }
 // Whether a macro changes anything now: a colour or a shared control when on, the others away from their neutral value
 function macroActive(id) {

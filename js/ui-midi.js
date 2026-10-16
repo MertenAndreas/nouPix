@@ -124,7 +124,9 @@ function midiRedraw() {
 const midiTabSig = () => JSON.stringify([ui.midiOn, midi.status, midi.ports, ui.midiOff, ui.midiMon, ui.midiVc, midi.learn,
   project.midi.maps.map(w => [w.id, w.key, w.to, w.takeover, w.mode, midiTargetLabel(w.to)]),
   project.zones.map(z => [z.id, z.name, z.scenes.map(s => [s.id, s.name]), z.playlists.map(p => [p.id, p.name])]),
-  project.macros.color1.mode, project.macros.color2.mode]);
+  project.macros.color1.mode, project.macros.color2.mode, midiEffects()]);
+// The effects in the project: in a zone's layers or in its scenes (so a playlist moving on doesn't change the list)
+const midiEffects = () => [...new Set(project.zones.flatMap(z => z.layers.concat(...z.scenes.map(sc => sc.layers)).map(L => L.src)))].filter(id => { const s = id && srcById(id); return s && s.kind === 'isf'; }).sort();
 
 /* ---------- what the MIDI window shows ---------- */
 function renderMidiWindow(D) {
@@ -169,6 +171,10 @@ function midiPorts() {
 // What a mapping can drive, as a list: Master, Blackout, then each zone's level, scenes, next scene and playlists
 function midiTargetSelect(w) {
   const opt = (t, label) => h('option', { value: t, selected: w.to === t }, label);
+  // the effects of the project (and the one this mapping drives), with the controls a MIDI control can move
+  const ids = new Set(midiEffects());
+  if (w.to.startsWith('p:')) ids.add(w.to.slice(2, w.to.indexOf(':', 2)));
+  const fx = [...ids].map(srcById).filter(src => src && src.kind === 'isf');
   return h('select', { class: 'mtarget', 'aria-label': `What ${midiKeyFull(w.key)} drives`, title: 'What it drives', onchange: e => midiSetMap(w.id, { to: e.target.value }) },
     midiTarget(w.to) ? null : h('option', { value: w.to, selected: true }, 'Missing: it was deleted'),
     opt('master', 'Master'), opt('blackout', 'Blackout'),
@@ -179,7 +185,8 @@ function midiTargetSelect(w) {
       opt('z:' + z.id, z.name + ' level'),
       z.scenes.map(sc => opt(`sc:${z.id}:${sc.id}`, `${z.name} · ${sc.name}`)),
       z.scenes.length ? opt('nx:' + z.id, z.name + ' · next scene') : null,
-      z.playlists.map(pl => opt(`pl:${z.id}:${pl.id}`, `${z.name} · ${pl.name} (playlist)`)))));
+      z.playlists.map(pl => opt(`pl:${z.id}:${pl.id}`, `${z.name} · ${pl.name} (playlist)`)))),
+    fx.map(src => h('optgroup', { label: src.name + ' (effect)' }, controlsOf(src).map(i => `p:${src.id}:${i.NAME}`).filter(t => midiTarget(t)).map(t => opt(t, midiTargetLabel(t))))));
 }
 function midiMaps() {
   const maps = project.midi.maps;
@@ -188,7 +195,7 @@ function midiMaps() {
     const k = midiKeyParts(w.key), T = midiTarget(w.to);
     const seg = (key, opts) => h('span', { class: 'seg mini' }, opts.map(([v, label, tip]) => h('button', { type: 'button', class: w[key] === v ? 'on' : '', title: tip, onclick: () => midiSetMap(w.id, { [key]: v }) }, label)));
     const how = !T ? h('span') : T.kind === 'fader' ? seg('takeover', [['pickup', 'Pickup', 'It follows once the fader reaches it'], ['jump', 'Jump', 'It goes where the fader is at once']])
-      : T.kind === 'toggle' ? seg('mode', [['toggle', 'Toggle', 'Each press turns it on or off'], ['hold', 'Hold', 'On while held']])
+      : T.kind === 'toggle' ? seg('mode', [['toggle', 'Toggle', 'Each press turns it on or off'], k.type === 'cc' ? ['hold', 'Follow', 'On while the control is up: a fader past the middle, a button held or latched'] : ['hold', 'Hold', 'On while held']])
         : h('span', { class: 'muted', title: 'A press plays it' }, 'On a press');
     return h('div', { class: 'mmap' + (T ? '' : ' missing'), 'data-map': w.id, title: k.port },
       h('span', { class: 'mk' }, midiKeyFull(w.key), ports.size > 1 ? h('small', null, k.port) : null),

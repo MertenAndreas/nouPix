@@ -68,12 +68,12 @@ function blankProject(name = 'Untitled') {
   return {
     format: 'openledmapper-project', version: 3, name, settings,
     fixtures: [], groups: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
-    midi: { maps: [] }, macros: defaultMacros(),
+    midi: { maps: [] }, macros: defaultMacros(), macroLinks: {},
   };
 }
 // A MIDI mapping (midi.js): a control (key: midi:<port>:<channel>:cc|note:<number>) drives a target (to: master,
-// blackout, z:<zone>, sc:<zone>:<scene>, nx:<zone>, pl:<zone>:<playlist>). takeover: pickup or jump, for a fader;
-// mode: toggle or hold, for something that is on or off.
+// blackout, z:<zone>, sc:<zone>:<scene>, nx:<zone>, pl:<zone>:<playlist>, m:<macro>, p:<source>:<control>).
+// takeover: pickup or jump, for a fader; mode: toggle or hold, for something that is on or off.
 const MIDI_KEY = /^midi:(.*):(\d{1,2}):(cc|note):(\d{1,3})$/;
 const newMidiMap = (key, to) => ({ id: uid(), key, to, takeover: 'pickup', mode: 'toggle' });
 // A group is a named set of fixtures. Its fixtures stay next to each other in the list (and so in drawing and

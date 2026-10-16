@@ -2,9 +2,10 @@
 // The Macros section at the top of the Content tab: Speed, Intensity and Saturation; Color 1 and Color 2 (the
 // colour picker, on or off, and opened, a slider for each part, HSV or RGB, for MIDI); and the shared controls
 // (Angle, Softness…), folded. Every slider can be learnt by a MIDI control. Under an effect's control, a note says
-// which macro it follows while that macro changes it.
+// which macro it follows while that macro changes it; in its Parameters, which macro each control follows can be
+// chosen for that effect.
 
-// The part of the macros the user has opened: 'color1', 'color2', 'shared'
+// The parts of the macros the user has opened: 'color1', 'color2', 'shared', and 'links' (in an effect's Parameters)
 const macroOpen = () => new Set(Array.isArray(ui.macroOpen) ? ui.macroOpen : []);
 function toggleMacroOpen(key) {
   const s = macroOpen();
@@ -64,17 +65,39 @@ function macrosSection() {
     h('div', { class: 'row mshared' }, foldBtn(shared, 'Shared controls', () => toggleMacroOpen('shared'), shared ? 'Fold them' : 'Angle, Softness, Scale, Count, Size, Width, Density, Fade'), nOn),
     shared ? h('div', { class: 'msub' }, abs.map(d => macroSlider(d.id))) : null);
 }
+// In an effect's Parameters, folded to one line: which macro each of its controls follows, for that effect wherever it
+// plays. A control follows the macro its name says, unless the user chooses another, or none.
+function macroLinksFold(src, rt) {
+  const inps = isfInputs(src).filter(i => macroChoices(rt, i).length);
+  if (!inps.length) return [];
+  const open = macroOpen().has('links'), roles = macroRolesOf(src, rt), mine = project.macroLinks[src.id] || {};
+  const n = inps.filter(i => roles[i.NAME]).length;
+  const head = h('div', { class: 'row mshared mlinks' }, foldBtn(open, 'Macros it follows', () => toggleMacroOpen('links'), open ? 'Fold them' : `Which macro each control of ${src.name} follows`),
+    h('span', { class: 'msum' }, `${n} of ${inps.length}`));
+  if (!open) return [head];
+  const rows = inps.map(inp => {
+    const label = inp.LABEL || inp.NAME, usual = rt.roles[inp.NAME];
+    const r = row(label, selectEl([['', 'Its own value'], ...macroChoices(rt, inp).map(id => [id, macroDef(id).label])], roles[inp.NAME] || '', v => setMacroLink(src, inp.NAME, v), { aria: `What ${label} follows` }));
+    if ((roles[inp.NAME] || '') !== (usual || '')) { r.classList.add('mchg'); r.title = `Chosen here. By its name it would follow ${usual ? macroDef(usual).label : 'none'}.`; }
+    return r;
+  });
+  const sub = h('div', { class: 'msub' }, h('p', { class: 'note' }, `For ${src.name} wherever it plays.`), ...rows,
+    Object.keys(mine).length ? h('div', { class: 'actions' }, h('button', { class: 'btn sm', type: 'button', title: 'Each control follows the macro its name says', onclick: () => resetMacroLinks(src) }, 'As their names say')) : null);
+  if (mappingLocked()) lockPanel(sub, 'Operator: you can see what follows the macros but not change it.');
+  return [head, sub];
+}
 // Under an effect's control: the macro it follows, while that macro changes it
 function macroFollows(id) {
   const d = macroDef(id), el = h('p', { class: 'note via' });
   bind(() => { const on = macroActive(id); el.hidden = !on; if (on) el.textContent = `Follows ${d.label}` + (d.kind === 'color' || d.kind === 'abs' ? '' : ` (${macroText(id)})`); });
   return el;
 }
-// After a macro moves: its sliders, the notes and the swatches, at most once a frame; and the MIDI marks
-let macrosQueued = false;
-function updateMacrosUI() {
-  updateMidiUI();
-  if (macrosQueued) return;
-  macrosQueued = true;
-  requestAnimationFrame(() => { macrosQueued = false; if (ui.rightTab === 'content' && !ui.rightHidden) syncInspector(); });
+// The values shown in the Content tab, after something else moved them (a macro, a MIDI control), at most once a frame
+let contentQueued = false;
+function syncContentSoon() {
+  if (contentQueued) return;
+  contentQueued = true;
+  requestAnimationFrame(() => { contentQueued = false; if (ui.rightTab === 'content' && !ui.rightHidden) syncInspector(); });
 }
+// After a macro moves: its sliders, the notes and the swatches; and the MIDI marks
+function updateMacrosUI() { updateMidiUI(); syncContentSoon(); }

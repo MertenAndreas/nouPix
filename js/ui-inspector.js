@@ -412,33 +412,36 @@ function renderContentTab(body) {
 
   if (rt && rt.error) body.append(sec('Shader error', h('div', { class: 'errbox' }, rt.error)));
   if (src.kind === 'isf' && rt && rt.R) {
-    const ctl = [];
+    const ctl = [], roles = macroRolesOf(src, rt);
     for (const inp of isfInputs(src)) {
-      const label = inp.LABEL || inp.NAME;
-      const holder = { v: paramValue(L, src, inp) };
+      const label = inp.LABEL || inp.NAME, t = `p:${src.id}:${inp.NAME}`;   // t: what a MIDI control drives through it
+      // the layer's own value, read again on each sync (a MIDI control may have moved it)
       const set = v => setParam(L, src, inp.NAME, v);
+      const holder = { get v() { return paramValue(L, src, inp); }, set v(x) { set(x); } };
       if (inp === rt.speed) {   // 0–100 % of the full speed, and a button for reverse
-        const M = speedMax(inp), sp = { pct: Math.min(100, Math.abs(holder.v) / M * 100) };
         let dir = holder.v < 0 ? -1 : 1;
+        const M = speedMax(inp), sp = { get pct() { return Math.min(100, Math.abs(holder.v) / M * 100); }, set pct(x) { set(dir * x / 100 * M); } };
         const rev = h('button', { class: 'btn sm rev' + (dir < 0 ? ' on' : ''), type: 'button', title: 'Run it in reverse', 'aria-pressed': String(dir < 0), onclick: () => {
           dir = -dir; rev.classList.toggle('on', dir < 0); rev.setAttribute('aria-pressed', String(dir < 0)); set(dir * sp.pct / 100 * M); commit();
         } }, 'Reverse');
-        const r = sliderRow('Speed', sp, 'pct', { min: 0, max: 100, step: 0.5, fmt: v => Math.round(v) + '%', onInput: v => set(dir * v / 100 * M), onCommit: commit });
+        const r = sliderRow('Speed', sp, 'pct', { min: 0, max: 100, step: 0.5, fmt: v => Math.round(v) + '%', onCommit: commit, midi: t });
         ctl.push(r, h('div', { class: 'row' }, h('span', { class: 'lbl' }), h('div', null, rev)));   // Reverse under the slider
       } else if (isAngle(inp)) {   // in degrees: whole degrees, notches of 5°, round the circle, and buttons every 45°
         const min = inp.MIN, max = inp.MAX;
         const pre = anglePresets(label, holder, min, max, v => { holder.v = v; set(v); syncInspector(); commit(); });
-        ctl.push(sliderRow(label, holder, 'v', { min, max, step: 1, notch: 5, wrap: max - min === 360, fmt: v => fmtV(Math.round(v * 10) / 10) + '°', onInput: v => { set(v); pre._sync(); }, onCommit: commit }), pre);
+        ctl.push(sliderRow(label, holder, 'v', { min, max, step: 1, notch: 5, wrap: max - min === 360, fmt: v => fmtV(Math.round(v * 10) / 10) + '°', onInput: () => pre._sync(), onCommit: commit, midi: t }), pre);
       } else if (inp.TYPE === 'float' || inp.TYPE === 'int') {
         const min = inp.MIN ?? 0, max = inp.MAX ?? 1;
-        ctl.push(sliderRow(label, holder, 'v', { min, max, step: inp.TYPE === 'int' ? 1 : (max - min) / 500, int: inp.TYPE === 'int', fmt: v => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)), onInput: set, onCommit: commit }));
+        ctl.push(sliderRow(label, holder, 'v', { min, max, step: inp.TYPE === 'int' ? 1 : (max - min) / 500, int: inp.TYPE === 'int', fmt: v => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)), onCommit: commit, midi: t }));
       } else if (inp.TYPE === 'long') {
         const vals = inp.VALUES || [], labs = inp.LABELS || vals;
-        ctl.push(row(label, selectEl(vals.map((v, i) => [v, labs[i]]), holder.v, v => { set(parseInt(v, 10)); commit(); }, { aria: label })));
+        const sel = selectEl(vals.map((v, i) => [v, labs[i]]), holder.v, v => { set(parseInt(v, 10)); commit(); }, { aria: label });
+        binders.push(() => { if (document.activeElement !== sel) sel.value = String(holder.v); });
+        ctl.push(row(label, midiSlot(sel, t)));
       } else if (inp.TYPE === 'bool') {
-        ctl.push(checkRow(label, holder, 'v', v => { set(v); commit(); }));
+        ctl.push(midiButton(checkRow(label, holder, 'v', () => commit()), t));
       } else if (inp.TYPE === 'event') {
-        ctl.push(row(label, h('button', { class: 'btn', type: 'button', onclick: () => { set(true); setTimeout(() => set(false), 80); } }, 'Trigger')));
+        ctl.push(row(label, midiButton(h('button', { class: 'btn', type: 'button', onclick: () => { set(true); setTimeout(() => set(false), 80); } }, 'Trigger'), t)));
       } else if (inp.TYPE === 'color') {
         ctl.push(colorRow(label, () => paramValue(L, src, inp), set, commit, `${L.id}:${src.id}:${inp.NAME}`));
       } else if (inp.TYPE === 'point2D') {
@@ -446,8 +449,9 @@ function renderContentTab(body) {
         const up = () => set([pt.x, pt.y]);
         ctl.push(row(label, numInput(pt, 'x', { prefix: 'X', step: 0.01, onInput: up, onCommit: commit }), numInput(pt, 'y', { prefix: 'Y', step: 0.01, onInput: up, onCommit: commit })));
       }
-      if (rt.roles && rt.roles[inp.NAME]) ctl.push(macroFollows(rt.roles[inp.NAME]));   // the macro it follows, while that changes it
+      if (roles[inp.NAME]) ctl.push(macroFollows(roles[inp.NAME]));   // the macro it follows, while that changes it
     }
+    ctl.push(...macroLinksFold(src, rt));
     ctl.push(h('div', { class: 'actions' }, h('button', { class: 'btn sm', type: 'button', onclick: () => { delete L.params[src.id]; commit(); renderRight(); } }, 'Reset to defaults')));
     body.append(sec('Parameters', ctl));
   }

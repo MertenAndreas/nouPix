@@ -676,6 +676,9 @@ body.remote-client #btnMidi { display: none; }
 .scene .ftag { top: auto; bottom: 6px; right: 8px; }
 .ptab { position: relative; }
 .ptab .ftag { top: -9px; right: 6px; }
+.checkrow[data-midi], .btn[data-midi] { position: relative; }
+.row > .mslot { width: 100%; }
+.mslot > select { width: 100%; }
 /* learning: what a control can drive is outlined; the one picked pulses */
 body.midi-learning [data-midi] { outline: 1px dashed rgba(255, 210, 63, .6); outline-offset: 2px; cursor: crosshair; }
 body.midi-learning [data-midi]:hover { outline-style: solid; outline-color: var(--midi); }
@@ -777,4 +780,7 @@ body.midiwin { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 
 .row.mshared { display: flex; align-items: center; gap: 8px; min-height: 22px; }
 .row.mshared .mfold { font-size: 12px; color: var(--text2); }
 .note.via { margin: -5px 0 0; font-size: 11px; color: var(--accent); }
+.row.mlinks { margin-top: 4px; }
+.row.mlinks .msum { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.row.mchg > .lbl { color: var(--accent); }
 .note.via[hidden] { display: none; }

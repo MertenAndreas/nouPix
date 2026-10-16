@@ -169,6 +169,7 @@ function hydrate(p) {
   });
   out.midi = fixMidi(p.midi);
   out.macros = fixMacros(p.macros);
+  out.macroLinks = fixMacroLinks(p.macroLinks, known);
   return out;
 }
 // The MIDI mappings: well-formed ones only, each with its own id. A mapping to a zone, scene or playlist that is gone

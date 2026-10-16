@@ -407,6 +407,31 @@ function setMacro(id, patch) {
 }
 // Part i of a colour macro (hue, saturation, value; or red, green, blue) set to x, from 0 to 1
 function setMacroPart(id, i, x) { const m = project.macros[id]; if (m && macroDef(id).kind === 'color') setMacro(id, macroPartPatch(m, i, clamp(x, 0, 1))); }
+// Which macro a control of an effect follows (a macro's id, or '' for none), for that effect wherever it plays. What
+// its name makes it follow is the default, and isn't kept.
+function setMacroLink(src, name, id) {
+  const rt = runtimeOf(src), o = Object.assign({}, project.macroLinks[src.id]);
+  if (id === ((rt.roles && rt.roles[name]) || '')) delete o[name]; else o[name] = id;
+  project.macroLinks = Object.assign({}, project.macroLinks, { [src.id]: o });
+  if (!Object.keys(o).length) delete project.macroLinks[src.id];
+  commit(); renderRight();
+}
+function resetMacroLinks(src) {
+  const all = Object.assign({}, project.macroLinks);
+  delete all[src.id];
+  project.macroLinks = all;
+  commit(); renderRight();
+}
+
+/* ---------- effects ---------- */
+// One control of an effect, set in every layer that plays it now (a MIDI fader on it). A scene played afterwards
+// brings its own value back.
+function setEffectControl(src, name, v) {
+  let n = 0;
+  for (const z of project.zones) for (const L of z.layers) if (L.src === src.id) { setParam(L, src, name, v); n++; }
+  if (!n) return;
+  remoteChanged(); commitSoft(); syncContentSoon();
+}
 
 /* ---------- playlists ---------- */
 // Play, pause, next… of a playlist, from any button, menu or key. On a device they go to the main computer, which

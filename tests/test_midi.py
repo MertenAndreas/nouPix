@@ -138,6 +138,12 @@ try:
     check("and follows once picked up", abs(ev("project.settings.master") - 100 / 127) < 1e-6)
     ev("midiSetMap(project.midi.maps.find(w => w.to === 'master').id, { takeover: 'jump' })"); cc(7, 10); settle()
     check("with Jump it goes where the fader is at once", abs(ev("project.settings.master") - 10 / 127) < 1e-6)
+    # the line sits over the middle of the slider's handle (a 3 px bar), at both ends and between
+    gaps = []
+    for v in (0, 64, 127):
+        cc(7, v); settle()
+        gaps.append(ev("(() => { const m = $('#master').getBoundingClientRect(), l = document.querySelector('.master .fline').getBoundingClientRect(); return (l.left + l.width / 2) - (m.left + 1.5 + project.settings.master * (m.width - 3)); })()"))
+    check("the fader's line is over the slider's handle", all(abs(o) < 0.75 for o in gaps), gaps)
     cc(7, 127); settle()
 
     # ---------- zone level

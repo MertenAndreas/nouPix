@@ -41,7 +41,9 @@ function markMidi() {
     if (line) {
       const w = ws.find(x => midiKeyParts(x.key).type === 'cc'), c = w && midiControlOf(w);
       line.hidden = !c;
-      if (c) { line.style.left = `calc(8px + ${c.last} * (100% - 16px))`; line.classList.toggle('away', !midiPicked(w)); }
+      // over the middle of the slider's handle: a 3 px bar (14 px round on the colour picker's)
+      const half = el.querySelector(':scope > input.grad') ? 7 : 1.5;
+      if (c) { line.style.left = `calc(${half}px + ${c.last} * (100% - ${2 * half}px))`; line.classList.toggle('away', !midiPicked(w)); }
     }
   }
 }

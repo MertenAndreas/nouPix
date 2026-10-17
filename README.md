@@ -92,4 +92,4 @@ To see it working before you build anything, open one of the [examples](examples
 
 ## Licence and credits
 
-GPL-3.0 (see `LICENSE`). The look and the logo are described in [docs/brand.md](docs/brand.md). The fonts are Saira, Chakra Petch and JetBrains Mono (SIL Open Font License, `css/OFL.txt`). The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence).
+GNU Affero General Public License 3.0 (AGPL-3.0, see `LICENSE`), © 2026 nouled studio. Anyone may use, change and share nouPix, and sell it too, but whoever passes it on, changed or not, or lets people use a changed copy over a network, must give them its full source under the same licence. Until 17 October 2026 the code was under GPL-3.0; copies taken before then keep that licence. The look and the logo are described in [docs/brand.md](docs/brand.md). The fonts are Saira, Chakra Petch and JetBrains Mono (SIL Open Font License, `css/OFL.txt`). The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence).

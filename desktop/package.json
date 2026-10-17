@@ -3,7 +3,7 @@
   "productName": "nouPix",
   "version": "1.0.0",
   "description": "nouPix desktop app: the interface in its own window, with the Art-Net bridge inside",
-  "license": "GPL-3.0",
+  "license": "AGPL-3.0-only",
   "author": "nouled studio",
   "repository": "github:nouled-studio/openLEDmapper",
   "private": true,
@@ -19,7 +19,7 @@
   "build": {
     "appId": "studio.nouled.noupix",
     "productName": "nouPix",
-    "copyright": "GPL-3.0",
+    "copyright": "Copyright © 2026 nouled studio. AGPL-3.0",
     "directories": {
       "output": "dist"
     },

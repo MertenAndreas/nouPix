@@ -387,6 +387,8 @@ To work on the app: `cd desktop && npm install && npm start` runs it from the so
 
 The logo is `icons/noupix.svg` (with its smaller cuts `noupix-small.svg`, `noupix-32.svg` and `noupix-favicon.svg`, and the wordmark `noupix-wordmark*.svg`); [brand.md](brand.md) describes it and the look. The app icons made from it are `noupix.ico` (Windows), `noupix.icns` (macOS), `noupix-256.png` and the phone app's `remote-*.png`. If you change the SVG, export these again.
 
-## Credits
+## Licence and credits
+
+nouPix is © 2026 nouled studio, under the GNU Affero General Public License 3.0 (`LICENSE`): you may use it, change it, share it and sell it; whoever passes it on, or lets others use a changed copy over the network, gives them its full source under the same licence.
 
 The fonts are Saira (Omnibus-Type), Chakra Petch (Cadson Demak) and JetBrains Mono (JetBrains), under the SIL Open Font License (`css/OFL.txt`). The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence), bundled as `js/vendor/isf.js`.

@@ -33,11 +33,12 @@
   --midi-ink: #000000;
   --midi-soft: rgba(255, 210, 63, 0.16);
   --scrim: rgba(0, 0, 0, 0.66);
-  /* the stage (ui-stage.js reads these): the canvas, and its pixels while they are off */
+  /* the stage (ui-stage.js reads these): the canvas, and its pixels while they are off, grey enough to find on the
+     black even zoomed out (small ones lighter, having no edge) */
   --canvas: #000000;
-  --dot: #121212;
-  --dot-small: #1c1c1c;
-  --dot-edge: #333333;
+  --dot: #262626;
+  --dot-small: #5c5c5c;
+  --dot-edge: #5c5c5c;
   --ui: "Saira", "Segoe UI", system-ui, -apple-system, sans-serif;
   --label: "Chakra Petch", "Saira", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -53,7 +54,7 @@
   --text: #f0f0f0; --text2: #bdbdbd; --muted: #8e8e8e;
   --accent: #ff3b3b; --accent-ink: #000000; --sel: #f0f0f0; --sel-ink: #000000; --sel-soft: rgba(255, 255, 255, 0.07);
   --live: #ffffff; --warn: #ff7a1a; --danger: #ff3b3b;
-  --canvas: #000000; --dot: #121212; --dot-small: #1c1c1c; --dot-edge: #333333;
+  --canvas: #000000; --dot: #262626; --dot-small: #5c5c5c; --dot-edge: #5c5c5c;
 }
 :root[data-theme="light"] {
   color-scheme: light;

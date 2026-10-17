@@ -62,33 +62,48 @@ function outlinePath(f, c) {
     if (f.closed) c.closePath();
   }
 }
+// How big a fixture's dots are on screen: about a third of the pixel pitch, at least 1.1 px so a sparse fixture far
+// away stays visible, but never more than ~half the pitch, so dense pixels zoomed out make a thin line, not a thick band
+function dotRadius(f) {
+  const s = f._pitch * ui.view.zoom;
+  return clamp(s * 0.36, clamp(s * 0.45, 0.6, 1.1), 10);
+}
 function drawDots(f, dispOverride) {
   const P = f._pts, n = f._n, D = dispOverride || f._disp, z = ui.view.zoom, ox = ui.view.x, oy = ui.view.y;
-  const r = clamp(f._pitch * z * 0.36, 1.1, 10), d = r * 2;
-  const small = r < 2.2, xmax = VW + 10, ymax = VH + 10;
-  // With the content shown strongly behind them, each dot gets a dark rim first, so the fixtures stand out from it
+  const r = dotRadius(f), d = r * 2;
+  // Below a pixel and a half across a dot can't look round anyway: squares are drawn, faster
+  const small = r < 0.75, xmax = VW + 10, ymax = VH + 10;
+  // With the content shown strongly behind them, each dot gets a dark rim first, so the fixtures stand out from it;
+  // the rim follows the dot's size, so small dots don't drown in it
   if (ui.showContent && ui.contentOp > 0.4) {
+    const e = Math.min(1.5, r * 0.6);
     ctx.fillStyle = 'rgba(0,0,0,0.8)';
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const sx = P[2 * i] * z + ox, sy = P[2 * i + 1] * z + oy;
       if (sx < -10 || sy < -10 || sx > xmax || sy > ymax) continue;
-      if (small) ctx.rect(sx - r - 1, sy - r - 1, d + 2, d + 2); else { ctx.moveTo(sx + r + 1.5, sy); ctx.arc(sx, sy, r + 1.5, 0, 6.2832); }
+      if (small) ctx.rect(sx - r - e, sy - r - e, d + 2 * e, d + 2 * e); else { ctx.moveTo(sx + r + e, sy); ctx.arc(sx, sy, r + e, 0, 6.2832); }
     }
     ctx.fill();
   }
-  // Big projects draw tens of thousands of dots: the colour is only set when it changes from the previous dot
-  let key = -2, stroke = false;
+  // Big projects draw tens of thousands of dots: dots of one colour in a row go in one path, filled when it changes
+  let key = -2, open = false;
+  const flush = () => {
+    if (!open) return;
+    ctx.fill();
+    if (key === -1 && !small && r >= 2.2) { ctx.strokeStyle = SC.dotEdge; ctx.lineWidth = 1; ctx.stroke(); }
+    open = false;
+  };
   for (let i = 0, j = 0; i < n; i++, j += 3) {
     const sx = P[2 * i] * z + ox, sy = P[2 * i + 1] * z + oy;
     if (sx < -10 || sy < -10 || sx > xmax || sy > ymax) continue;
     const R = D ? D[j] : 0, G = D ? D[j + 1] : 0, B = D ? D[j + 2] : 0;
     const lit = R + G + B > 6, k = lit ? (R << 16) | (G << 8) | B : -1;
-    if (k !== key) { key = k; ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : small ? SC.dotSmall : SC.dot; }
-    if (small) { ctx.fillRect(sx - r, sy - r, d, d); continue; }
-    ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.2832); ctx.fill();
-    if (!lit) { if (!stroke) { ctx.strokeStyle = SC.dotEdge; ctx.lineWidth = 1; stroke = true; } ctx.stroke(); }
+    if (k !== key) { flush(); key = k; ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : r < 2.2 ? SC.dotSmall : SC.dot; }
+    if (!open) { ctx.beginPath(); open = true; }
+    if (small) ctx.rect(sx - r, sy - r, d, d); else { ctx.moveTo(sx + r, sy); ctx.arc(sx, sy, r, 0, 6.2832); }
   }
+  flush();
   return r;
 }
 function drawWiring(f, color) {
@@ -101,7 +116,7 @@ function drawWiring(f, color) {
   ctx.stroke();
   ctx.globalAlpha = 1;
   const [x0, y0] = toS(P[0], P[1]);
-  const r = clamp(f._pitch * ui.view.zoom * 0.36, 1.1, 10) + 4;
+  const r = dotRadius(f) + 4;
   ctx.beginPath(); ctx.arc(x0, y0, r, 0, 6.2832); ctx.strokeStyle = SC.first; ctx.lineWidth = 2; ctx.stroke();
   if (n > 1) { // direction arrow
     const [x1, y1] = toS(P[2], P[3]);

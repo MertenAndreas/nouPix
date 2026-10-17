@@ -37,23 +37,15 @@
      ring around every pixel that keeps fixtures easy to find on the black */
   --canvas: #000000;
   --dot: #000000;
-  --dot-edge: #6a6a6a;
+  --dot-edge: #8c8c8c;
+  /* around the canvas, and a light halo under what is drawn over it (none in the black look) */
+  --stage-out: #000000;
+  --stage-halo: none;
   --ui: "Saira", "Segoe UI", system-ui, -apple-system, sans-serif;
   --label: "Chakra Petch", "Saira", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --r: 0px;
   --bottom-h: 250px;
-}
-/* the stage stays black in the white look: it shows light, and the fixtures keep their colours (ui-stage.js reads
-   its colours here) */
-:root[data-theme="light"] .stage {
-  color-scheme: dark;
-  --bg0: #000000; --bg1: #0a0a0a; --bg2: #111111; --bg3: #191919; --bg4: #232323;
-  --line: #1e1e1e; --line2: #2c2c2c; --line3: #3a3a3a;
-  --text: #f0f0f0; --text2: #bdbdbd; --muted: #8e8e8e;
-  --accent: #ff3b3b; --accent-ink: #000000; --sel: #f0f0f0; --sel-ink: #000000; --sel-soft: rgba(255, 255, 255, 0.07);
-  --live: #ffffff; --warn: #ff7a1a; --danger: #ff3b3b;
-  --canvas: #000000; --dot: #000000; --dot-edge: #6a6a6a;
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -87,9 +79,12 @@
   --midi-ink: #ffffff;
   --midi-soft: rgba(138, 100, 0, 0.14);
   --scrim: rgba(20, 20, 20, 0.28);
-  --canvas: #ffffff;
-  --dot: #ececec;
-  --dot-edge: #bdbdbd;
+  /* the canvas stays black (it shows light), around it the stage is white */
+  --canvas: #000000;
+  --dot: #000000;
+  --dot-edge: #8c8c8c;
+  --stage-out: #ffffff;
+  --stage-halo: #ffffff;
 }
 * { box-sizing: border-box; }
 /* scroll bars in the look: thin, dark, square, also where the system always shows them (a Mac with a mouse, Windows) */
@@ -721,6 +716,10 @@ input[type=range].grad:focus-visible { outline: 1px solid var(--accent); outline
 .statusbar b { color: var(--text2); font-weight: 500; }
 .statusbar .hov { color: var(--accent); }
 .statusbar .fill { flex: 1; }
+/* its parts sit in the bar's own row; Art-Net's pill at the right end, as wide for any rate, so nothing moves */
+#status { display: contents; }
+.statusbar .pill { height: 18px; padding: 0 8px; font-size: 10.5px; flex: none; }
+.statusbar .pill.ok > span:last-child { min-width: 21ch; }
 
 /* ---------- modal + toast ---------- */
 .modal-bg { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 50; padding: 16px; }

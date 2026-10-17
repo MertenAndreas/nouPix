@@ -35,8 +35,8 @@ function setTheme(t) {
   if (ui.rightTab === 'settings') renderRight();
 }
 function updateUndoButtons() { $('#btnUndo').disabled = hist.idx <= 0; $('#btnRedo').disabled = hist.idx >= hist.stack.length - 1; }
-// The status pill only shows what matters: Art-Net going out, or something wrong. With everything fine and
-// Art-Net off it is hidden.
+// The status pill, at the right end of the status bar, only shows what matters: Art-Net going out, or something
+// wrong. With everything fine and Art-Net off it is hidden.
 function updateBridgeUI() {
   const pill = $('#bridgePill'), txt = $('#bridgeText');
   pill.className = 'pill';

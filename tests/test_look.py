@@ -42,6 +42,8 @@ try:
     check("running text in Saira 300, labels in Chakra Petch", css("body", "fontWeight") == "300" and "Saira" in css("body", "fontFamily")
           and "Chakra Petch" in css(".phead h2", "fontFamily") and css(".phead h2", "textTransform") == "uppercase")
     check("square corners", css(".btn", "borderRadius") == "0px" and css(".pill", "borderRadius") == "0px")
+    check("Art-Net's rate shows in the status bar, not the top bar, so the top bar doesn't move",
+          ev("(() => { setOutput(true); updateBridgeUI(); const p = document.querySelector('#bridgePill'), r = !!p.closest('.statusbar') && !p.closest('.topbar') && !p.hidden && /pkt\\/s/.test(p.textContent); setOutput(false); updateBridgeUI(); return r; })()"))
     check("Art-Net on is white, Blackout red", (setattr_ := ev("(() => { setOutput(true); const o = getComputedStyle(document.querySelector('#btnOutput')).borderTopColor; setOutput(false); return o; })()")) == "rgb(255, 255, 255)"
           and css("#btnBlackout", "color") == "rgb(255, 59, 59)", setattr_)
 
@@ -49,7 +51,8 @@ try:
     pg.click("#btnTheme"); settle(0.4)
     check("the top bar's button turns it white", ev("document.documentElement.dataset.theme") == "light" and css("body", "backgroundColor") != "rgb(0, 0, 0)"
           and ev("ui.theme") == "light" and pg.get_attribute("#btnTheme", "aria-pressed") == "true")
-    check("the stage stays black, so the fixtures look the same", ev("SC.canvas") == "#000000" and ev("SC.bg0") == "#000000" and ev("getComputedStyle(document.documentElement).getPropertyValue('--bg0').trim()") != "#000000")
+    check("the canvas stays black, so the fixtures look the same; around it the stage is white, with a halo under what crosses the canvas",
+          ev("SC.canvas") == "#000000" and ev("SC.dot") == "#000000" and ev("SC.out") == "#ffffff" and ev("SC.halo") == "#ffffff")
     check("kept with this computer's preferences, not in the project", ev("store.get('noupix.ui', {}).theme") == "light" and "theme" not in ev("JSON.parse(serialize(true))"))
     pg.reload(); pg.wait_for_function("window.olm && olm.bridge.connected"); settle(0.6)
     check("and still white after a reload, from the start", ev("document.documentElement.dataset.theme") == "light" and ev("ui.theme") == "light")

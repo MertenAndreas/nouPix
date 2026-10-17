@@ -76,7 +76,8 @@ function drawDots(f, dispOverride) {
   // Each dot shows what it sends, black when off, inside a thin grey ring that keeps the fixture easy to find on the
   // black stage; with the content shown strongly behind them, a dark rim outside that, so they stand out from it.
   // Rings and rims follow the dot's size, so small dots don't drown in them
-  const e = clamp(r * 0.3, 0.5, 1), rims = [[SC.dotEdge, e]];
+  const e = clamp(r * 0.3, 0.5, 1.5), rims = [[SC.dotEdge, e]], blur = ctx.shadowBlur;
+  ctx.shadowBlur = 0;
   if (ui.showContent && ui.contentOp > 0.4) rims.unshift(['rgba(0,0,0,0.8)', e + Math.min(1.5, r * 0.6)]);
   for (const [col, w] of rims) {
     ctx.fillStyle = col;
@@ -100,6 +101,7 @@ function drawDots(f, dispOverride) {
     if (small) ctx.rect(sx - r, sy - r, d, d); else { ctx.moveTo(sx + r, sy); ctx.arc(sx, sy, r, 0, 6.2832); }
   }
   if (open) ctx.fill();
+  ctx.shadowBlur = blur;
   return r;
 }
 function drawWiring(f, color) {
@@ -178,14 +180,14 @@ function drawGrid() {
   ctx.beginPath();
   for (let x = 0; x <= W; x += step) { const sx = Math.round(x * z + ui.view.x) + 0.5; ctx.moveTo(sx, ui.view.y); ctx.lineTo(sx, ui.view.y + H * z); }
   for (let y = 0; y <= H; y += step) { const sy = Math.round(y * z + ui.view.y) + 0.5; ctx.moveTo(ui.view.x, sy); ctx.lineTo(ui.view.x + W * z, sy); }
-  ctx.strokeStyle = withAlpha(SC.muted, 0.12); ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = 'rgba(142,142,142,0.12)'; ctx.lineWidth = 1; ctx.stroke();   // over the black canvas in both looks
   ctx.restore();
 }
 function drawView() {
   stageLook();
   resizeView();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.fillStyle = SC.bg0; ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = SC.out; ctx.fillRect(0, 0, VW, VH);
   const W = project.settings.compW, H = project.settings.compH, z = ui.view.zoom;
   const [ox, oy] = [ui.view.x, ui.view.y];
   ctx.fillStyle = SC.canvas; ctx.fillRect(ox, oy, W * z, H * z);
@@ -201,11 +203,13 @@ function drawView() {
     ctx.drawImage(guideImg, ox + (W - iw * s) / 2 * z, oy + (H - ih * s) / 2 * z, iw * s * z, ih * s * z);
     ctx.globalAlpha = 1;
   }
+  // In the white look, dark lines and names cross the black canvas: a light halo keeps them readable there
+  ctx.shadowColor = SC.halo || 'transparent'; ctx.shadowBlur = SC.halo ? 3 : 0;
   if (ui.showZones || ui.tool === 'zone') drawZones();
   ctx.strokeStyle = SC.line2; ctx.lineWidth = 1; ctx.strokeRect(Math.round(ox) - 0.5, Math.round(oy) - 0.5, Math.round(W * z) + 1, Math.round(H * z) + 1);
   ctx.font = '10px ' + FONT_MONO; ctx.fillStyle = SC.muted; ctx.fillText(`${W} × ${H}`, ox, oy - 6);
 
-  if (!project.fixtures.length || !project.fixtures[0]._pts) { drawOverlays(); return; }
+  if (!project.fixtures.length || !project.fixtures[0]._pts) { drawOverlays(); ctx.shadowBlur = 0; return; }
   for (const f of project.fixtures) {
     const isSel = ui.sel.has(f.id), hov = ui.hoverFx === f.id, col = isSel ? SC.sel : fxTag(f) || SC.muted;   // its group's colour, or grey
     ctx.save();
@@ -223,7 +227,10 @@ function drawView() {
       const [lx, ly] = toS(b.x0, b.y0);
       ctx.font = (isSel ? '600 ' : '500 ') + '11px ' + FONT_UI;
       ctx.fillStyle = isSel ? SC.sel : fxTag(f) || SC.text2; ctx.globalAlpha = f.enabled ? 0.95 : 0.5;
-      ctx.fillText(f.name + (f.locked ? '  (locked)' : ''), lx, ly - 7);
+      const name = f.name + (f.locked ? '  (locked)' : '');
+      // in the white look a crisp light edge, so a dark name reads on the black canvas too
+      if (SC.halo) { ctx.save(); ctx.shadowBlur = 0; ctx.strokeStyle = SC.halo; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeText(name, lx, ly - 7); ctx.restore(); }
+      ctx.fillText(name, lx, ly - 7);
       ctx.globalAlpha = 1;
     }
   }
@@ -243,6 +250,7 @@ function drawView() {
     }
   }
   drawOverlays();
+  ctx.shadowBlur = 0;
 }
 // The corners of a frame on screen, padded by pad pixels
 function frameCorners(F, pad) {
@@ -361,14 +369,15 @@ function drawOverlays() {
 }
 function prepDraft(d) { d._pts = computePoints(d); d._n = pixelCount(d); d._pitch = fixturePitch(d); }
 // The stage's fonts and colours are the page's (css/app.css), read once and again when the look changes (setTheme).
-// They are read on the stage itself, which stays black in the white look too: it shows light.
+// The canvas stays black in both looks (it shows light); in the white look the stage around it is white.
 let FONT_MONO = null, FONT_UI = null, SC = null;
 function stageLook(again = false) {
   if (SC && !again) return;
   const cs = getComputedStyle(stageEl), v = n => cs.getPropertyValue(n).trim();
   FONT_MONO = v('--mono'); FONT_UI = v('--ui');
   SC = { sel: v('--sel'), selInk: v('--sel-ink'), first: v('--danger'), pick: v('--warn'), text: v('--text'), text2: v('--text2'), muted: v('--muted'),
-    line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotEdge: v('--dot-edge'), handle: v('--bg1') };
+    line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotEdge: v('--dot-edge'), handle: v('--bg1'),
+    out: v('--stage-out'), halo: v('--stage-halo') === 'none' ? '' : v('--stage-halo') };
 }
 // #rrggbb at an opacity
 const withAlpha = (c, a) => /^#[0-9a-f]{6}$/i.test(c) ? `rgba(${parseInt(c.slice(1, 3), 16)},${parseInt(c.slice(3, 5), 16)},${parseInt(c.slice(5, 7), 16)},${a})` : c;

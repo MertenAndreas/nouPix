@@ -44,6 +44,17 @@
   --r: 0px;
   --bottom-h: 250px;
 }
+/* the stage stays black in the white look: it shows light, and the fixtures keep their colours (ui-stage.js reads
+   its colours here) */
+:root[data-theme="light"] .stage {
+  color-scheme: dark;
+  --bg0: #000000; --bg1: #0a0a0a; --bg2: #111111; --bg3: #191919; --bg4: #232323;
+  --line: #1e1e1e; --line2: #2c2c2c; --line3: #3a3a3a;
+  --text: #f0f0f0; --text2: #bdbdbd; --muted: #8e8e8e;
+  --accent: #ff3b3b; --accent-ink: #000000; --sel: #f0f0f0; --sel-ink: #000000; --sel-soft: rgba(255, 255, 255, 0.07);
+  --live: #ffffff; --warn: #ff7a1a; --danger: #ff3b3b;
+  --canvas: #000000; --dot: #121212; --dot-small: #1c1c1c; --dot-edge: #333333;
+}
 :root[data-theme="light"] {
   color-scheme: light;
   --bg0: #e8e8e8;
@@ -82,6 +93,12 @@
   --dot-edge: #bdbdbd;
 }
 * { box-sizing: border-box; }
+/* scroll bars in the look: thin, dark, square, also where the system always shows them (a Mac with a mouse, Windows) */
+* { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line2); }
+::-webkit-scrollbar-thumb:hover { background: var(--line3); }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg0); color: var(--text); font: 300 13.5px/1.35 var(--ui); overflow: hidden; -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -226,7 +243,9 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 
 /* ---------- stage ---------- */
 .stagewrap { position: relative; display: grid; grid-template-rows: 32px minmax(0, 1fr); min-height: 0; background: var(--bg0); }
-.stagebar { display: flex; align-items: center; gap: 12px; padding: 0 10px 0 52px; border-bottom: 1px solid var(--line); background: var(--bg1); font-size: 12px; color: var(--text2); overflow-x: auto; white-space: nowrap; }
+.stagebar { display: flex; align-items: center; gap: 12px; padding: 0 10px 0 52px; border-bottom: 1px solid var(--line); background: var(--bg1); font-size: 12px; color: var(--text2); overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: none; }
+/* on a narrow window it scrolls sideways (trackpad, Shift + wheel) without a scroll bar in the way */
+.stagebar::-webkit-scrollbar { display: none; }
 .stagebar label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 .stagebar input[type=range] { width: 70px; }
 .stagebar .zoom { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
@@ -383,6 +402,10 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .srcfind { padding: 8px 10px 0; display: grid; gap: 6px; }
 .srcfind input { width: 100%; }
 .srcfacets { display: flex; flex-wrap: wrap; gap: 4px; }
+.srcfacets { flex-wrap: nowrap; }
+.srcfacets .chip { flex: 1 1 auto; min-width: 0; border: 1px solid var(--line2); background: var(--bg2); color: var(--text2); height: 22px; padding: 0 4px; cursor: pointer; font: 400 11px/1 var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.srcfacets .chip:hover { border-color: var(--line3); color: var(--text); }
+.srcfacets .chip.on { background: var(--bg4); color: var(--text); border-color: var(--line3); box-shadow: inset 0 -2px 0 var(--accent); }
 .srcfacets select { flex: 0 1 auto; field-sizing: content; min-width: 0; max-width: 100%; width: auto; font-size: 11px; padding: 1px 4px; height: 22px; border-radius: 0; color: var(--text2); }
 .srcfacets select.on { background: var(--sel-soft); border-color: var(--accent); color: var(--accent); }
 .srcfacets button { flex: none; border: 1px solid var(--line2); background: var(--bg2); color: var(--text2); border-radius: 0; padding: 0 8px; height: 22px; font-size: 11px; cursor: pointer; }
@@ -415,8 +438,9 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
   clip-path: polygon(calc(var(--cut) - .4px) 0, 100% 0, 100% calc(100% - var(--cut) + .4px), calc(100% - var(--cut) + .4px) 100%, 0 100%, 0 calc(var(--cut) - .4px)); }
 .scene:hover { --fill: var(--bg4); }
 .scene.live { --edge: var(--live); --fill: color-mix(in srgb, var(--live) 8%, var(--bg3)); }
-/* the playing scene's one small mark: its own colour, or red */
-.scene.live::after { background: linear-gradient(var(--mark, var(--accent)), var(--mark, var(--accent))) right 3px top 3px / 4px 4px no-repeat, var(--fill); }
+/* every scene's small mark, in its colour (red unless the user gives it another): dim, and bright while it plays */
+.scene::after { --mk: color-mix(in srgb, var(--mark, var(--accent)) 40%, transparent); background: linear-gradient(var(--mk), var(--mk)) right 3px top 3px / 4px 4px no-repeat, var(--fill, var(--bg3)); }
+.scene.live::after { --mk: var(--mark, var(--accent)); }
 .scene .t { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }
 .scene .t .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scene .k { font-family: var(--mono); font-size: 10px; color: var(--muted); }
@@ -604,6 +628,22 @@ input[type=text]:hover, input[type=number]:hover, select:hover { border-color: v
 input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; background: var(--bg3); }
 input.bad { border-color: var(--danger) !important; color: var(--danger); }
 select { padding-right: 4px; cursor: pointer; }
+/* drop-down lists drawn in the app's look where the browser allows it (Chrome and Edge 135 and newer, the desktop app);
+   elsewhere the system's own */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select { display: inline-flex; align-items: center; gap: 6px; }
+  select::picker-icon { content: '▾'; color: var(--muted); font-size: 10px; margin-left: auto; transition: none; }
+  select:open::picker-icon { color: var(--text); }
+  ::picker(select) { background: var(--bg2); border: 1px solid var(--line2); border-radius: 0; padding: 4px; margin: 2px 0; color: var(--text); font: 400 12.5px/1.35 var(--ui); scrollbar-width: thin; }
+  option { padding: 5px 10px 5px 12px; border: 0; color: var(--text2); }
+  option:hover, option:focus-visible { background: var(--bg4); color: var(--text); outline: none; }
+  option:checked { color: var(--text); font-weight: 500; box-shadow: inset 2px 0 0 var(--sel); }
+  option::checkmark { display: none; }
+  option:disabled { color: var(--muted); }
+  optgroup { padding: 6px 0 2px; font: 600 10px var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  optgroup option { font: 400 12.5px/1.35 var(--ui); letter-spacing: 0; text-transform: none; }
+}
 input[type=checkbox] { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 /* sliders: a 2 px track, aluminium up to the value (--p, kept by rangeFill in ui-forms.js), and a narrow bar for a
    handle. accent-color stays for the browsers that draw their own. The colour picker's (.grad) keep their look. */

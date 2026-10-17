@@ -10,7 +10,7 @@ Pure black, so the light on the stage is the brightest thing on screen.
 
 | Colour | Means | Used for |
 |---|---|---|
-| **Red** `#FF3B3B` (`--accent`) | acts | the active tool, the tab underline, the chosen half of a grouped button (a line under it), focus, the primary button, Blackout, the playing scene's small mark (when it has no colour of its own), the red dot of the i and the arrows in the logo |
+| **Red** `#FF3B3B` (`--accent`) | acts | the active tool, the tab underline, the chosen half of a grouped button (a line under it), focus, the primary button, Blackout, every scene's small mark (unless the user gives it another colour; dim, bright while it plays), the red dot of the i and the arrows in the logo |
 | **White** `#FFFFFF` (`--live`) | a light is on | Art-Net on (with the app's one glow), the playing scene's edge, the playlist playing, the source playing |
 | **Yellow** `#FFD23F` (`--midi`) | MIDI, and nothing else | learn, the fader lines, CC / Note tags, MIDI wires |
 | **Aluminium** `#DCE1E6` (`--fader`) | something you move | sliders and their fill, levels, the macros' links in the patch bay |
@@ -35,7 +35,6 @@ colour is a variable in `:root`, redefined for white under `:root[data-theme="li
 |---|---|---|
 | window, stage (`--bg0`) | `#000000` | `#e8e8e8` |
 | panels (`--bg1`) | `#0a0a0a` | `#f5f5f5` |
-| the canvas on the stage (`--canvas`) | `#000000` | `#ffffff` |
 | text, secondary, muted | `#f0f0f0`, `#bdbdbd`, `#8e8e8e` | `#111111`, `#3d3d3d`, `#666666` |
 | red (`--accent`) | `#ff3b3b` | `#c8141a` |
 | lit (`--live`) | `#ffffff` | `#000000` |
@@ -43,8 +42,9 @@ colour is a variable in `:root`, redefined for white under `:root[data-theme="li
 | aluminium (`--fader`) | `#dce1e6` | `#4f5861` |
 
 Contrast rule for anything new: text at least 4.5:1 on its background. `--muted` is the darkest grey allowed for text;
-darker greys are for lines and fills. The stage reads its colours from these variables (`stageLook` in
-`ui-stage.js`), again when the look changes. The login page and the phone remote are black.
+darker greys are for lines and fills. The stage stays black in both looks: it shows light, and the fixtures keep their colours (`.stage` keeps the black
+variables, and `stageLook` in `ui-stage.js` reads them there). With the content shown strongly behind them, the
+fixtures' pixels get a dark rim, so they stand out from it. The login page and the phone remote are black.
 
 ## 3. Type
 
@@ -77,7 +77,7 @@ same without the internet; the bridge serves them. They are under the SIL Open F
 
 A group, a zone or a scene can have a colour, only when the user gives it one (the Inspector, or the scene's dialog;
 the first swatch is none). A group's shows on its fixtures in the list and on the stage, a zone's on its scenes'
-left edge, a scene's on its small mark while it plays (red when it has none). Fixtures have none of their own. The
+left edge, a scene's on its small mark, dim and bright while it plays (red when it has none). Fixtures have none of their own. The
 eight choices are saturated, and none is red or yellow: `#2f7bff` `#00c2ff` `#00d68f` `#8fe000` `#ff8a00` `#ff2fd1`
 `#9b5cff` `#ff5c8a` (`TAGS` in `model.js`).
 

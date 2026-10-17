@@ -66,6 +66,17 @@ function drawDots(f, dispOverride) {
   const P = f._pts, n = f._n, D = dispOverride || f._disp, z = ui.view.zoom, ox = ui.view.x, oy = ui.view.y;
   const r = clamp(f._pitch * z * 0.36, 1.1, 10), d = r * 2;
   const small = r < 2.2, xmax = VW + 10, ymax = VH + 10;
+  // With the content shown strongly behind them, each dot gets a dark rim first, so the fixtures stand out from it
+  if (ui.showContent && ui.contentOp > 0.4) {
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const sx = P[2 * i] * z + ox, sy = P[2 * i + 1] * z + oy;
+      if (sx < -10 || sy < -10 || sx > xmax || sy > ymax) continue;
+      if (small) ctx.rect(sx - r - 1, sy - r - 1, d + 2, d + 2); else { ctx.moveTo(sx + r + 1.5, sy); ctx.arc(sx, sy, r + 1.5, 0, 6.2832); }
+    }
+    ctx.fill();
+  }
   // Big projects draw tens of thousands of dots: the colour is only set when it changes from the previous dot
   let key = -2, stroke = false;
   for (let i = 0, j = 0; i < n; i++, j += 3) {
@@ -338,11 +349,12 @@ function drawOverlays() {
   }
 }
 function prepDraft(d) { d._pts = computePoints(d); d._n = pixelCount(d); d._pitch = fixturePitch(d); }
-// The stage's fonts and colours are the page's (css/app.css), read once and again when the look changes (setTheme)
+// The stage's fonts and colours are the page's (css/app.css), read once and again when the look changes (setTheme).
+// They are read on the stage itself, which stays black in the white look too: it shows light.
 let FONT_MONO = null, FONT_UI = null, SC = null;
 function stageLook(again = false) {
   if (SC && !again) return;
-  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  const cs = getComputedStyle(stageEl), v = n => cs.getPropertyValue(n).trim();
   FONT_MONO = v('--mono'); FONT_UI = v('--ui');
   SC = { sel: v('--sel'), selInk: v('--sel-ink'), first: v('--danger'), pick: v('--warn'), text: v('--text'), text2: v('--text2'), muted: v('--muted'),
     line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotSmall: v('--dot-small'), dotEdge: v('--dot-edge'), handle: v('--bg1') };

@@ -162,7 +162,7 @@ function hydrate(p) {
     const z = Object.assign(newZone({ name: 'Zone ' + (i + 1) }), zn);
     z.id = uniqueId(z.id, zoneIds);
     if (typeof z.name !== 'string') z.name = 'Zone ' + (i + 1);
-    z.tag = tagOf(zn.tag);
+    z.tag = tagOf(z.tag);
     z.layers = (Array.isArray(z.layers) ? z.layers : []).map(fixLayer);
     z.scenes = fixScenes(z.scenes);
     z.opacity = isFinite(z.opacity) ? clamp(+z.opacity, 0, 1) : 1;

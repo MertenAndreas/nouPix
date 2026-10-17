@@ -93,7 +93,7 @@ try:
     phctx = br.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     ph = phctx.new_page(); watch(ph, "phone")
     ph.goto(f"http://127.0.0.1:{RP}/")
-    check("the login page asks who you are, three choices", ph.locator(".role").count() == 3 and "Who are you?" in ph.inner_text("h1"))
+    check("the login page asks who you are, three choices", ph.locator(".role").count() == 3 and "Who are you?" in ph.text_content("h1"))
     ph.click(".role[data-role=remote]"); ph.click("#go")
     check("Remote opens the phone page, live", until(ph, "document.querySelectorAll('.zone').length > 0 && document.querySelector('#conn').classList.contains('ok')"))
     zn = ph.locator(".zone .zhead b").all_inner_texts()
@@ -149,7 +149,7 @@ try:
     op.goto(f"http://127.0.0.1:{RP}/"); op.click(".role[data-role=operator]"); op.click("#go")
     check("operator: the interface, with the project of the main computer", until(op, "window.olm && remote.loaded && olm.project.fixtures.length === 9", 15000))
     O = op.evaluate
-    check("the top bar says Operator; no Art-Net, Highlight or Nodes", "Operator" in op.inner_text("#btnRemote") and not op.is_visible("#btnOutput") and not op.is_visible("#hl") and not op.is_visible("#dockTabs [data-tab=nodes]"))
+    check("the top bar says Operator; no Art-Net, Highlight or Nodes", "Operator" in op.text_content("#btnRemote") and not op.is_visible("#btnOutput") and not op.is_visible("#hl") and not op.is_visible("#dockTabs [data-tab=nodes]"))
     check("no tools that draw fixtures, no + Add or SVG", op.locator("#rail button:visible").count() == 1 and not op.is_visible("#btnAddFx") and not op.is_visible("#btnImportSvg"))
     # the stage: select, but nothing moves
     fx = O("(() => { const f = olm.project.fixtures[0]; const r = document.querySelector('#view').getBoundingClientRect(); const [x, y] = toS(f.cx, f.cy); return [r.left + x, r.top + y, f.cx]; })()")

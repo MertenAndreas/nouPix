@@ -68,7 +68,7 @@ try:
     r = W.locator('.bay [data-bv="m:speed"]'); r.fill("0.75"); r.dispatch_event("input"); settle()
     check("a row's slider moves what it drives (Speed at 1.5×)", abs(ev("project.macros.speed.v") - 1.5) < 0.01, ev("project.macros.speed.v"))
     W.locator('.bay [data-bb="blackout"]').click(); settle()
-    check("a row's button turns Blackout on, and says so", ev("ui.blackout") and W.locator('.bay [data-bb="blackout"]').inner_text() == "On")
+    check("a row's button turns Blackout on, and says so", ev("ui.blackout") and W.locator('.bay [data-bb="blackout"]').text_content() == "On")
     W.locator('.bay [data-bb="blackout"]').click(); settle()
 
     # ---------- a wire picked

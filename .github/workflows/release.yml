@@ -2,7 +2,7 @@
 # with PyInstaller (noupix.spec), then wrapped with the interface window in an Electron app (desktop/).
 #   - Push a tag named after the version in noupix.py (git tag v1.0.0 && git push origin v1.0.0):
 #     the apps are built, tested and attached to a new GitHub release.
-#   - Or run it by hand from the Actions tab: the apps are built and kept as run artifacts, no release.
+#   - Or run it by hand from the Actions tab: the apps are built and kept as run artifacts for a day, no release.
 name: Build apps
 
 on:
@@ -130,11 +130,15 @@ jobs:
           fi
           ls -l out
 
+      # Kept one day only: the release job takes them within minutes and the release keeps its own copy, and on a
+      # private repository these count against GitHub's 500 MB of free storage. The installers are compressed already.
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.suffix }}
           path: out/*
           if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
 
   release:
     needs: build

@@ -73,37 +73,33 @@ function drawDots(f, dispOverride) {
   const r = dotRadius(f), d = r * 2;
   // Below a pixel and a half across a dot can't look round anyway: squares are drawn, faster
   const small = r < 0.75, xmax = VW + 10, ymax = VH + 10;
-  // With the content shown strongly behind them, each dot gets a dark rim first, so the fixtures stand out from it;
-  // the rim follows the dot's size, so small dots don't drown in it
-  if (ui.showContent && ui.contentOp > 0.4) {
-    const e = Math.min(1.5, r * 0.6);
-    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  // Each dot shows what it sends, black when off, inside a thin grey ring that keeps the fixture easy to find on the
+  // black stage; with the content shown strongly behind them, a dark rim outside that, so they stand out from it.
+  // Rings and rims follow the dot's size, so small dots don't drown in them
+  const e = clamp(r * 0.3, 0.5, 1), rims = [[SC.dotEdge, e]];
+  if (ui.showContent && ui.contentOp > 0.4) rims.unshift(['rgba(0,0,0,0.8)', e + Math.min(1.5, r * 0.6)]);
+  for (const [col, w] of rims) {
+    ctx.fillStyle = col;
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const sx = P[2 * i] * z + ox, sy = P[2 * i + 1] * z + oy;
       if (sx < -10 || sy < -10 || sx > xmax || sy > ymax) continue;
-      if (small) ctx.rect(sx - r - e, sy - r - e, d + 2 * e, d + 2 * e); else { ctx.moveTo(sx + r + e, sy); ctx.arc(sx, sy, r + e, 0, 6.2832); }
+      if (small) ctx.rect(sx - r - w, sy - r - w, d + 2 * w, d + 2 * w); else { ctx.moveTo(sx + r + w, sy); ctx.arc(sx, sy, r + w, 0, 6.2832); }
     }
     ctx.fill();
   }
   // Big projects draw tens of thousands of dots: dots of one colour in a row go in one path, filled when it changes
   let key = -2, open = false;
-  const flush = () => {
-    if (!open) return;
-    ctx.fill();
-    if (key === -1 && !small && r >= 2.2) { ctx.strokeStyle = SC.dotEdge; ctx.lineWidth = 1; ctx.stroke(); }
-    open = false;
-  };
   for (let i = 0, j = 0; i < n; i++, j += 3) {
     const sx = P[2 * i] * z + ox, sy = P[2 * i + 1] * z + oy;
     if (sx < -10 || sy < -10 || sx > xmax || sy > ymax) continue;
     const R = D ? D[j] : 0, G = D ? D[j + 1] : 0, B = D ? D[j + 2] : 0;
     const lit = R + G + B > 6, k = lit ? (R << 16) | (G << 8) | B : -1;
-    if (k !== key) { flush(); key = k; ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : r < 2.2 ? SC.dotSmall : SC.dot; }
+    if (k !== key) { if (open) { ctx.fill(); open = false; } key = k; ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : SC.dot; }
     if (!open) { ctx.beginPath(); open = true; }
     if (small) ctx.rect(sx - r, sy - r, d, d); else { ctx.moveTo(sx + r, sy); ctx.arc(sx, sy, r, 0, 6.2832); }
   }
-  flush();
+  if (open) ctx.fill();
   return r;
 }
 function drawWiring(f, color) {
@@ -372,7 +368,7 @@ function stageLook(again = false) {
   const cs = getComputedStyle(stageEl), v = n => cs.getPropertyValue(n).trim();
   FONT_MONO = v('--mono'); FONT_UI = v('--ui');
   SC = { sel: v('--sel'), selInk: v('--sel-ink'), first: v('--danger'), pick: v('--warn'), text: v('--text'), text2: v('--text2'), muted: v('--muted'),
-    line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotSmall: v('--dot-small'), dotEdge: v('--dot-edge'), handle: v('--bg1') };
+    line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotEdge: v('--dot-edge'), handle: v('--bg1') };
 }
 // #rrggbb at an opacity
 const withAlpha = (c, a) => /^#[0-9a-f]{6}$/i.test(c) ? `rgba(${parseInt(c.slice(1, 3), 16)},${parseInt(c.slice(3, 5), 16)},${parseInt(c.slice(5, 7), 16)},${a})` : c;

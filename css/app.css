@@ -41,6 +41,9 @@
   /* around the canvas, and a light halo under what is drawn over it (none in the black look) */
   --stage-out: #000000;
   --stage-halo: none;
+  /* fixtures' names over the canvas, black in both looks */
+  --canvas-ink: #bdbdbd;
+  --canvas-sel: #f0f0f0;
   --ui: "Saira", "Segoe UI", system-ui, -apple-system, sans-serif;
   --label: "Chakra Petch", "Saira", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;

@@ -225,13 +225,13 @@ function drawView() {
     if (ui.showLabels && (z > 0.35 || isSel) && (!isSel || ui.sel.size <= 6 || hov)) {
       const b = fixtureBounds(f);
       const [lx, ly] = toS(b.x0, b.y0);
+      // over the black canvas a name is light, as in the black look; outside it, in the white look, dark
+      const onCanvas = lx >= ox && lx <= ox + W * z && ly - 7 >= oy && ly - 7 <= oy + H * z;
+      ctx.save(); ctx.shadowBlur = 0;
       ctx.font = (isSel ? '600 ' : '500 ') + '11px ' + FONT_UI;
-      ctx.fillStyle = isSel ? SC.sel : fxTag(f) || SC.text2; ctx.globalAlpha = f.enabled ? 0.95 : 0.5;
-      const name = f.name + (f.locked ? '  (locked)' : '');
-      // in the white look a crisp light edge, so a dark name reads on the black canvas too
-      if (SC.halo) { ctx.save(); ctx.shadowBlur = 0; ctx.strokeStyle = SC.halo; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.strokeText(name, lx, ly - 7); ctx.restore(); }
-      ctx.fillText(name, lx, ly - 7);
-      ctx.globalAlpha = 1;
+      ctx.fillStyle = isSel ? (onCanvas ? SC.canvasSel : SC.sel) : fxTag(f) || (onCanvas ? SC.canvasInk : SC.text2); ctx.globalAlpha = f.enabled ? 0.95 : 0.5;
+      ctx.fillText(f.name + (f.locked ? '  (locked)' : ''), lx, ly - 7);
+      ctx.restore();
     }
   }
   if (ui.showWiring) drawDataLinks();
@@ -377,7 +377,7 @@ function stageLook(again = false) {
   FONT_MONO = v('--mono'); FONT_UI = v('--ui');
   SC = { sel: v('--sel'), selInk: v('--sel-ink'), first: v('--danger'), pick: v('--warn'), text: v('--text'), text2: v('--text2'), muted: v('--muted'),
     line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotEdge: v('--dot-edge'), handle: v('--bg1'),
-    out: v('--stage-out'), halo: v('--stage-halo') === 'none' ? '' : v('--stage-halo') };
+    out: v('--stage-out'), halo: v('--stage-halo') === 'none' ? '' : v('--stage-halo'), canvasInk: v('--canvas-ink'), canvasSel: v('--canvas-sel') };
 }
 // #rrggbb at an opacity
 const withAlpha = (c, a) => /^#[0-9a-f]{6}$/i.test(c) ? `rgba(${parseInt(c.slice(1, 3), 16)},${parseInt(c.slice(3, 5), 16)},${parseInt(c.slice(5, 7), 16)},${a})` : c;

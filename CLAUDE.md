@@ -113,7 +113,7 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   sets it and every slider showing it; `buildOutput` multiplies it in.
 - Colours: a group (`g.tag`), a zone (`z.tag`) or a scene (`sc.tag`) may have one, a hex from `TAGS`; none (`''`, or no
   `tag` on a scene) is the default: nothing gets one unless the user gives it. Fixtures show their group's (`fxTag`);
-  a zone's is its scenes' edge, a scene's its mark while it plays (`--mark`). `hydrate` drops fixtures' colours, and
+  a zone's is its scenes' edge, a scene's its corner mark (`--mark`; red without one), dim and bright while it plays. `hydrate` drops fixtures' colours, and
   the others from files before version 4 (they were given automatically then).
 - Files: `{ format: 'noupix-project', version: 4, … }`, saved as `.noupix.json`. `hydrate` (project-io.js) repairs
   anything opened (older versions, openLedMapper and Weft files, hand edits) so the rest of the code can trust the

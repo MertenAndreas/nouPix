@@ -438,8 +438,9 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
   clip-path: polygon(calc(var(--cut) - .4px) 0, 100% 0, 100% calc(100% - var(--cut) + .4px), calc(100% - var(--cut) + .4px) 100%, 0 100%, 0 calc(var(--cut) - .4px)); }
 .scene:hover { --fill: var(--bg4); }
 .scene.live { --edge: var(--live); --fill: color-mix(in srgb, var(--live) 8%, var(--bg3)); }
-/* the playing scene's one small mark: its own colour, or red */
-.scene.live::after { background: linear-gradient(var(--mark, var(--accent)), var(--mark, var(--accent))) right 3px top 3px / 4px 4px no-repeat, var(--fill); }
+/* every scene's small mark, in its colour (red unless the user gives it another): dim, and bright while it plays */
+.scene::after { --mk: color-mix(in srgb, var(--mark, var(--accent)) 40%, transparent); background: linear-gradient(var(--mk), var(--mk)) right 3px top 3px / 4px 4px no-repeat, var(--fill, var(--bg3)); }
+.scene.live::after { --mk: var(--mark, var(--accent)); }
 .scene .t { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }
 .scene .t .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scene .k { font-family: var(--mono); font-size: 10px; color: var(--muted); }

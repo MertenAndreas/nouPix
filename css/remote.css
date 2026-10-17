@@ -99,9 +99,11 @@ button { cursor: pointer; }
 .scene b { font-weight: 500; font-size: 14.5px; line-height: 1.2; overflow-wrap: anywhere; }
 .scene span { color: var(--muted); font: 11px var(--mono); }
 .scene:active { transform: scale(.98); }
-/* playing: a white edge and the one small red mark */
+/* every scene's small mark, in its colour (red unless given another): dim, and bright with a white edge while it plays */
 .scene.live { --edge: var(--live); --fill: #1b1b1b; }
-.scene.live::after { background: linear-gradient(var(--mark, var(--accent)), var(--mark, var(--accent))) right 7px top 7px / 6px 6px no-repeat, var(--fill); }
+.scene { --mk: color-mix(in srgb, var(--mark, var(--accent)) 40%, transparent); }
+.scene.live { --mk: var(--mark, var(--accent)); }
+.scene::after { background: linear-gradient(var(--mk), var(--mk)) right 7px top 7px / 6px 6px no-repeat, var(--fill, var(--bg2)); }
 .scene.live b { color: var(--live); }
 .empty { color: var(--muted); font-size: 13.5px; }
 /* a zone's playlists, and the one playing */

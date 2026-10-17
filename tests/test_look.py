@@ -49,7 +49,7 @@ try:
     pg.click("#btnTheme"); settle(0.4)
     check("the top bar's button turns it white", ev("document.documentElement.dataset.theme") == "light" and css("body", "backgroundColor") != "rgb(0, 0, 0)"
           and ev("ui.theme") == "light" and pg.get_attribute("#btnTheme", "aria-pressed") == "true")
-    check("the stage draws in the white look's colours", ev("SC.bg0") == ev("getComputedStyle(document.documentElement).getPropertyValue('--bg0').trim()") and ev("SC.canvas") == "#ffffff")
+    check("the stage stays black, so the fixtures look the same", ev("SC.canvas") == "#000000" and ev("SC.bg0") == "#000000" and ev("getComputedStyle(document.documentElement).getPropertyValue('--bg0').trim()") != "#000000")
     check("kept with this computer's preferences, not in the project", ev("store.get('noupix.ui', {}).theme") == "light" and "theme" not in ev("JSON.parse(serialize(true))"))
     pg.reload(); pg.wait_for_function("window.olm && olm.bridge.connected"); settle(0.6)
     check("and still white after a reload, from the start", ev("document.documentElement.dataset.theme") == "light" and ev("ui.theme") == "light")

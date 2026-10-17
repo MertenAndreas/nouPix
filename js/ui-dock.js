@@ -541,18 +541,17 @@ function renderNodes(body) {
       : 'Node discovery needs nouPix running on this computer (the app, or noupix.py): a web page on its own cannot send or receive Art-Net.'));
   } else {
     scroll.append(h('table', { class: 'table' },
-      h('thead', null, h('tr', null, ['IP', 'Name', 'Network', 'Output ports', 'Universes', 'MAC', 'Status', ''].map(t => h('th', null, t)))),
+      h('thead', null, h('tr', null, ['IP', 'Name', 'Network', 'Universes', 'MAC', 'Status', ''].map(t => h('th', null, t)))),   // ArtPoll tells the universes, not the outputs
       h('tbody', null, nodes.map(n => {
         const known = project.controllers.find(c => c.ip === n.ip);
         return withRightClick(h('tr', null,
           h('td', { class: 'mono' }, n.ip),
           h('td', null, h('div', null, n.shortName || '—'), h('div', { class: 'muted', style: { fontSize: '11px' } }, n.longName)),
           h('td', { class: 'mono muted' }, (k => k ? k.name || k.ip : '—')(netOf(n.ip, nets))),
-          h('td', { class: 'mono' }, n.universes.length || '—'),
           h('td', { class: 'mono' }, n.universes.length ? n.universes.join(', ') : '—'),
           h('td', { class: 'mono' }, n.mac || '—'),
           h('td', { class: 'muted', style: { fontSize: '11px', maxWidth: '260px' } }, n.report || ''),
-          h('td', null, h('button', { class: 'btn sm', type: 'button', disabled: !n.universes.length, title: n.universes.length ? (known ? `Refresh the universes ${known.name} shows as reported by the device, in the Patch tab` : '') : 'This device reports no output ports',
+          h('td', null, h('button', { class: 'btn sm', type: 'button', disabled: !n.universes.length, title: n.universes.length ? (known ? `Refresh the universes ${known.name} shows as reported by the device, in the Patch tab` : '') : 'This device reports no universes',
             onclick: () => addNodeAsController(n) }, known ? 'Refresh universes' : 'Add as controller'))), e => nodeMenu(e, n));
       }))));
   }

@@ -41,7 +41,7 @@ On Windows, allow nouPix (or Python) through the firewall on private networks wh
 
 The interface is black, so the light on the stage is the brightest thing on screen. A few colours mean the same everywhere: **red** marks what acts (the active tool, Blackout, the primary button), what you select is outlined in **white**, **white** means a light is on (Art-Net on, the scene playing, with a small red mark in its corner), **yellow** belongs to MIDI, and **aluminium** is anything you move (sliders, levels). Everything else is a grey.
 
-- **Black or white:** the sun in the top bar (or **Settings → Interface**) turns the interface white, for daylight; the moon turns it black again. It is this computer's choice, not the project's, and the MIDI and Scenes windows follow it.
+- **Black or white:** the sun in the top bar (or **Settings → Interface**) turns the interface white, for daylight (the stage stays black: it shows light); the moon turns it black again. It is this computer's choice, not the project's, and the MIDI and Scenes windows follow it.
 - **Colours of your own:** a group or a zone can be given one of eight colours (Inspector, **Colour**; the first swatch is none): a group's fixtures show it in the list and on the stage, a zone's scenes on their edge. A scene can have one too (**⋯ → Rename, fade time, colour…**): it is the small mark on the scene while it plays (red when it has none). Nothing gets a colour unless you give it one.
 - The fonts come with the app, so it looks the same without the internet.
 

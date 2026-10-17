@@ -35,7 +35,6 @@ colour is a variable in `:root`, redefined for white under `:root[data-theme="li
 |---|---|---|
 | window, stage (`--bg0`) | `#000000` | `#e8e8e8` |
 | panels (`--bg1`) | `#0a0a0a` | `#f5f5f5` |
-| the canvas on the stage (`--canvas`) | `#000000` | `#ffffff` |
 | text, secondary, muted | `#f0f0f0`, `#bdbdbd`, `#8e8e8e` | `#111111`, `#3d3d3d`, `#666666` |
 | red (`--accent`) | `#ff3b3b` | `#c8141a` |
 | lit (`--live`) | `#ffffff` | `#000000` |
@@ -43,8 +42,9 @@ colour is a variable in `:root`, redefined for white under `:root[data-theme="li
 | aluminium (`--fader`) | `#dce1e6` | `#4f5861` |
 
 Contrast rule for anything new: text at least 4.5:1 on its background. `--muted` is the darkest grey allowed for text;
-darker greys are for lines and fills. The stage reads its colours from these variables (`stageLook` in
-`ui-stage.js`), again when the look changes. The login page and the phone remote are black.
+darker greys are for lines and fills. The stage stays black in both looks: it shows light, and the fixtures keep their colours (`.stage` keeps the black
+variables, and `stageLook` in `ui-stage.js` reads them there). With the content shown strongly behind them, the
+fixtures' pixels get a dark rim, so they stand out from it. The login page and the phone remote are black.
 
 ## 3. Type
 

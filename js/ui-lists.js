@@ -257,23 +257,15 @@ function srcMatches(s, q, skip) {
   const vals = Object.values(fs);
   return q.split(/\s+/).every(w => hay.includes(w) || vals.includes(SRC_SEARCH[w]));
 }
+// The filters are one row of buttons, by use: Architectural, Ambient, Show, Utility (click the one on again for all).
+// The other facets (mood, look, motion) stay in the search: "disco" finds the party sources.
 function renderSrcFacets() {
   const want = ui.srcFacets || (ui.srcFacets = {}), q = (ui.srcFilter || '').trim().toLowerCase();
-  // Type only appears once there is more than one kind of source
-  const kinds = new Set(project.sources.map(s => srcFacets(s).type));
-  const sel = SRC_FACETS.filter(f => f.key !== 'type' || kinds.size > 1 || want.type).map(f => {
-    // How many sources each value would show, given the search and the other facets
-    const n = new Map();
-    for (const s of project.sources) if (srcMatches(s, q, f.key)) { const v = srcFacets(s)[f.key]; n.set(v, (n.get(v) || 0) + 1); }
-    const el = h('select', { class: want[f.key] ? 'on' : '', title: f.label, 'aria-label': 'Filter by ' + f.label.toLowerCase() },
-      h('option', { value: '' }, f.label + ': all'),
-      ...f.values.filter(([v]) => n.get(v) || want[f.key] === v).map(([v, l]) => h('option', { value: v }, `${l} (${n.get(v) || 0})`)));
-    el.value = want[f.key] || '';
-    el.addEventListener('change', () => { want[f.key] = el.value; renderSrcList(); $('#srcFacets select[title="' + f.label + '"]').focus(); });
-    return el;
-  });
-  const any = q || Object.values(want).some(Boolean);
-  $('#srcFacets').replaceChildren(...sel, ...(any ? [h('button', { type: 'button', title: 'Show all sources', onclick: () => { ui.srcFacets = {}; ui.srcFilter = $('#srcFind').value = ''; renderSrcList(); $('#srcFind').focus(); } }, 'Clear') ] : []));
+  const use = SRC_FACETS.find(f => f.key === 'use'), n = new Map();
+  for (const s of project.sources) if (srcMatches(s, q, 'use')) { const v = srcFacets(s).use; n.set(v, (n.get(v) || 0) + 1); }
+  const chips = use.values.map(([v, l]) => h('button', { type: 'button', class: 'chip' + (want.use === v ? ' on' : ''), 'aria-pressed': String(want.use === v), title: `${l}: ${n.get(v) || 0}`,
+    onclick: () => { ui.srcFacets = want.use === v ? {} : { use: v }; renderSrcList(); } }, l));
+  $('#srcFacets').replaceChildren(...chips);
 }
 function renderSrcList() {
   renderSrcFacets();

@@ -41,7 +41,7 @@ On Windows, allow nouPix (or Python) through the firewall on private networks wh
 
 The interface is black, so the light on the stage is the brightest thing on screen. A few colours mean the same everywhere: **red** marks what acts (the active tool, Blackout, the primary button), what you select is outlined in **white**, **white** means a light is on (Art-Net on, the scene playing, with a small red mark in its corner), **yellow** belongs to MIDI, and **aluminium** is anything you move (sliders, levels). Everything else is a grey.
 
-- **Black or white:** the sun in the top bar (or **Settings → Interface**) turns the interface white, for daylight (the stage stays black: it shows light); the moon turns it black again. It is this computer's choice, not the project's, and the MIDI and Scenes windows follow it.
+- **Black or white:** the sun in the top bar (or **Settings → Interface**) turns the interface white, for daylight (the canvas stays black: it shows light; the stage around it turns white); the moon turns it black again. It is this computer's choice, not the project's, and the MIDI and Scenes windows follow it.
 - **Colours of your own:** a group or a zone can be given one of eight colours (Inspector, **Colour**; the first swatch is none): a group's fixtures show it in the list and on the stage, a zone's scenes on their edge. A scene can have one too (**⋯ → Rename, fade time, colour…**): it is the small mark in the scene's corner, dim, and bright while the scene plays (red until you give it another). Nothing gets a colour unless you give it one.
 - The fonts come with the app, so it looks the same without the internet.
 
@@ -52,7 +52,7 @@ The interface is black, so the light on the stage is the brightest thing on scre
 3. **Patch.** In the Patch panel, add a controller: IP address, number of outputs, universes per output and first universe. Then drag fixtures from the list onto an output. Fixtures chained on one output are addressed in order, automatically.
 4. **Content.** Click a generator in Sources to play it in the selected layer of the selected zone. Add zones, layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
 5. **Scenes.** When a zone's look is right, press **+ Store** on its row in the Scenes panel. Put scenes in a **playlist** to have the zone play them one after another by itself.
-6. **Art-Net ON.**
+6. **Art-Net ON.** The status bar's right end then shows how many packets go out each second, or what is wrong.
 
 **Ovals.** A circle stretches into an oval: drag the side handles of its frame on the stage, or set **Radius X** and **Y** in the Inspector (**Make it round** brings it back). Its pixels are spaced evenly along the curve, as on a real strip. Ellipses in an imported SVG become ovals.
 

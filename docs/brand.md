@@ -42,9 +42,11 @@ colour is a variable in `:root`, redefined for white under `:root[data-theme="li
 | aluminium (`--fader`) | `#dce1e6` | `#4f5861` |
 
 Contrast rule for anything new: text at least 4.5:1 on its background. `--muted` is the darkest grey allowed for text;
-darker greys are for lines and fills. The stage stays black in both looks: it shows light, and the fixtures keep their colours (`.stage` keeps the black
-variables, and `stageLook` in `ui-stage.js` reads them there). With the content shown strongly behind them, the
-fixtures' pixels get a dark rim, so they stand out from it. The login page and the phone remote are black.
+darker greys are for lines and fills. The canvas stays black in both looks: it shows light, and each pixel shows what it
+sends (black when off) inside a grey ring (`--dot-edge`) that keeps fixtures easy to find. In the white look the stage
+around the canvas is white (`--stage-out`), and names and lines that cross the canvas get a light halo (`--stage-halo`);
+`stageLook` in `ui-stage.js` reads these. With the content shown strongly behind them, the fixtures' pixels get a dark
+rim, so they stand out from it. The login page and the phone remote are black.
 
 ## 3. Type
 

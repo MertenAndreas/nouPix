@@ -1,4 +1,4 @@
-// openLedMapper · js/render.js
+// nouPix · js/render.js
 // Rendering: the GPU mixer that composites zones and layers, looks and fades between them, sampling the
 // composition at every pixel of the fixtures, and the highlight and test patterns. Uses util, model, geometry, sources.
 

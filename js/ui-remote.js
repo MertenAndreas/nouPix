@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-remote.js
+// nouPix · js/ui-remote.js
 // Remote control in the interface: the top-bar button and its menu, the Remote control section of Settings, the
 // screen a device shows while it waits for the main computer, and how the mapping is shown locked to operators.
 
@@ -19,7 +19,7 @@ function updateRemoteUI() {
   }
   const st = remote.status, on = !!(st && st.on), n = remote.clients.size;
   b.classList.toggle('on', on); b.classList.remove('warn');
-  b.title = on ? `Remote control on: ${n} device${n === 1 ? '' : 's'} connected. Click for the address.` : 'Remote control: let phones, tablets and other computers use openLedMapper';
+  b.title = on ? `Remote control on: ${n} device${n === 1 ? '' : 's'} connected. Click for the address.` : 'Remote control: let phones, tablets and other computers use nouPix';
   badge.textContent = n; badge.hidden = !on || !n;
 }
 function remoteMenu(anchor) {
@@ -52,7 +52,7 @@ function remoteSection() {
   const parts = [
     h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'Remote control'),
       h('button', { class: 'onsw' + (cfg.on ? ' on' : ''), type: 'button', role: 'switch', 'aria-checked': String(cfg.on), disabled: !bridge.connected,
-        title: bridge.connected ? '' : 'Needs openLedMapper running on this computer (the app, or openledmapper.py)',
+        title: bridge.connected ? '' : 'Needs nouPix running on this computer (the app, or noupix.py)',
         onclick: () => { cfg.on = !cfg.on; apply(); } }, h('i'), cfg.on ? 'ON' : 'OFF')),
     row('Port', numInput(port, 'v', { int: true, min: 1024, max: 65535, aria: 'Remote control port', onCommit: () => { cfg.port = port.v; if (cfg.on) remoteConfigure(); else remoteSaveCfg(); renderRight(); } })),
     row('Password', h('div', { class: 'pwrow' }, pw, show)),
@@ -63,7 +63,7 @@ function remoteSection() {
       h('button', { class: 'btn sm', type: 'button', onclick: () => navigator.clipboard.writeText(u).then(() => toast('Copied ' + u), () => toast(u)) }, 'Copy')))));
     const list = [...remote.clients.values()];
     parts.push(h('p', { class: 'note' }, list.length ? 'Connected: ' + list.map(c => `${ROLE_NAMES[c.role] || c.role} (${c.addr})`).join(', ') : 'No device connected yet.'));
-    if (/Mac/.test(navigator.platform)) parts.push(h('p', { class: 'note' }, 'If macOS asks whether openLedMapper may accept incoming connections, allow it, or devices cannot reach it.'));
+    if (/Mac/.test(navigator.platform)) parts.push(h('p', { class: 'note' }, 'If macOS asks whether nouPix may accept incoming connections, allow it, or devices cannot reach it.'));
     parts.push(h('p', { class: 'note' }, 'The Remote page installs as an app on phones (LED Remote). On Android, Chrome first needs this address in chrome://flags, "Insecure origins treated as secure"; without it, the page\'s full screen button hides the browser\'s bars. The user guide has the steps.'));
   } else if (st && st.error) parts.push(h('p', { class: 'note err' }, st.error));
   const s = sec('Remote control', parts);
@@ -75,7 +75,7 @@ function remoteSection() {
 function remoteOverlay() {
   if (!REMOTE_CLIENT) return;
   let ov = $('#remoteWait');
-  const msg = remote.bye ? remote.bye : !bridge.connected ? 'Connecting to openLedMapper…' : !remote.hostOn ? 'Waiting for openLedMapper on the main computer. Keep its window open with Remote control on.' : !remote.loaded ? 'Loading the project…' : '';
+  const msg = remote.bye ? remote.bye : !bridge.connected ? 'Connecting to nouPix…' : !remote.hostOn ? 'Waiting for nouPix on the main computer. Keep its window open with Remote control on.' : !remote.loaded ? 'Loading the project…' : '';
   if (!msg) { if (ov) ov.remove(); return; }
   if (!ov) { ov = h('div', { id: 'remoteWait', class: 'rwait', role: 'status' }); document.body.append(ov); }
   ov.replaceChildren(h('div', { class: 'rwbox' }, h('div', { class: 'rwspin', hidden: !!remote.bye }), h('p', null, msg),

@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-inspector.js
+// nouPix · js/ui-inspector.js
 // The right panel: fixture, multi-selection, group and zone inspectors, the Content tab (zones, layers,
 // parameters, video controls) and Settings.
 
@@ -44,10 +44,9 @@ function renderInspector(body) {
   const f = sel[0], alone = f.group != null && groupById(f.group);
   if (alone && project.fixtures.filter(x => x.group === f.group).length === 1) body.append(groupSection(alone, [f]));   // a group of one
   const nameIn = textInput(f, 'name', { id: 'fxName', aria: 'Fixture name', onInput: () => renderFxList(), onCommit: commit });
-  const sw = tagSwatches(f, 'Tag colour');
   body.append(sec(null,
     h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon(f.type)), isOval(f) ? 'Oval' : TYPE_LABEL[f.type], h('span', { class: 'fill' }), h('span', { class: 'mono muted', style: { letterSpacing: 0, textTransform: 'none' } }, pixelCount(f) + ' px')),
-    row('Name', nameIn), row('Tag', sw),
+    row('Name', nameIn),
     project.groups.length ? row('Group', selectEl([['', 'None'], ...project.groups.map(g => [g.id, groupName(g)])], f.group ?? '', v => setFixtureGroup(f, v), { aria: 'Group' })) : null,
     h('div', { style: { display: 'flex', gap: '16px' } }, checkRow('Enabled', f, 'enabled', () => { commit(); }), checkRow('Locked', f, 'locked', () => { commit(); renderRight(); }))));
   body.append(arrangeSection([f]));
@@ -266,7 +265,7 @@ function groupSection(g, sel) {
   dim.querySelector('.sval').dataset.groupPct = g.id;
   dim.title = `Dims every fixture of ${groupName(g)}, over each one's own dimmer and under the master`;
   return sec(null,
-    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: g.tag } }, icon('group')), 'Group'),
+    h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: g.tag || 'var(--text2)' } }, icon('group')), 'Group'),
     row('Name', nameIn), row('Colour', sw), dim,
     h('p', { class: 'note' }, sel.length === 1 ? `1 fixture · ${fmtN(px)} pixels. Drop fixtures on the group's name in the list to add them.`
       : `${sel.length} fixtures · ${fmtN(px)} pixels. To edit just one of them, double-click it on the stage or click it in the list.`));
@@ -303,7 +302,7 @@ function zoneOpacityInput(z, width) {
   r.addEventListener('click', e => e.stopPropagation());
   return midiSlot(r, 'z:' + z.id, width);   // a MIDI fader can drive it
 }
-const zoneTag = z => h('span', { class: 'ztag', style: { borderColor: z.tag } });
+const zoneTag = z => h('span', { class: 'ztag', style: { borderColor: z.tag || 'var(--muted)' } });
 function renderZoneInspector(body) {
   const z = selZone();
   if (!z) { body.append(sec('Zones', h('p', { class: 'note' }, 'No zones yet. Drag on the stage to draw one.'))); return; }
@@ -312,11 +311,11 @@ function renderZoneInspector(body) {
   const upd = () => { sizeTxt.textContent = `${z.w} × ${z.h}`; };
   upd(); binders.push(upd);
   const g = o => Object.assign({ int: true, onInput: () => { clampZone(z); syncInspector(); }, onCommit: () => { clampZone(z); commit(); syncInspector(); } }, o);
-  const sw = tagSwatches(z, 'Zone color');
+  const sw = tagSwatches(z, 'Zone colour');
   body.append(sec(null,
     h('h3', null, h('span', { class: 'ty', style: { display: 'flex', color: 'var(--text2)' } }, icon('zone')), 'Zone', h('span', { class: 'fill' }), sizeTxt),
     row('Name', textInput(z, 'name', { id: 'zoneName', aria: 'Zone name', onInput: () => refreshScenes(), onCommit: () => { commit(); renderSrcList(); } })),
-    row('Color', sw),
+    row('Colour', sw),
     row('Opacity', h('div', { class: 'slider' }, zoneOpacityInput(z, 150), h('span', { class: 'mono', 'data-zone-pct': z.id }, pct(z.opacity))))));
   body.append(sec('Area',
     row('Position', numInput(z, 'x', g({ prefix: 'X', min: 0, aria: 'Zone X' })), numInput(z, 'y', g({ prefix: 'Y', min: 0, aria: 'Zone Y' }))),
@@ -379,7 +378,7 @@ function layersSection(z) {
     list.append(li);
   }
   if (!z.layers.length) list.append(emptyRow('No layers, so this zone is black. Add a layer, or click a source.'));
-  return sec(null, h('h3', null, 'Layers', h('span', { style: { color: z.tag, letterSpacing: '.06em' } }, '· ' + z.name), h('span', { class: 'fill' }),
+  return sec(null, h('h3', null, 'Layers', h('span', { style: { color: z.tag || 'var(--text2)', letterSpacing: '.06em' } }, '· ' + z.name), h('span', { class: 'fill' }),
     h('button', { class: 'btn sm', type: 'button', title: 'Add an empty layer above the selected one', onclick: () => addLayer(z) }, '+ Layer')), list);
 }
 function renderContentTab(body) {
@@ -589,6 +588,9 @@ function renderSettings(body) {
   const s = project.settings;
   let before = [s.compW, s.compH];
   const onSize = () => { fitZonesToCanvas(...before); before = [s.compW, s.compH]; markGeom(); commit(); };
+  body.append(sec('Interface',
+    row('Look', seg([['dark', 'Black'], ['light', 'White']], ui.theme === 'light' ? 'light' : 'dark', v => setTheme(v))),
+    h('p', { class: 'note' }, 'Black keeps the light on the stage the brightest thing on screen. White is for daylight. It is kept on this computer, not in the project.')));
   body.append(sec('Composition',
     row('Size', numInput(s, 'compW', { prefix: 'W', int: true, min: 16, max: 8192, onCommit: onSize }), numInput(s, 'compH', { prefix: 'H', int: true, min: 16, max: 8192, onCommit: onSize })),
     h('p', { class: 'note' }, 'The canvas content is rendered at this size and sampled at each pixel position. Fixture coordinates are in these units.')));
@@ -611,13 +613,13 @@ function renderSettings(body) {
       project.guide ? h('button', { class: 'btn', type: 'button', onclick: () => { project.guide = null; guideImg = null; commit(); renderRight(); } }, 'Remove guide') : null),
     h('p', { class: 'note' }, 'A guide image (for example your layout SVG) is drawn over the stage, fitted to the composition, so you can trace fixtures over it.')));
   if (!REMOTE_CLIENT) body.append(remoteSection());
-  // Where the page finds openledmapper.py. The desktop app always uses its own, so there is nothing to set there.
+  // Where the page finds noupix.py. The desktop app always uses its own, so there is nothing to set there.
   if (!/Electron/.test(navigator.userAgent) && !REMOTE_CLIENT) {
     const auto = bridgeUrl();
     body.append(sec('Art-Net connection',
       row('Address', textInput(s, 'bridgeUrl', { placeholder: auto || 'ws://127.0.0.1:8080/ws', aria: 'Art-Net connection address', onCommit: () => { commit(); connectBridge(); } })),
       h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: connectBridge }, 'Reconnect')),
-      h('p', { class: 'note', html: 'Art-Net is sent by <code>openledmapper.py</code> running on this computer. Leave the address empty to use the one this page was opened from.' })));
+      h('p', { class: 'note', html: 'Art-Net is sent by <code>noupix.py</code> running on this computer. Leave the address empty to use the one this page was opened from.' })));
   }
 }
 

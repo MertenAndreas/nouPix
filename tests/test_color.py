@@ -30,7 +30,7 @@ try:
     ev("""(() => { const p = blankProject('Colour'); const f = newFixture('line', { x1: 100, y1: 300, x2: 900, y2: 300, pixels: 4 }); p.fixtures.push(f);
       const c = newController({ name: 'C', ip: '10.0.0.9', outputs: 1, upo: 1, startUniverse: 0 }); c.chains[0] = [f.id]; p.controllers.push(c);
       p.zones[0].layers = [newLayer('b-solid')]; olm.loadProject(JSON.parse(JSON.stringify(p, replacer)));
-      olm.selectZone(olm.project.zones[0].id); ui.layer = olm.project.zones[0].layers[0].id; olm.ui.rightTab = 'content'; renderRight(); localStorage.removeItem('openledmapper.colors'); })()""")
+      olm.selectZone(olm.project.zones[0].id); ui.layer = olm.project.zones[0].layers[0].id; olm.ui.rightTab = 'content'; renderRight(); localStorage.removeItem('noupix.colors'); })()""")
     time.sleep(0.4)
     out = lambda: (time.sleep(0.25), ev("Array.from(olm.universes()[0].data.slice(0, 3))"))[1]
     par = lambda: ev("(() => { const z = olm.project.zones[0], L = z.layers[0]; return (L.params['b-solid'] || {}).color || null; })()")

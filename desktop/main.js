@@ -1,9 +1,9 @@
-// openLedMapper desktop app: the interface in its own window, with the Art-Net bridge (openledmapper.py) running
+// nouPix desktop app: the interface in its own window, with the Art-Net bridge (noupix.py) running
 // inside the app. The bridge is started here with --embedded: it prints "READY <address>" once it listens, and
 // stops when this app quits, because its stdin closes then (even if the app crashes).
 //
-//   npm start      runs it from the source, with python3 ../openledmapper.py as the bridge
-//   npm run dist   builds the app; the packed bridge (PyInstaller, ../dist/openledmapper-bridge) must exist first
+//   npm start      runs it from the source, with python3 ../noupix.py as the bridge
+//   npm run dist   builds the app; the packed bridge (PyInstaller, ../dist/noupix-bridge) must exist first
 'use strict';
 
 const { app, BrowserWindow, Menu, desktopCapturer, dialog, powerSaveBlocker, session, shell } = require('electron');
@@ -12,10 +12,17 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const LOG_FILE = path.join(os.homedir(), '.openledmapper', 'openledmapper.log');
+const LOG_FILE = path.join(os.homedir(), '.noupix', 'noupix.log');
+
+// The app was called openLedMapper: what it kept (the window's storage, with the project) carries over, once, before
+// anything uses the new folder
+try {
+  const was = path.join(app.getPath('appData'), 'openLedMapper');
+  if (!fs.existsSync(app.getPath('userData')) && fs.existsSync(was)) fs.renameSync(was, app.getPath('userData'));
+} catch (e) { /* the old folder in use, or none: start afresh */ }
 
 // Keep rendering and sending when the window is minimised, covered or in the background, as the
-// switches openledmapper.py gives Chrome do.
+// switches noupix.py gives Chrome do.
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
@@ -39,11 +46,11 @@ if (!app.requestSingleInstanceLock()) {
 
 function bridgeCommand() {
   if (app.isPackaged) {
-    const exe = process.platform === 'win32' ? 'openledmapper-bridge.exe' : 'openledmapper-bridge';
+    const exe = process.platform === 'win32' ? 'noupix-bridge.exe' : 'noupix-bridge';
     return [path.join(process.resourcesPath, 'bridge', exe), []];
   }
   const python = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
-  return [python, [path.join(__dirname, '..', 'openledmapper.py')]];
+  return [python, [path.join(__dirname, '..', 'noupix.py')]];
 }
 
 // Starts the bridge and resolves with the interface address it prints.
@@ -72,7 +79,7 @@ function startBridge() {
         const last = out.trim().split('\n').filter(Boolean).pop() || `exit code ${code}`;
         reject(new Error(`The Art-Net bridge stopped while starting: ${last}`));
       } else if (!quitting) {
-        dialog.showErrorBox('openLedMapper', `The Art-Net bridge stopped unexpectedly. openLedMapper will close.\n\nDetails are in ${LOG_FILE}`);
+        dialog.showErrorBox('nouPix', `The Art-Net bridge stopped unexpectedly. nouPix will close.\n\nDetails are in ${LOG_FILE}`);
         app.quit();
       }
     });
@@ -91,7 +98,7 @@ async function start() {
   try {
     url = await startBridge();
   } catch (e) {
-    dialog.showErrorBox('openLedMapper', `${e.message}\n\nDetails are in ${LOG_FILE}`);
+    dialog.showErrorBox('nouPix', `${e.message}\n\nDetails are in ${LOG_FILE}`);
     quitting = true;
     stopBridge();
     app.quit();
@@ -105,10 +112,10 @@ async function start() {
 
   win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 900, minHeight: 600,
-    title: 'openLedMapper',
-    backgroundColor: '#0d1420',
+    title: 'nouPix',
+    backgroundColor: '#000000',
     show: false,
-    icon: app.isPackaged ? undefined : path.join(__dirname, '..', 'icons', 'openledmapper-256.png'),  // packed: the app's own icon
+    icon: app.isPackaged ? undefined : path.join(__dirname, '..', 'icons', 'noupix-256.png'),  // packed: the app's own icon
     webPreferences: { backgroundThrottling: false, contextIsolation: true, sandbox: true },
   });
   win.once('ready-to-show', () => win.show());
@@ -119,10 +126,10 @@ async function start() {
   // and Scenes windows, which the page draws itself, are windows of the app.
   wc.setWindowOpenHandler(({ url: target, frameName }) => {
     if (frameName === 'olm-midi' && (target === '' || target === 'about:blank')) {
-      return { action: 'allow', overrideBrowserWindowOptions: { width: 1180, height: 760, minWidth: 720, minHeight: 420, title: 'MIDI', backgroundColor: '#0d1420', autoHideMenuBar: true } };
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 1180, height: 760, minWidth: 720, minHeight: 420, title: 'MIDI', backgroundColor: '#000000', autoHideMenuBar: true } };
     }
     if (frameName === 'olm-scenes' && (target === '' || target === 'about:blank')) {
-      return { action: 'allow', overrideBrowserWindowOptions: { width: 1180, height: 460, minWidth: 520, minHeight: 220, title: 'Scenes', backgroundColor: '#0d1420', autoHideMenuBar: true } };
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 1180, height: 460, minWidth: 520, minHeight: 220, title: 'Scenes', backgroundColor: '#000000', autoHideMenuBar: true } };
     }
     openOutside(target);
     return { action: 'deny' };
@@ -132,7 +139,7 @@ async function start() {
   wc.on('will-prevent-unload', e => {
     const choice = dialog.showMessageBoxSync(win, {
       type: 'warning', buttons: ['Close', 'Cancel'], defaultId: 1, cancelId: 1,
-      message: 'Art-Net output is on.', detail: 'Closing openLedMapper stops the output to your LEDs.',
+      message: 'Art-Net output is on.', detail: 'Closing nouPix stops the output to your LEDs.',
     });
     if (choice === 0) e.preventDefault();  // preventDefault here means: close anyway
   });
@@ -162,7 +169,7 @@ function setUpScreenCapture() {
   session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
     try {
       const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 } });
-      const chosen = await pickSource(sources.filter(s => s.name !== 'openLedMapper'));
+      const chosen = await pickSource(sources.filter(s => s.name !== 'nouPix'));
       callback(chosen ? { video: chosen } : {});
     } catch (e) {
       callback({});
@@ -175,15 +182,15 @@ function pickSource(sources) {
     const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const items = sources.map(s => `<button onclick="location.hash='${encodeURIComponent(s.id)}'"><img src="${s.thumbnail.toDataURL()}"><span>${esc(s.name)}</span></button>`).join('');
     const html = `<!doctype html><meta charset="utf-8"><title>Choose what to capture</title><style>
-      body{margin:0;padding:16px;background:#0d1420;color:#dbe4f0;font:14px system-ui,sans-serif}
+      body{margin:0;padding:16px;background:#000;color:#f0f0f0;font:14px system-ui,sans-serif}
       h1{font-size:15px;margin:0 0 12px} .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
-      button{background:#16202f;border:1px solid #2a3a52;border-radius:8px;color:inherit;padding:8px;cursor:pointer;text-align:left}
-      button:hover{border-color:#22d3ee} img{width:100%;display:block;border-radius:4px;margin-bottom:6px;background:#000}
+      button{background:#111;border:1px solid #2c2c2c;border-radius:0;color:inherit;padding:8px;cursor:pointer;text-align:left}
+      button:hover{border-color:#ff3b3b} img{width:100%;display:block;margin-bottom:6px;background:#000}
       span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}</style>
       <h1>Choose a screen or window to capture</h1><div class="grid">${items}</div>`;
     const picker = new BrowserWindow({
       parent: win, modal: process.platform !== 'darwin', width: 760, height: 520, title: 'Choose what to capture',
-      backgroundColor: '#0d1420', autoHideMenuBar: true, webPreferences: { sandbox: true, contextIsolation: true, javascript: true },
+      backgroundColor: '#000000', autoHideMenuBar: true, webPreferences: { sandbox: true, contextIsolation: true, javascript: true },
     });
     let done = false;
     const finish = id => { if (done) return; done = true; resolve(sources.find(s => s.id === id) || null); if (!picker.isDestroyed()) picker.close(); };
@@ -205,7 +212,7 @@ function setUpMenu() {
     ] },
     { role: 'windowMenu' },
     { role: 'help', submenu: [
-      { label: 'openLedMapper on GitHub', click: () => shell.openExternal('https://github.com/nouled-studio/openLEDmapper') },
+      { label: 'nouPix on GitHub', click: () => shell.openExternal('https://github.com/nouled-studio/openLEDmapper') },
       { label: 'Show log file', click: () => shell.showItemInFolder(LOG_FILE) },
     ] },
   ];

@@ -236,17 +236,17 @@ with sync_playwright() as p:
               Storage.prototype.setItem = function (k, v) { out.push([k, v.length]); return ls.call(this, k, v); };
               const z = olm.project.zones[0]; for (let i = 0; i < 3; i++) { olm.goScene(z, z.scenes[0], true); await new Promise(r => setTimeout(r, 600)); }
               Storage.prototype.setItem = ls; return out; }""")
-          check("scene changes save the project without rewriting the guide image", sizes and all(k != "openledmapper.guide" and n < 20000 for k, n in sizes), sizes)
+          check("scene changes save the project without rewriting the guide image", sizes and all(k != "noupix.guide" and n < 20000 for k, n in sizes), sizes)
           pg.reload(); pg.wait_for_function("window.olm && olm.bridge.connected"); time.sleep(0.5)
           check("the guide image comes back after a reload", pg.evaluate("olm.project.guide && olm.project.guide.src") == url)
           pg.evaluate("() => { olm.project.guide = null; commit(); }"); time.sleep(0.8)
           pg.reload(); pg.wait_for_function("window.olm && olm.bridge.connected"); time.sleep(0.5)
-          check("a removed guide stays removed", pg.evaluate("!olm.project.guide && localStorage.getItem('openledmapper.guide') === null"))
+          check("a removed guide stays removed", pg.evaluate("!olm.project.guide && localStorage.getItem('noupix.guide') === null"))
           # a project saved by 0.3.0 keeps its guide inside the project
           old = base_project([solid([1, 0, 0])]); old["guide"] = {"src": url, "name": "old.png"}
-          pg.evaluate("p => { for (const k of ['project', 'guide']) localStorage.removeItem('openledmapper.' + k); localStorage.setItem('weft.project', JSON.stringify(p)); }", old)
+          pg.evaluate("p => { for (const k of ['project', 'guide']) localStorage.removeItem('noupix.' + k); localStorage.setItem('weft.project', JSON.stringify(p)); }", old)
           pg.reload(); pg.wait_for_function("window.olm && olm.bridge.connected"); time.sleep(1.2)
-          st = pg.evaluate("() => ({ src: olm.project.guide && olm.project.guide.src, inProject: JSON.parse(localStorage.getItem('openledmapper.project')).guide.src, own: !!localStorage.getItem('openledmapper.guide'), oldGone: localStorage.getItem('weft.project') === null })")
+          st = pg.evaluate("() => ({ src: olm.project.guide && olm.project.guide.src, inProject: JSON.parse(localStorage.getItem('noupix.project')).guide.src, own: !!localStorage.getItem('noupix.guide'), oldGone: localStorage.getItem('weft.project') === null })")
           check("a project kept by Weft carries over, keeps its guide and moves it to its own key", st["src"] == url and st["inProject"] is None and st["own"] and st["oldGone"], {k: (v[:30] if isinstance(v, str) else v) for k, v in st.items()})
       except Exception as e: check("group ran to the end", False, str(e)[:200])
 

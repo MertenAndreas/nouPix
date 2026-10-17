@@ -1,6 +1,6 @@
-// openLedMapper · js/remote-app.js
+// nouPix · js/remote-app.js
 // The remote page for phones, tablets and computers: each zone with what plays in it, a dimmer, its playlists and
-// its scenes. The programmer makes the zones, scenes and playlists in openLedMapper; this page only plays and dims them.
+// its scenes. The programmer makes the zones, scenes and playlists in nouPix; this page only plays and dims them.
 'use strict';
 (() => {
   const $ = s => document.querySelector(s);
@@ -30,8 +30,8 @@
   function conn(ok, text) { $('#conn').classList.toggle('ok', ok); $('#conn span').textContent = text; $('#conn').title = text; $('#conn').setAttribute('aria-label', text); }
   function status() {
     if (bye) { wait(bye); conn(false, 'Disconnected'); return; }
-    if (!ws || ws.readyState !== 1) { wait('Connecting to openLedMapper…'); conn(false, 'Connecting'); return; }
-    if (!hostOn) { wait('Waiting for openLedMapper on the main computer.'); conn(false, 'Waiting'); return; }
+    if (!ws || ws.readyState !== 1) { wait('Connecting to nouPix…'); conn(false, 'Connecting'); return; }
+    if (!hostOn) { wait('Waiting for nouPix on the main computer.'); conn(false, 'Waiting'); return; }
     wait(state ? '' : 'Loading…'); conn(true, 'Live');
   }
   const send = m => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); };
@@ -60,8 +60,8 @@
 
   // ---- the page
   function render() {
-    $('#pname').textContent = state.name || 'openLedMapper';
-    document.title = (state.name ? state.name + ' · ' : '') + 'openLedMapper Remote';
+    $('#pname').textContent = state.name || 'nouPix';
+    document.title = (state.name ? state.name + ' · ' : '') + 'nouPix Remote';
     $('#bo').hidden = !state.blackout;
     const zones = $('#zones');
     const cards = new Map([...zones.children].map(c => [c.dataset.id, c]));
@@ -71,7 +71,7 @@
       updateCard(card, z);
       order.push(card);
     }
-    if (!state.zones.length) order.push(el('p', { class: 'empty' }, 'No zones in this project yet. The programmer adds them in openLedMapper.'));
+    if (!state.zones.length) order.push(el('p', { class: 'empty' }, 'No zones in this project yet. The programmer adds them in nouPix.'));
     // cards move only when the zones change order: moving a card would stop a finger dragging its dimmer
     if (order.length !== zones.children.length || order.some((c, i) => zones.children[i] !== c)) zones.replaceChildren(...order);
   }
@@ -111,7 +111,7 @@
   }
   function updateCard(card, z) {
     card._z = z;
-    card.style.setProperty('--zt', z.tag || 'var(--accent)');
+    if (z.tag) card.style.setProperty('--zt', z.tag); else card.style.removeProperty('--zt');   // the zone's colour, when it has one
     updatePlaylists(card, z);
     card.querySelector('.zhead b').textContent = z.name;
     const sc = z.scenes.find(s => s.id === z.scene);
@@ -127,7 +127,7 @@
     }
     box.dataset.key = key;
     box.replaceChildren(...(z.scenes.length ? z.scenes.map(s => el('button', { 'data-id': s.id,
-      class: 'scene' + (s.id === z.scene ? ' live' : ''), type: 'button', style: { '--st': s.tag || '' }, 'aria-pressed': String(s.id === z.scene),
+      class: 'scene' + (s.id === z.scene ? ' live' : ''), type: 'button', style: s.tag ? { '--mark': s.tag } : {}, 'aria-pressed': String(s.id === z.scene),
       title: s.fade ? `Fades in ${s.fade} s` : 'Cuts straight to it',
       onclick: e => {
         send({ op: 'scene', zone: z.id, scene: s.id });

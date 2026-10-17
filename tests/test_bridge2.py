@@ -61,7 +61,7 @@ finally:
 # Discovery: ArtPoll goes to the broadcast address of each network the page ticks, plus one typed address
 from harness import ROOT
 sys.path.insert(0, ROOT)
-import openledmapper as olm
+import noupix as olm
 class FakeArt:
     discovery = True
     def __init__(s): s.sent = []

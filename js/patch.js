@@ -1,4 +1,4 @@
-// openLedMapper · js/patch.js
+// nouPix · js/patch.js
 // Addressing: which universe and channels each fixture uses on its controller output (computePatch), conflicts,
 // assigning fixtures to outputs. Uses util, model and geometry; computePatch ends with layoutFrame (output.js).
 

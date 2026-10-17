@@ -20,11 +20,14 @@ try:
     page = get('/')[2].decode()
     import re
     files = re.findall(r'(?:src|href)="((?:js|css)/[^"]+)"', page)
-    check("the page loads its styles and 28 scripts", len(files) == 29, files)
+    check("the page loads its styles (fonts.css, app.css) and 28 scripts", len(files) == 30 and files[:2] == ['css/fonts.css', 'css/app.css'], files)
     for f in files:
         st, ct, body = get('/' + f)
         check(f"/{f} is served as {'CSS' if f.endswith('.css') else 'JavaScript'}", st == 200 and (('css' in ct) if f.endswith('.css') else ('javascript' in ct)) and body == open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f), 'rb').read(), (st, ct))
-    for p in ['/js/nope.js', '/js/../openledmapper.py', '/js/%2e%2e/openledmapper.py', '/js/vendor/../../openledmapper.py', '/js/app.js.bak', '/tests/harness.py', '/examples/01-led-bars.json', '//etc/passwd', '/openledmapper.py', '/js/', '/css/app.css/']:
+    for f in [l.split('url(')[1].split(')')[0] for l in open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'css', 'fonts.css')) if 'url(' in l]:
+        st, ct, body = get('/css/' + f)
+        check(f"/css/{f} is served as a font", st == 200 and ct == 'font/woff2' and len(body) > 5000)
+    for p in ['/js/nope.js', '/js/../noupix.py', '/js/%2e%2e/noupix.py', '/js/vendor/../../noupix.py', '/js/app.js.bak', '/tests/harness.py', '/examples/01-led-bars.json', '//etc/passwd', '/openledmapper.py', '/js/', '/css/app.css/', '/css/OFL.txt', '/icons/noupix.svg']:
         check(f"{p} is not served", get(p)[0] == 404)
 finally:
     b.terminate()

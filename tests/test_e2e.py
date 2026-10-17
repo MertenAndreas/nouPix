@@ -94,7 +94,7 @@ with sync_playwright() as p:
     d = node.last(3)
     check("Art-Net universe 3 carries the layer colour", d is not None and list(d[:15]) == [255, 128, 64] * 5, list(d[:15]) if d else None)
     locks = pg.evaluate("navigator.locks.query().then(q => q.held.map(l => l.name))")
-    check("Web Lock held while Art-Net is on", any(l.startswith("openledmapper-output-") for l in locks), locks)
+    check("Web Lock held while Art-Net is on", any(l.startswith("noupix-output-") for l in locks), locks)
 
     # --- a second window taking over
     pg2 = ctx.new_page(); pg2.goto(f"http://127.0.0.1:{PORT}/"); pg2.wait_for_function("window.olm && olm.bridge.connected", timeout=10000)
@@ -102,7 +102,7 @@ with sync_playwright() as p:
     on1, on2 = pg.evaluate("olm.ui.outputOn"), pg2.evaluate("olm.ui.outputOn")
     locks = pg.evaluate("navigator.locks.query().then(q => q.held.map(l => l.name))")
     check("second window takes over Art-Net, first stops", (on1, on2) == (False, True), (on1, on2))
-    check("first window released its Web Lock", sum(1 for l in locks if l.startswith("openledmapper-output-")) == 1, locks)
+    check("first window released its Web Lock", sum(1 for l in locks if l.startswith("noupix-output-")) == 1, locks)
     pg2.evaluate("olm.setOutput(false)"); time.sleep(0.3); pg2.close()
 
     # --- migration of a Weft 0.1 project

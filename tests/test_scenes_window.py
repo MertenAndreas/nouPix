@@ -28,7 +28,7 @@ try:
     # ---------- opening it
     with pg.expect_popup() as pi: pg.click("#dockBody button[aria-label='Open in a window']")
     W = pi.value; W.on("pageerror", lambda e: errs.append("Scenes window: " + str(e))); W.set_viewport_size({"width": 1180, "height": 460}); settle(0.8)
-    check("Open in a window: the scenes in a window of their own", W.title() == "Scenes · openLedMapper" and W.locator(".scenerow").count() == 3 and W.locator(".scene").count() == 36)
+    check("Open in a window: the scenes in a window of their own", W.title() == "Scenes · nouPix" and W.locator(".scenerow").count() == 3 and W.locator(".scene").count() == 36)
     check("with the app's look", W.evaluate("getComputedStyle(document.body).backgroundColor") == ev("getComputedStyle(document.body).backgroundColor"))
     check("the bottom panel's Scenes tab says where they are", "in their own window" in pg.inner_text("#dockBody") and pg.locator("#dockBody .scene").count() == 0)
     n0 = len(ctx.pages); pg.click("#dockBody button:has-text('Show the window')"); settle(0.4)

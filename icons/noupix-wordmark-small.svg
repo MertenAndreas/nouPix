@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.2 2.8 72.4 22.4" width="61.4" height="19" role="img" aria-label="nouPix">
+  <path fill="none" stroke="#F0F0F0" stroke-width="1.7" stroke-linejoin="miter" d="M0,24 L0,10.5 L2.5,8 L10,8 L10,24 M14,10.5 L16.5,8 L24,8 L24,21.5 L21.5,24 L14,24 Z M28,8 L28,24 L35.5,24 L38,21.5 L38,8 M42,24 L42,6.5 L44.5,4 L52,4 L52,11 L49.5,13.5 L42,13.5 M56,8 L56,24"/>
+  <rect x="54.9" y="3.3" width="2.2" height="2.2" rx="0.88" fill="#FF3B3B"/>
+  <g fill="#F0F0F0">
+    <rect x="58.9" y="6.9" width="2.2" height="2.2" rx="0.88"/><rect x="61.4" y="10.9" width="2.2" height="2.2" rx="0.88"/>
+    <rect x="63.9" y="14.9" width="2.2" height="2.2" rx="0.88"/><rect x="66.4" y="18.9" width="2.2" height="2.2" rx="0.88"/>
+    <rect x="68.9" y="22.9" width="2.2" height="2.2" rx="0.88"/><rect x="68.9" y="6.9" width="2.2" height="2.2" rx="0.88"/>
+    <rect x="66.4" y="10.9" width="2.2" height="2.2" rx="0.88"/><rect x="61.4" y="18.9" width="2.2" height="2.2" rx="0.88"/>
+    <rect x="58.9" y="22.9" width="2.2" height="2.2" rx="0.88"/>
+  </g>
+</svg>

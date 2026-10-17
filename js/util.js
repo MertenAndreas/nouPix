@@ -1,4 +1,4 @@
-// openLedMapper · js/util.js
+// nouPix · js/util.js
 // Small helpers used everywhere: page elements ($, $$, h, svgEl), numbers and text (clamp, wrap180, fmtN, pct…),
 // local storage (store), toast messages, error reports, file download and the icon set. Uses nothing else.
 
@@ -40,14 +40,15 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); return true; } catch (e) { return false; } },
   remove(k) { try { localStorage.removeItem(k); } catch (e) { /* storage off */ } },
 };
-// This app was called Weft before: what it kept in the browser carries over (once, and only where nothing newer is kept)
+// This app was called openLedMapper, and Weft before that: what it kept in the browser carries over (once, and only
+// where nothing newer is kept)
 function carryOverStorage() {
-  for (const k of ['project', 'ui', 'guide', 'project.unopened']) {
+  for (const old of ['openledmapper.', 'weft.']) for (const k of ['project', 'ui', 'guide', 'project.unopened', 'clip', 'remote', 'colors']) {
     try {
-      const v = localStorage.getItem('weft.' + k);
-      if (v == null || localStorage.getItem('openledmapper.' + k) != null) continue;
-      localStorage.removeItem('weft.' + k); // makes room for the copy
-      try { localStorage.setItem('openledmapper.' + k, v); } catch (e) { localStorage.setItem('weft.' + k, v); }
+      const v = localStorage.getItem(old + k);
+      if (v == null || localStorage.getItem('noupix.' + k) != null) continue;
+      localStorage.removeItem(old + k); // makes room for the copy
+      try { localStorage.setItem('noupix.' + k, v); } catch (e) { localStorage.setItem(old + k, v); }
     } catch (e) { /* storage off */ }
   }
 }
@@ -71,7 +72,7 @@ function report(where, e) {
   const key = where + ': ' + ((e && e.message) || e);
   if (reported.has(key)) return;
   reported.add(key);
-  console.error('openLedMapper, ' + key, e);
+  console.error('nouPix, ' + key, e);
 }
 function download(name, text, type = 'application/json') {
   const a = h('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
@@ -115,6 +116,8 @@ const ICONS = {
   ungroup: '<svg viewBox="0 0 16 16"><path d="M1.75 4.25a1 1 0 011-1h3.2l1.5 1.5h5.8a1 1 0 011 1v6.5a1 1 0 01-1 1H2.75a1 1 0 01-1-1z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round" stroke-dasharray="2.2 1.6"/><path d="M6 9.2h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   panel: '<svg viewBox="0 0 16 16"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10 3v10" stroke="currentColor" stroke-width="1.3"/><rect x="10.6" y="3.4" width="3" height="9.2" fill="currentColor" opacity=".45"/></svg>',
   popout: '<svg viewBox="0 0 16 16"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.5 2H14v4.5M14 2L7.5 8.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  sun: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="2.9"/><path d="M8 1.4v1.7M8 12.9v1.7M1.4 8h1.7M12.9 8h1.7M3.3 3.3l1.2 1.2M11.5 11.5l1.2 1.2M3.3 12.7l1.2-1.2M11.5 4.5l1.2-1.2"/></svg>',
+  moon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M13.4 9.7A5.7 5.7 0 0 1 6.3 2.6a5.7 5.7 0 1 0 7.1 7.1z"/></svg>',
   chev: '<svg viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 const icon = name => svgEl(ICONS[name]);

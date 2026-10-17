@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-color.js
+// nouPix · js/ui-color.js
 // The colour picker for the colour controls of shaders: a swatch in the panel opens a picker with a colour wheel and
 // intensity, RGB and HSV sliders, a hex box, lighting presets and recent colours.
 
@@ -25,8 +25,8 @@ function fromHex(s) {
 const LIGHT_COLORS = [['Red', '#FF0000'], ['Orange', '#FF6000'], ['Amber', '#FFB000'], ['Yellow', '#FFFF00'], ['Lime', '#A0FF00'], ['Green', '#00FF00'], ['Mint', '#00FF90'],
   ['Cyan', '#00FFFF'], ['Sky blue', '#0090FF'], ['Blue', '#0000FF'], ['Congo blue', '#4000FF'], ['Lavender', '#A060FF'], ['Magenta', '#FF00FF'], ['Pink', '#FF3C82'], ['White', '#FFFFFF'], ['Off', '#000000']];
 const RECENT_MAX = 8;
-const recentColors = () => { const r = store.get('openledmapper.colors', []); return Array.isArray(r) ? r.filter(x => fromHex(String(x))).slice(0, RECENT_MAX) : []; };
-function rememberColor(hex) { store.set('openledmapper.colors', [hex, ...recentColors().filter(x => x !== hex)].slice(0, RECENT_MAX)); }
+const recentColors = () => { const r = store.get('noupix.colors', []); return Array.isArray(r) ? r.filter(x => fromHex(String(x))).slice(0, RECENT_MAX) : []; };
+function rememberColor(hex) { store.set('noupix.colors', [hex, ...recentColors().filter(x => x !== hex)].slice(0, RECENT_MAX)); }
 
 /* ---------- the swatch in the panel ---------- */
 // get() gives the colour [r, g, b, a], set(c) changes it live, done() makes it one undo step; key names the control,

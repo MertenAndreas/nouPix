@@ -1,7 +1,7 @@
 /*{
   "ISFVSN": "2",
-  "DESCRIPTION": "Two colours that bounce across the stage, with a soft edge. An example of a custom ISF shader for openLedMapper: add it with + Add > ISF shader file (.fs)… above the source list. Its inputs become the controls in the Content tab.",
-  "CREDIT": "openLedMapper examples",
+  "DESCRIPTION": "Two colours that bounce across the stage, with a soft edge. An example of a custom ISF shader for nouPix: add it with + Add > ISF shader file (.fs)… above the source list. Its inputs become the controls in the Content tab.",
+  "CREDIT": "nouPix examples",
   "CATEGORIES": ["Generator", "gradient", "lively"],
   "INPUTS": [
     { "NAME": "colorA", "LABEL": "Colour A", "TYPE": "color", "DEFAULT": [1.0, 0.25, 0.1, 1.0] },

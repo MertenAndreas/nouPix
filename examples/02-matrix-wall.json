@@ -1,6 +1,6 @@
 {
- "format": "openledmapper-project",
- "version": 3,
+ "format": "noupix-project",
+ "version": 4,
  "name": "Matrix wall",
  "settings": {
   "compW": 1280,
@@ -18,12 +18,11 @@
  },
  "fixtures": [
   {
-   "id": "lsg5tatp",
+   "id": "tuzuw5eq",
    "type": "matrix",
    "name": "Panel A",
    "enabled": true,
    "locked": false,
-   "tag": "#3cc8ff",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -47,15 +46,14 @@
    "start": "TL",
    "dir": "H",
    "snake": true,
-   "group": "264d7i7y"
+   "group": "7hwurfzl"
   },
   {
-   "id": "4uzcvd8r",
+   "id": "wnkci238",
    "type": "matrix",
    "name": "Panel B",
    "enabled": true,
    "locked": false,
-   "tag": "#ffb341",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -79,15 +77,14 @@
    "start": "TR",
    "dir": "H",
    "snake": true,
-   "group": "264d7i7y"
+   "group": "7hwurfzl"
   },
   {
-   "id": "698kyb6a",
+   "id": "ypfxaxkm",
    "type": "matrix",
    "name": "Panel C",
    "enabled": true,
    "locked": false,
-   "tag": "#b58cff",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -111,15 +108,14 @@
    "start": "TL",
    "dir": "H",
    "snake": true,
-   "group": "264d7i7y"
+   "group": "7hwurfzl"
   },
   {
-   "id": "7uyvv9hg",
+   "id": "va562e4l",
    "type": "matrix",
    "name": "Panel D",
    "enabled": true,
    "locked": false,
-   "tag": "#46e08c",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -143,20 +139,20 @@
    "start": "TR",
    "dir": "H",
    "snake": true,
-   "group": "264d7i7y"
+   "group": "7hwurfzl"
   }
  ],
  "groups": [
   {
-   "id": "264d7i7y",
+   "id": "7hwurfzl",
    "name": "Wall",
-   "tag": "#b58cff",
+   "tag": "",
    "open": true
   }
  ],
  "controllers": [
   {
-   "id": "c4ln2u3d",
+   "id": "q9dzkcb1",
    "name": "Left controller",
    "ip": "10.0.0.60",
    "enabled": true,
@@ -166,15 +162,15 @@
    "split": false,
    "chains": [
     [
-     "lsg5tatp"
+     "tuzuw5eq"
     ],
     [
-     "4uzcvd8r"
+     "wnkci238"
     ]
    ]
   },
   {
-   "id": "f8sk882k",
+   "id": "dv3mqh50",
    "name": "Right controller",
    "ip": "10.0.0.61",
    "enabled": true,
@@ -184,10 +180,10 @@
    "split": false,
    "chains": [
     [
-     "698kyb6a"
+     "ypfxaxkm"
     ],
     [
-     "7uyvv9hg"
+     "va562e4l"
     ]
    ]
   }
@@ -388,9 +384,9 @@
  ],
  "zones": [
   {
-   "id": "24wy11no",
+   "id": "62w66qms",
    "name": "Whole wall",
-   "tag": "#b58cff",
+   "tag": "",
    "x": 0,
    "y": 0,
    "w": 1280,
@@ -398,7 +394,7 @@
    "opacity": 1,
    "layers": [
     {
-     "id": "uowyglz9",
+     "id": "h50q8q60",
      "src": "b-spiral",
      "params": {
       "b-spiral": {
@@ -413,13 +409,12 @@
    ],
    "scenes": [
     {
-     "id": "4ngdw45t",
+     "id": "yhho3wp1",
      "name": "Spiral",
-     "tag": "#ff6f86",
      "fade": 2,
      "layers": [
       {
-       "id": "uowyglz9",
+       "id": "h50q8q60",
        "src": "b-spiral",
        "params": {
         "b-spiral": {
@@ -434,13 +429,12 @@
      ]
     },
     {
-     "id": "d9m1g5v9",
+     "id": "mkgohg86",
      "name": "Mirror ball",
-     "tag": "#e8d56a",
      "fade": 2,
      "layers": [
       {
-       "id": "y6egbhtb",
+       "id": "8ty8hwa6",
        "src": "b-mirrorball",
        "params": {},
        "opacity": 1,
@@ -450,13 +444,12 @@
      ]
     },
     {
-     "id": "hggqzuc4",
+     "id": "lei6e1gf",
      "name": "Lava",
-     "tag": "#ffb341",
      "fade": 3,
      "layers": [
       {
-       "id": "vua47ok5",
+       "id": "mvosutw2",
        "src": "b-lava",
        "params": {},
        "opacity": 1,
@@ -466,13 +459,12 @@
      ]
     },
     {
-     "id": "zgp0s5pu",
+     "id": "n053cs8e",
      "name": "Plasma + stars",
-     "tag": "#3cc8ff",
      "fade": 2,
      "layers": [
       {
-       "id": "1zv05k6x",
+       "id": "3p1opcan",
        "src": "b-plasma",
        "params": {},
        "opacity": 1,
@@ -480,7 +472,7 @@
        "on": true
       },
       {
-       "id": "y6tdtihw",
+       "id": "l4wt9f5p",
        "src": "b-stars",
        "params": {},
        "opacity": 0.8,
@@ -490,13 +482,13 @@
      ]
     }
    ],
-   "scene": "4ngdw45t",
+   "scene": "yhho3wp1",
    "playlists": []
   },
   {
-   "id": "ogd06add",
+   "id": "rw1tn7f6",
    "name": "Panel B only",
-   "tag": "#ffb341",
+   "tag": "",
    "x": 330,
    "y": 170,
    "w": 300,
@@ -504,7 +496,7 @@
    "opacity": 0,
    "layers": [
     {
-     "id": "yug5o0q8",
+     "id": "n0eh4rqi",
      "src": "b-checker",
      "params": {
       "b-checker": {
@@ -518,13 +510,12 @@
    ],
    "scenes": [
     {
-     "id": "zana53zg",
+     "id": "lxw6852h",
      "name": "Checker",
-     "tag": "#46e08c",
      "fade": 1,
      "layers": [
       {
-       "id": "yug5o0q8",
+       "id": "n0eh4rqi",
        "src": "b-checker",
        "params": {
         "b-checker": {
@@ -538,9 +529,71 @@
      ]
     }
    ],
-   "scene": "zana53zg",
+   "scene": "lxw6852h",
    "playlists": []
   }
  ],
- "guide": null
+ "guide": null,
+ "midi": {
+  "maps": [],
+  "order": []
+ },
+ "macros": {
+  "speed": {
+   "v": 1
+  },
+  "intensity": {
+   "v": 1
+  },
+  "saturation": {
+   "v": 1
+  },
+  "color1": {
+   "on": false,
+   "mode": "hsv",
+   "h": 200,
+   "s": 1,
+   "v": 1
+  },
+  "color2": {
+   "on": false,
+   "mode": "hsv",
+   "h": 320,
+   "s": 1,
+   "v": 1
+  },
+  "angle": {
+   "on": false,
+   "v": 0.5
+  },
+  "softness": {
+   "on": false,
+   "v": 0.5
+  },
+  "scale": {
+   "on": false,
+   "v": 0.5
+  },
+  "count": {
+   "on": false,
+   "v": 0.5
+  },
+  "size": {
+   "on": false,
+   "v": 0.5
+  },
+  "width": {
+   "on": false,
+   "v": 0.5
+  },
+  "density": {
+   "on": false,
+   "v": 0.5
+  },
+  "decay": {
+   "on": false,
+   "v": 0.5
+  }
+ },
+ "macroLinks": {}
 }

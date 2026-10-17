@@ -48,7 +48,7 @@ try:
     check("MIDI is not asked for until it is turned on", ev("__midi.asked") == 0 and ev("midi.status") == "off" and not ev("ui.midiOn"))
     W = window()
     check("the MIDI button opens the MIDI window, big, and turns MIDI on", ev("__midi.asked") == 1 and ev("midi.status") == "ok" and ev("ui.midiOn")
-          and pg.locator("#btnMidi.on").count() == 1 and W.title() == "MIDI · openLedMapper" and W.locator(".midipanel .mmaps").count() == 1
+          and pg.locator("#btnMidi.on").count() == 1 and W.title() == "MIDI · nouPix" and W.locator(".midipanel .mmaps").count() == 1
           and W.locator(".mwhead .btn.learn").is_visible(), W.title())
     check("it has the app's look", W.evaluate("getComputedStyle(document.body).backgroundColor") == ev("getComputedStyle(document.body).backgroundColor"))
     check("the bottom panel keeps its tabs", "MIDI" not in pg.inner_text("#dockTabs"))
@@ -261,7 +261,7 @@ try:
     check("key 5 plays pad 5", ev(f"zoneById('{zz}').scene") == sc0)
     check("its notes on and off show in the monitor", ev("midi.log.slice(0, 2).map(e => e.text)") == ["Note off 40 · ch1", "Note on 40 · ch1"], ev("midi.log.slice(0, 2).map(e => e.text)"))
     W.click(".vchead .mfold"); settle()
-    check("folded again, it takes one line, and is remembered", W.locator(".vtrack").count() == 0 and not ev("ui.midiVc") and ev("store.get('openledmapper.ui', {}).midiVc") is False)
+    check("folded again, it takes one line, and is remembered", W.locator(".vtrack").count() == 0 and not ev("ui.midiVc") and ev("store.get('noupix.ui', {}).midiVc") is False)
     W.click(".vchead .mfold"); settle()
 
     # ---------- refused, missing

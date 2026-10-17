@@ -1,4 +1,4 @@
-// openLedMapper · js/playlists.js
+// nouPix · js/playlists.js
 // Playlists: a zone plays some of its scenes one after another by itself. Each step is a scene and a play time,
 // which counts from the moment the step starts (its fade in included) until the next step starts. One playlist
 // plays per zone; at its end it loops, stops, or plays another playlist of the zone. The main window runs them on

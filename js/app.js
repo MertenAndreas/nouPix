@@ -1,4 +1,4 @@
-// openLedMapper · js/app.js
+// nouPix · js/app.js
 // The app: top bar and status bar, wiring buttons and keys (initUI, onKey), the frame loop, boot, and window.olm,
 // the handle the browser console and the tests use. Loaded last; boot() runs at its end.
 
@@ -10,10 +10,29 @@ function updateHighlightUI() {
   $('#btnHl').title = on ? `Highlight on: ${m[1]} (${m[2]}). Click or press I to go back to the content.` : `Highlight with ${m[1]}: ${m[2]} (I)`;
   $('#btnHl').setAttribute('aria-pressed', String(on));
 }
-// The version comes from the bridge (VERSION in openledmapper.py), so the page always shows the one it runs with
+// The version comes from the bridge (VERSION in noupix.py), so the page always shows the one it runs with
 function showVersion(v) {
   $('#appVer').textContent = v ? 'v' + v : '';
-  $('.brand').title = v ? 'openLedMapper ' + v : 'openLedMapper';
+  $('.brand').title = v ? 'nouPix ' + v : 'nouPix';
+}
+// The look: black (the default) or white, one click away in the top bar and in Settings. It is this computer's
+// (ui.theme, with the preferences); the MIDI and Scenes windows follow, and the stage reads its colours again.
+function applyTheme() {
+  const t = ui.theme === 'light' ? 'light' : 'dark';
+  for (const d of [document, midiDoc(), scenesDoc()]) if (d) d.documentElement.dataset.theme = t;
+  const b = $('#btnTheme');
+  b.innerHTML = ICONS[t === 'light' ? 'moon' : 'sun'];
+  b.title = t === 'light' ? 'Black interface' : 'White interface';
+  b.setAttribute('aria-label', b.title);
+  b.setAttribute('aria-pressed', String(t === 'light'));
+  stageLook(true);
+  redrawStage();
+}
+function setTheme(t) {
+  ui.theme = t === 'light' ? 'light' : 'dark';
+  savePrefs();
+  applyTheme();
+  if (ui.rightTab === 'settings') renderRight();
 }
 function updateUndoButtons() { $('#btnUndo').disabled = hist.idx <= 0; $('#btnRedo').disabled = hist.idx >= hist.stack.length - 1; }
 // The status pill only shows what matters: Art-Net going out, or something wrong. With everything fine and
@@ -24,10 +43,10 @@ function updateBridgeUI() {
   const st = bridge.stats, hl = bridge.hello;
   const from = hl ? `Sending from ${hl.bindIp === '0.0.0.0' ? 'all network cards' : hl.bindIp}, port ${hl.bindPort}${hl.discovery ? '' : ' · node discovery off: ' + (hl.discoveryNote || '')}` : '';
   let show = true;
-  if (bridge.state === 'none') { pill.classList.add('warn'); txt.textContent = 'Preview only'; pill.title = 'This page can\'t send Art-Net on its own. Start openLedMapper (the app, or openledmapper.py) and use the window it opens.'; }
+  if (bridge.state === 'none') { pill.classList.add('warn'); txt.textContent = 'Preview only'; pill.title = 'This page can\'t send Art-Net on its own. Start nouPix (the app, or noupix.py) and use the window it opens.'; }
   else if (!bridge.connected) {
     show = Date.now() - (bridge.since || 0) > 1500;
-    pill.classList.add('warn'); txt.textContent = 'Output not connected'; pill.title = 'Reconnecting to the part of openLedMapper that sends Art-Net…';
+    pill.classList.add('warn'); txt.textContent = 'Output not connected'; pill.title = 'Reconnecting to the part of nouPix that sends Art-Net…';
   }
   else if (st && st.errors && st.lastError) { pill.classList.add('err'); txt.textContent = ui.outputOn ? `Send error · ${fmtN(st.pps)} pkt/s` : 'Send error'; pill.title = 'Last send error: ' + st.lastError + (from ? '\n' + from : ''); }
   else if (ui.outputOn) { pill.classList.add('ok'); txt.textContent = `Sending · ${fmtN(st ? st.pps : 0)} pkt/s`; pill.title = 'Art-Net packets sent per second. ' + from; }
@@ -41,7 +60,7 @@ function updateBridgeUI() {
 function setOutput(on) {
   if (REMOTE_CLIENT) return;   // only the main computer sends Art-Net
   if (on && !bridge.connected) {
-    toast(bridge.state === 'none' ? 'This page can\'t send Art-Net on its own: start openLedMapper (the app, or openledmapper.py) and use the window it opens.' : 'The Art-Net output isn\'t connected yet. Try again in a moment.', 'warn');
+    toast(bridge.state === 'none' ? 'This page can\'t send Art-Net on its own: start nouPix (the app, or noupix.py) and use the window it opens.' : 'The Art-Net output isn\'t connected yet. Try again in a moment.', 'warn');
     return;
   }
   if (on) bridgeSend({ t: 'output', on: true });
@@ -54,7 +73,7 @@ function setOutput(on) {
 // While Art-Net is on, hold a Web Lock: Chrome does not freeze a background page that holds one.
 let releaseLock = null;
 function keepAwake(on) {
-  if (on && !releaseLock && navigator.locks) navigator.locks.request('openledmapper-output-' + uid(), () => ui.outputOn ? new Promise(r => { releaseLock = r; }) : null).catch(() => {});
+  if (on && !releaseLock && navigator.locks) navigator.locks.request('noupix-output-' + uid(), () => ui.outputOn ? new Promise(r => { releaseLock = r; }) : null).catch(() => {});
   else if (!on && releaseLock) { releaseLock(); releaseLock = null; }
 }
 function updateStatus() {
@@ -89,11 +108,13 @@ function renderAll() {
 
 /* ---------- wiring the UI ---------- */
 function initUI() {
-  const prefs = store.get('openledmapper.ui', {});
+  const prefs = store.get('noupix.ui', {});
   for (const k of UI_PREFS) if (k in prefs) ui[k] = prefs[k];
   remoteLoadCfg();
   document.body.classList.toggle('remote-client', REMOTE_CLIENT);
   if (REMOTE_CLIENT && ui.dockTab === 'nodes') ui.dockTab = 'patch';
+  applyTheme();
+  $('#btnTheme').addEventListener('click', () => setTheme(ui.theme === 'light' ? 'dark' : 'light'));
   $('#btnRemote').addEventListener('click', e => remoteMenu(e.currentTarget));
   initMidiUI();
   $('#projName').addEventListener('change', e => { project.name = e.target.value.trim() || 'Untitled'; commit(); });
@@ -157,7 +178,7 @@ function initUI() {
     else if (n.endsWith('.fs') || n.endsWith('.glsl')) addIsfFile(f);
     else if (n.endsWith('.json')) openProjectFile(f);
     else if (mediaKindOf(f)) { mediaTarget = null; addMediaFile(f); }
-    else toast(`${f.name}: openLedMapper opens projects (.json), shaders (.fs), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
+    else toast(`${f.name}: nouPix opens projects (.json), shaders (.fs), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
   });
   window.addEventListener('keydown', onKey);
   window.addEventListener('keyup', e => { if (e.code === 'Space') { spaceHeld = false; cv.style.cursor = ''; } });
@@ -245,17 +266,17 @@ const redrawStage = () => { stageDirty = true; };
 function boot() {
   carryOverStorage();
   initUI();
-  const saved = REMOTE_CLIENT ? null : store.get('openledmapper.project', null);   // a device gets the project from the main computer
+  const saved = REMOTE_CLIENT ? null : store.get('noupix.project', null);   // a device gets the project from the main computer
   let p = REMOTE_CLIENT ? blankProject('Connecting…') : null;
   if (saved && Array.isArray(saved.fixtures)) p = saved;
   if (p && p.guide && !p.guide.src) { // the guide image is saved on its own (see saveSoon)
-    const g = store.get('openledmapper.guide', null);
+    const g = store.get('noupix.guide', null);
     if (g && g.name === p.guide.name && typeof g.src === 'string') { p.guide.src = g.src; guideKept = g.src; }
   }
   try { loadProject(p || demoProject()); }
   catch (e) { // keep a copy of what could not be opened, and start from the demo instead of not starting at all
     report('opening the saved project', e);
-    store.set('openledmapper.project.unopened', saved);
+    store.set('noupix.project.unopened', saved);
     loadProject(demoProject());
     toast('The project kept in this browser could not be opened, so the demo layout is loaded.', 'err');
   }
@@ -266,7 +287,7 @@ function boot() {
   new ResizeObserver(() => { resizeView(); redrawStage(); }).observe(stageEl);
   for (const t of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click', 'drop']) window.addEventListener(t, redrawStage, { capture: true, passive: true });
   requestAnimationFrame(frameLoop);
-  // a handle for the browser console and for tests (olm = openLedMapper)
+  // a handle for the browser console and for tests (olm: the app's first initials, kept so scripts keep working)
   window.olm = { get project() { return project; }, get tickCost() { return tickCost; }, get drawCost() { return drawCost; }, get frameIndex() { return frameIndex; }, get clockT() { return clockT; }, glCanvas, samplePick, loadProject, ui, universes: () => universes, computePatch, setOutput, bridge, tick, mixer, goScene, storeScene, loadSource, selectZone, addZone, setTool, mediaEl: id => mediaEls.get(id) };
 }
 boot();

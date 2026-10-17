@@ -1,8 +1,8 @@
-# openLedMapper 0.9.11
+# nouPix 1.0.0
 
-<img src="icons/openledmapper-256.png" alt="" width="96" align="right">
+<img src="icons/noupix-256.png" alt="" width="96" align="right">
 
-A pixel-mapping tool for LED installations. Draw or import your LED fixtures, play generators, shaders, images, video or a screen capture on them, store looks as scenes, play them in playlists, and send it all out over Art-Net.
+A pixel-mapping tool for LED installations, by nouled studio. It was called openLedMapper until 1.0. Draw or import your LED fixtures, play generators, shaders, images, video or a screen capture on them, store looks as scenes, play them in playlists, and send it all out over Art-Net.
 
 ## Download
 
@@ -14,24 +14,24 @@ Get the app from the [Releases](https://github.com/nouled-studio/openLEDmapper/r
 | Mac with Apple silicon (M1 or newer) | `…-macos-apple-silicon.dmg` | macOS 12 or newer |
 | Mac with an Intel processor | `…-macos-intel.dmg` | macOS 12 or newer |
 
-On a Mac, open the `.dmg` and drag openLedMapper onto Applications.
+On a Mac, open the `.dmg` and drag nouPix onto Applications.
 
 The apps aren't signed yet, so the first time:
 
 - **Windows:** SmartScreen says it protected your PC. Click **More info → Run anyway**.
 - **macOS:** click **Done** on the warning, then **System Settings → Privacy & Security → Open Anyway**.
 
-On Windows, allow openLedMapper through the firewall on private networks when asked, or node discovery won't work.
+On Windows, allow nouPix through the firewall on private networks when asked, or node discovery won't work.
 
 ## Run from the source (Linux, Raspberry Pi, any computer)
 
 You need Python 3.8 or newer and Chrome, Edge or Chromium. Then run:
 
 ```
-python3 openledmapper.py
+python3 noupix.py
 ```
 
-On Windows or macOS you can also double-click `start-openledmapper.bat` or `start-openledmapper.command`. Keep the terminal open: closing it stops the output. `python3 openledmapper.py --help` lists the options, for example `--bind-ip 2.0.0.10` to send from a specific network card.
+On Windows or macOS you can also double-click `start-noupix.bat` or `start-noupix.command`. Keep the terminal open: closing it stops the output. `python3 noupix.py --help` lists the options, for example `--bind-ip 2.0.0.10` to send from a specific network card.
 
 ## Quick start
 
@@ -54,6 +54,8 @@ To see it working before you build anything, open one of the [examples](examples
 - **Playlists:** several per zone, each a list of scenes with play times, played by itself in a loop, once, or followed by another playlist. Fades come from each scene, one for the whole playlist, or a step's own.
 - Art-Net output with automatic addressing, node discovery and a DMX monitor. **Highlight** (💡) lights fixtures on site to check them: Trace, Flood, Color check, Spotlight, and Pixel finder for single pixels. Gamma and colour trims are set per fixture, and RGBW is supported.
 - The output keeps running when the window is minimised or covered.
+- **Black or white:** the interface is black, so the light on the stage is the brightest thing on screen; one click in the top bar (or Settings → Interface) turns it white for daylight. Groups and zones can be given a colour, which their fixtures and scenes show; nothing gets one unless you choose it.
+- Works offline: the fonts and everything else come with the app.
 - **Macros:** in the MIDI window, Speed, Intensity, Saturation, Color 1 and 2, and the controls most effects share (Angle, Width, Softness…), for every effect at once, over each one's own values: scenes keep theirs. Each effect can take a control out of its macro, or have it follow another.
 - **MIDI:** the faders, knobs and pads of a MIDI controller move the master, blackout, the groups' dimmers, the zones' levels, the macros and any control of an effect, and play scenes and playlists. Press Learn, move a control, then choose what it should move from its list, or click it. Faders pick up where the slider is, and a thin yellow line on the slider shows where the fader is. See every mapping as wires in the patch bay (draw new ones by dragging; see and change which effects follow each macro), or as a list. No controller at hand? The MIDI window has a virtual one on screen.
 - **Remote control:** phones, tablets and other computers on the network log in as Programmer (everything, with a password), Operator (content, scenes and playlists; the mapping is locked) or Remote, a simple page that plays the playlists and scenes of each zone and dims the zones.
@@ -81,13 +83,13 @@ To see it working before you build anything, open one of the [examples](examples
 ## For developers
 
 - **Interface:** `index.html` (markup), `css/app.css`, and the scripts in `js/`, one per responsibility (model, geometry, patch, sources, render, output, project files, actions, and the panels). [CLAUDE.md](CLAUDE.md) describes the architecture and the conventions. Plain scripts, no build step: the page also opens straight from disk.
-- **Art-Net bridge:** `openledmapper.py` (Python, standard library only). With remote control on it also serves `login.html` and `remote.html` (the phone page) to the network.
+- **Art-Net bridge:** `noupix.py` (Python, standard library only). With remote control on it also serves `login.html` and `remote.html` (the phone page) to the network.
 - **Desktop app:** an Electron window in `desktop/`, around the interface, with the bridge packed inside.
   - Run it from source with `cd desktop && npm install && npm start`.
 - **Tests:** `python tests/run_tests.py --quick` (about 10 minutes), or without `--quick` for everything, including the byte-for-byte Art-Net comparison, a soak test and the UI fuzzer.
 - **Examples:** `examples/`; `python tests/make_examples.py` rebuilds the example projects.
-- **Release:** set `VERSION` in `openledmapper.py`, then push a matching tag (`git tag v0.9.11 && git push origin v0.9.11`). GitHub builds the Windows and Mac apps and attaches them to a release (`.github/workflows/release.yml`).
+- **Release:** set `VERSION` in `noupix.py`, then push a matching tag (`git tag v1.0.0 && git push origin v1.0.0`). GitHub builds the Windows and Mac apps and attaches them to a release (`.github/workflows/release.yml`).
 
 ## Licence and credits
 
-GPL-3.0 (see `LICENSE`). The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence).
+GPL-3.0 (see `LICENSE`). The look and the logo are described in [docs/brand.md](docs/brand.md). The fonts are Saira, Chakra Petch and JetBrains Mono (SIL Open Font License, `css/OFL.txt`). The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence).

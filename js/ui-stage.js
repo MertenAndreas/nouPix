@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-stage.js
+// nouPix · js/ui-stage.js
 // The stage: view and zoom, drawing fixtures, wiring, zones and the selection frame, hit testing, dragging
 // handles, the drawing tools and the pointer, the pixel finder and the guide image.
 
@@ -73,10 +73,10 @@ function drawDots(f, dispOverride) {
     if (sx < -10 || sy < -10 || sx > xmax || sy > ymax) continue;
     const R = D ? D[j] : 0, G = D ? D[j + 1] : 0, B = D ? D[j + 2] : 0;
     const lit = R + G + B > 6, k = lit ? (R << 16) | (G << 8) | B : -1;
-    if (k !== key) { key = k; ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : small ? '#1d2129' : '#12151b'; }
+    if (k !== key) { key = k; ctx.fillStyle = lit ? `rgb(${R},${G},${B})` : small ? SC.dotSmall : SC.dot; }
     if (small) { ctx.fillRect(sx - r, sy - r, d, d); continue; }
     ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.2832); ctx.fill();
-    if (!lit) { if (!stroke) { ctx.strokeStyle = '#343a46'; ctx.lineWidth = 1; stroke = true; } ctx.stroke(); }
+    if (!lit) { if (!stroke) { ctx.strokeStyle = SC.dotEdge; ctx.lineWidth = 1; stroke = true; } ctx.stroke(); }
   }
   return r;
 }
@@ -91,24 +91,24 @@ function drawWiring(f, color) {
   ctx.globalAlpha = 1;
   const [x0, y0] = toS(P[0], P[1]);
   const r = clamp(f._pitch * ui.view.zoom * 0.36, 1.1, 10) + 4;
-  ctx.beginPath(); ctx.arc(x0, y0, r, 0, 6.2832); ctx.strokeStyle = '#ff5a5f'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x0, y0, r, 0, 6.2832); ctx.strokeStyle = SC.first; ctx.lineWidth = 2; ctx.stroke();
   if (n > 1) { // direction arrow
     const [x1, y1] = toS(P[2], P[3]);
     const a = Math.atan2(y1 - y0, x1 - x0), L = r + 9;
     const ax = x0 + Math.cos(a) * L, ay = y0 + Math.sin(a) * L;
     ctx.beginPath(); ctx.moveTo(ax + Math.cos(a) * 5, ay + Math.sin(a) * 5);
     ctx.lineTo(ax + Math.cos(a + 2.5) * 5, ay + Math.sin(a + 2.5) * 5); ctx.lineTo(ax + Math.cos(a - 2.5) * 5, ay + Math.sin(a - 2.5) * 5);
-    ctx.closePath(); ctx.fillStyle = '#ff5a5f'; ctx.fill();
+    ctx.closePath(); ctx.fillStyle = SC.first; ctx.fill();
   }
   ctx.font = '600 10px ' + FONT_MONO;
-  ctx.fillStyle = '#ff5a5f'; ctx.fillText('1', x0 - r - 8, y0 - r);
+  ctx.fillStyle = SC.first; ctx.fillText('1', x0 - r - 8, y0 - r);
   ctx.restore();
 }
 // With Wiring on: the data cable between fixtures chained on one output, from the last pixel of one to the
 // first pixel of the next, as a thin dashed line
 function drawDataLinks() {
   ctx.save();
-  ctx.strokeStyle = 'rgba(230,236,245,.55)'; ctx.fillStyle = 'rgba(230,236,245,.7)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = withAlpha(SC.text, 0.55); ctx.fillStyle = withAlpha(SC.text, 0.7); ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
   for (const c of project.controllers) for (const chain of c.chains) {
     let prev = null;
     for (const id of chain) {
@@ -156,17 +156,17 @@ function drawGrid() {
   ctx.beginPath();
   for (let x = 0; x <= W; x += step) { const sx = Math.round(x * z + ui.view.x) + 0.5; ctx.moveTo(sx, ui.view.y); ctx.lineTo(sx, ui.view.y + H * z); }
   for (let y = 0; y <= H; y += step) { const sy = Math.round(y * z + ui.view.y) + 0.5; ctx.moveTo(ui.view.x, sy); ctx.lineTo(ui.view.x + W * z, sy); }
-  ctx.strokeStyle = 'rgba(120,135,160,0.09)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = withAlpha(SC.muted, 0.12); ctx.lineWidth = 1; ctx.stroke();
   ctx.restore();
 }
 function drawView() {
-  fonts();
+  stageLook();
   resizeView();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.fillStyle = '#0a0b0e'; ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = SC.bg0; ctx.fillRect(0, 0, VW, VH);
   const W = project.settings.compW, H = project.settings.compH, z = ui.view.zoom;
   const [ox, oy] = [ui.view.x, ui.view.y];
-  ctx.fillStyle = '#000'; ctx.fillRect(ox, oy, W * z, H * z);
+  ctx.fillStyle = SC.canvas; ctx.fillRect(ox, oy, W * z, H * z);
   if (ui.showContent && mixer.ok) {
     ctx.globalAlpha = ui.contentOp; ctx.imageSmoothingEnabled = true;
     ctx.drawImage(mixer.canvas, ox, oy, W * z, H * z);
@@ -180,27 +180,27 @@ function drawView() {
     ctx.globalAlpha = 1;
   }
   if (ui.showZones || ui.tool === 'zone') drawZones();
-  ctx.strokeStyle = '#2f3541'; ctx.lineWidth = 1; ctx.strokeRect(Math.round(ox) - 0.5, Math.round(oy) - 0.5, Math.round(W * z) + 1, Math.round(H * z) + 1);
-  ctx.font = '10px ' + FONT_MONO; ctx.fillStyle = '#6c7481'; ctx.fillText(`${W} × ${H}`, ox, oy - 6);
+  ctx.strokeStyle = SC.line2; ctx.lineWidth = 1; ctx.strokeRect(Math.round(ox) - 0.5, Math.round(oy) - 0.5, Math.round(W * z) + 1, Math.round(H * z) + 1);
+  ctx.font = '10px ' + FONT_MONO; ctx.fillStyle = SC.muted; ctx.fillText(`${W} × ${H}`, ox, oy - 6);
 
   if (!project.fixtures.length || !project.fixtures[0]._pts) { drawOverlays(); return; }
   for (const f of project.fixtures) {
-    const isSel = ui.sel.has(f.id), hov = ui.hoverFx === f.id;
+    const isSel = ui.sel.has(f.id), hov = ui.hoverFx === f.id, col = isSel ? SC.sel : fxTag(f) || SC.muted;   // its group's colour, or grey
     ctx.save();
     outlinePath(f, ctx);
-    ctx.strokeStyle = isSel ? '#3cc8ff' : f.tag;
+    ctx.strokeStyle = col;
     ctx.globalAlpha = isSel ? 0.95 : hov ? 0.8 : f.enabled ? 0.35 : 0.2;
     ctx.lineWidth = isSel ? 1.5 : 1;
     if (!f.enabled) ctx.setLineDash([4, 4]);
     ctx.stroke();
     ctx.restore();
     drawDots(f);
-    if (((isSel && ui.sel.size <= 6) || ui.showWiring) && f._n > 1) drawWiring(f, isSel ? '#3cc8ff' : f.tag);
+    if (((isSel && ui.sel.size <= 6) || ui.showWiring) && f._n > 1) drawWiring(f, col);
     if (ui.showLabels && (z > 0.35 || isSel) && (!isSel || ui.sel.size <= 6 || hov)) {
       const b = fixtureBounds(f);
       const [lx, ly] = toS(b.x0, b.y0);
       ctx.font = (isSel ? '600 ' : '500 ') + '11px ' + FONT_UI;
-      ctx.fillStyle = isSel ? '#3cc8ff' : f.tag; ctx.globalAlpha = f.enabled ? 0.95 : 0.5;
+      ctx.fillStyle = isSel ? SC.sel : fxTag(f) || SC.text2; ctx.globalAlpha = f.enabled ? 0.95 : 0.5;
       ctx.fillText(f.name + (f.locked ? '  (locked)' : ''), lx, ly - 7);
       ctx.globalAlpha = 1;
     }
@@ -213,11 +213,11 @@ function drawView() {
     const f = sel[0];
     for (const hd of handlesOf(f)) {
       const [sx, sy] = toS(hd.x, hd.y);
-      if (hd.ctl) { ctx.beginPath(); ctx.moveTo(...toS(hd.ax, hd.ay)); ctx.lineTo(sx, sy); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1; ctx.stroke(); ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, 6.2832); ctx.fillStyle = '#3cc8ff'; ctx.fill(); continue; }
-      if (hd.rot) { const a = rad(f.rot), e = toS(f.cx + Math.sin(a) * f.h / 2, f.cy - Math.cos(a) * f.h / 2); ctx.beginPath(); ctx.moveTo(...e); ctx.lineTo(sx, sy); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1; ctx.stroke(); }
+      if (hd.ctl) { ctx.beginPath(); ctx.moveTo(...toS(hd.ax, hd.ay)); ctx.lineTo(sx, sy); ctx.strokeStyle = SC.sel; ctx.lineWidth = 1; ctx.stroke(); ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, 6.2832); ctx.fillStyle = SC.sel; ctx.fill(); continue; }
+      if (hd.rot) { const a = rad(f.rot), e = toS(f.cx + Math.sin(a) * f.h / 2, f.cy - Math.cos(a) * f.h / 2); ctx.beginPath(); ctx.moveTo(...e); ctx.lineTo(sx, sy); ctx.strokeStyle = SC.sel; ctx.lineWidth = 1; ctx.stroke(); }
       ctx.beginPath();
       if (hd.round) ctx.arc(sx, sy, 5, 0, 6.2832); else ctx.rect(sx - 4.5, sy - 4.5, 9, 9);
-      ctx.fillStyle = hd.id === 'c' ? '#3cc8ff' : '#fff'; ctx.fill(); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = hd.id === 'c' ? SC.sel : SC.handle; ctx.fill(); ctx.strokeStyle = SC.sel; ctx.lineWidth = 1.5; ctx.stroke();
     }
   }
   drawOverlays();
@@ -232,7 +232,7 @@ function drawSelRotate() {
   if (!hs.length) return;
   const list = rotatable();
   ctx.save();
-  ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1;
+  ctx.strokeStyle = SC.sel; ctx.lineWidth = 1;
   if ((list.length > 1 || framed(list[0])) && !wholeGroup(list)) {   // a group draws its own frame
     ctx.globalAlpha = 0.8; ctx.setLineDash([4, 3]);
     ctx.beginPath(); frameCorners(selFrame(list), 10).forEach((p, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, ...p)); ctx.closePath(); ctx.stroke();
@@ -240,22 +240,22 @@ function drawSelRotate() {
   }
   for (const hd of hs) {
     const [sx, sy] = toS(hd.x, hd.y);
-    if (hd.selscale) { ctx.beginPath(); ctx.rect(sx - 4, sy - 4, 8, 8); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke(); continue; }
+    if (hd.selscale) { ctx.beginPath(); ctx.rect(sx - 4, sy - 4, 8, 8); ctx.fillStyle = SC.handle; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke(); continue; }
     const [bx, by] = toS(hd.bx, hd.by);
     if (drag && drag.kind === 'rotsel') {   // the pivot, and the angle so far
       const [px, py] = toS(drag.px, drag.py);
       ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px - 6, py); ctx.lineTo(px + 6, py); ctx.moveTo(px, py - 6); ctx.lineTo(px, py + 6); ctx.stroke();
-      ctx.font = '600 11px ' + FONT_MONO; ctx.fillStyle = '#3cc8ff';
+      ctx.font = '600 11px ' + FONT_MONO; ctx.fillStyle = SC.sel;
       ctx.fillText((drag.deg > 0 ? '+' : '') + Math.round(drag.deg) + '°', sx + 12, sy + 4);
     }
     const L = Math.hypot(sx - bx, sy - by) || 1;
     ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(sx - (sx - bx) / L * 6, sy - (sy - by) / L * 6); ctx.stroke();
-    ctx.beginPath(); ctx.arc(sx, sy, 6, 0, 6.2832); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx, sy, 6, 0, 6.2832); ctx.fillStyle = SC.handle; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
     ctx.beginPath(); ctx.arc(sx, sy, 3, -0.4, 4.4); ctx.lineWidth = 1.2; ctx.stroke();   // a small turning arrow
   }
   if (drag && drag.kind === 'scalesel') {
     const F = selFrame(list), [lx, ly] = frameCorners(F, 10)[2];
-    ctx.font = '600 11px ' + FONT_MONO; ctx.fillStyle = '#3cc8ff';
+    ctx.font = '600 11px ' + FONT_MONO; ctx.fillStyle = SC.sel;
     ctx.fillText(`${fmtV(F.w)} × ${fmtV(F.h)}`, lx + 10, ly + 14);
   }
   ctx.restore();
@@ -281,19 +281,19 @@ function drawGroups() {
     // the frame turns with the group (see rotateSel), so it keeps hugging its fixtures
     const C = frameCorners(frameOf(a.list, numOr(g.rot, 0)), 10);
     ctx.save();
-    ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1;
+    ctx.strokeStyle = SC.sel; ctx.lineWidth = 1;
     ctx.globalAlpha = whole ? 0.9 : 0.5; ctx.setLineDash(whole ? [] : [4, 3]);
     ctx.beginPath(); C.forEach((p, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, p[0], p[1])); ctx.closePath(); ctx.stroke();
     ctx.setLineDash([]); ctx.globalAlpha = 1;
     ctx.font = '600 11px ' + FONT_UI;
     const t = groupName(g), lw = Math.round(ctx.measureText(t).width + 30);
     const lx = Math.round((C[0][0] + C[1][0] + C[2][0] + C[3][0]) / 4 - lw / 2), ly = Math.round(Math.max(...C.map(p => p[1])) + 5);
-    ctx.beginPath(); ctx.roundRect(lx, ly, lw, 18, 4);
-    if (whole) { ctx.fillStyle = '#3cc8ff'; ctx.fill(); } else { ctx.fillStyle = 'rgba(10,11,14,.85)'; ctx.fill(); ctx.strokeStyle = 'rgba(60,200,255,.6)'; ctx.stroke(); }
+    ctx.beginPath(); ctx.rect(lx, ly, lw, 18);
+    if (whole) { ctx.fillStyle = SC.sel; ctx.fill(); } else { ctx.fillStyle = withAlpha(SC.bg1, 0.85); ctx.fill(); ctx.strokeStyle = withAlpha(SC.sel, 0.6); ctx.stroke(); }
     // a small folder, as in the list
     ctx.beginPath(); ctx.moveTo(lx + 7, ly + 5.5); ctx.lineTo(lx + 10.5, ly + 5.5); ctx.lineTo(lx + 12, ly + 7); ctx.lineTo(lx + 18, ly + 7); ctx.lineTo(lx + 18, ly + 13.5); ctx.lineTo(lx + 7, ly + 13.5); ctx.closePath();
-    ctx.strokeStyle = whole ? '#04141c' : '#3cc8ff'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.fillStyle = whole ? '#04141c' : '#3cc8ff'; ctx.fillText(t, lx + 23, ly + 13);
+    ctx.strokeStyle = whole ? SC.selInk : SC.sel; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = whole ? SC.selInk : SC.sel; ctx.fillText(t, lx + 23, ly + 13);
     ctx.restore();
   }
 }
@@ -302,11 +302,11 @@ function drawOverlays() {
   const pk = ui.outputMode === 'pixel' && ui.pickPx && fxById(ui.pickPx.fid);
   if (pk && pk._pts && ui.pickPx.i < pk._n) {
     const [sx, sy] = toS(pk._pts[2 * ui.pickPx.i], pk._pts[2 * ui.pickPx.i + 1]);
-    ctx.save(); ctx.strokeStyle = '#ffb341'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.strokeStyle = SC.pick; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
   if (draft) {
     prepDraft(draft);
-    ctx.save(); ctx.setLineDash([5, 4]); outlinePath(draft, ctx); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.setLineDash([5, 4]); outlinePath(draft, ctx); ctx.strokeStyle = SC.sel; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
     drawDots(draft, null);
   }
   if (pathDraft && pathDraft.pts.length) {
@@ -315,7 +315,7 @@ function drawOverlays() {
     // the path so far, and on to the pointer
     const line = pathPoly({ pts: c ? P.concat(c) : P, ctl: d.pen ? (c ? d.ctl.concat(0, 0, 0, 0) : d.ctl) : null, closed: false });
     for (let i = 0; i < line.length; i += 2) (i ? ctx.lineTo : ctx.moveTo).call(ctx, ...toS(line[i], line[i + 1]));
-    ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.stroke();
+    ctx.strokeStyle = SC.sel; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.stroke();
     ctx.setLineDash([]);
     if (d.pen) { // the handles of the last point
       const k = P.length / 2 - 1, [ax, ay] = toS(P[2 * k], P[2 * k + 1]);
@@ -323,23 +323,32 @@ function drawOverlays() {
         const hx = d.ctl[4 * k + o], hy = d.ctl[4 * k + o + 1];
         if (!hx && !hy) continue;
         const [sx, sy] = toS(P[2 * k] + hx, P[2 * k + 1] + hy);
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(sx, sy); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, 6.2832); ctx.fillStyle = '#3cc8ff'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(sx, sy); ctx.strokeStyle = SC.sel; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, 6.2832); ctx.fillStyle = SC.sel; ctx.fill();
       }
     }
-    for (let i = 0; i < P.length; i += 2) { const [sx, sy] = toS(P[i], P[i + 1]); ctx.fillStyle = '#fff'; ctx.fillRect(sx - 3.5, sy - 3.5, 7, 7); }
+    for (let i = 0; i < P.length; i += 2) { const [sx, sy] = toS(P[i], P[i + 1]); ctx.fillStyle = SC.text; ctx.fillRect(sx - 3.5, sy - 3.5, 7, 7); }
     ctx.restore();
   }
   if (marquee) {
     const [a, b] = [toS(marquee.x0, marquee.y0), toS(marquee.x1, marquee.y1)];
-    ctx.fillStyle = 'rgba(60,200,255,0.08)'; ctx.strokeStyle = 'rgba(60,200,255,0.7)'; ctx.lineWidth = 1;
+    ctx.fillStyle = withAlpha(SC.sel, 0.08); ctx.strokeStyle = withAlpha(SC.sel, 0.7); ctx.lineWidth = 1;
     ctx.fillRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
     ctx.strokeRect(Math.min(a[0], b[0]) + 0.5, Math.min(a[1], b[1]) + 0.5, Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
   }
 }
 function prepDraft(d) { d._pts = computePoints(d); d._n = pixelCount(d); d._pitch = fixturePitch(d); }
-let FONT_MONO = null, FONT_UI = null;
-function fonts() { if (!FONT_MONO) { const cs = getComputedStyle(document.documentElement); FONT_MONO = cs.getPropertyValue('--mono').trim(); FONT_UI = cs.getPropertyValue('--ui').trim(); } }
+// The stage's fonts and colours are the page's (css/app.css), read once and again when the look changes (setTheme)
+let FONT_MONO = null, FONT_UI = null, SC = null;
+function stageLook(again = false) {
+  if (SC && !again) return;
+  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  FONT_MONO = v('--mono'); FONT_UI = v('--ui');
+  SC = { sel: v('--sel'), selInk: v('--sel-ink'), first: v('--danger'), pick: v('--warn'), text: v('--text'), text2: v('--text2'), muted: v('--muted'),
+    line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotSmall: v('--dot-small'), dotEdge: v('--dot-edge'), handle: v('--bg1') };
+}
+// #rrggbb at an opacity
+const withAlpha = (c, a) => /^#[0-9a-f]{6}$/i.test(c) ? `rgba(${parseInt(c.slice(1, 3), 16)},${parseInt(c.slice(3, 5), 16)},${parseInt(c.slice(5, 7), 16)},${a})` : c;
 
 /* ---------- zones on the stage ---------- */
 let zoneDraft = null, zoneLabels = [];
@@ -356,7 +365,7 @@ function drawZones() {
     const [sx, sy] = toS(z.x, z.y), on = editing && z === sel;
     ctx.setLineDash(on ? [] : [6, 4]);
     ctx.lineWidth = on ? 1.5 : 1.2;
-    ctx.strokeStyle = on ? '#3cc8ff' : z.tag;
+    ctx.strokeStyle = on ? SC.sel : z.tag || SC.muted;
     ctx.globalAlpha = editing ? 1 : 0.8;
     ctx.strokeRect(Math.round(sx) + 0.5, Math.round(sy) + 0.5, Math.max(1, Math.round(z.w * zm) - 1), Math.max(1, Math.round(z.h * zm) - 1));
     ctx.setLineDash([]); ctx.globalAlpha = 1;
@@ -366,10 +375,10 @@ function drawZones() {
     ctx.font = '600 11px ' + FONT_UI; const nw = ctx.measureText(z.name).width;
     ctx.font = '400 11px ' + FONT_UI; const ew = extra ? ctx.measureText(extra).width + 6 : 0;
     const lx = Math.round(sx), ly = z.y * zm >= 22 ? Math.round(sy) - 21 : Math.round(sy) + 5, lw = Math.round(nw + ew + 14);
-    ctx.fillStyle = 'rgba(10,11,14,.85)'; ctx.fillRect(lx, ly, lw, 18);
-    ctx.strokeStyle = on ? '#3cc8ff' : z.tag; ctx.lineWidth = 1; ctx.strokeRect(lx + 0.5, ly + 0.5, lw - 1, 17);
-    ctx.font = '600 11px ' + FONT_UI; ctx.fillStyle = z.tag; ctx.fillText(z.name, lx + 7, ly + 13);
-    if (extra) { ctx.font = '400 11px ' + FONT_UI; ctx.fillStyle = '#a2a9b5'; ctx.fillText(extra, lx + 13 + nw, ly + 13); }
+    ctx.fillStyle = withAlpha(SC.bg1, 0.85); ctx.fillRect(lx, ly, lw, 18);
+    ctx.strokeStyle = on ? SC.sel : z.tag || SC.muted; ctx.lineWidth = 1; ctx.strokeRect(lx + 0.5, ly + 0.5, lw - 1, 17);
+    ctx.font = '600 11px ' + FONT_UI; ctx.fillStyle = z.tag || SC.text2; ctx.fillText(z.name, lx + 7, ly + 13);
+    if (extra) { ctx.font = '400 11px ' + FONT_UI; ctx.fillStyle = SC.text2; ctx.fillText(extra, lx + 13 + nw, ly + 13); }
     zoneLabels.push({ z, x: lx, y: ly, w: lw, h: 18 });
   });
   ctx.restore();
@@ -379,14 +388,14 @@ function drawZoneEdit() {
   ctx.save();
   if (z) for (const [x, y] of Object.values(zoneHandlePoints(z))) {
     const [sx, sy] = toS(x, y);
-    ctx.fillStyle = '#fff'; ctx.fillRect(sx - 4.5, sy - 4.5, 9, 9);
-    ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.5; ctx.strokeRect(sx - 4.5, sy - 4.5, 9, 9);
+    ctx.fillStyle = SC.handle; ctx.fillRect(sx - 4.5, sy - 4.5, 9, 9);
+    ctx.strokeStyle = SC.sel; ctx.lineWidth = 1.5; ctx.strokeRect(sx - 4.5, sy - 4.5, 9, 9);
   }
   if (zoneDraft) {
     const [sx, sy] = toS(zoneDraft.x, zoneDraft.y), w = zoneDraft.w * ui.view.zoom, hh = zoneDraft.h * ui.view.zoom;
-    ctx.fillStyle = 'rgba(60,200,255,0.08)'; ctx.fillRect(sx, sy, w, hh);
-    ctx.setLineDash([5, 4]); ctx.strokeStyle = '#3cc8ff'; ctx.lineWidth = 1.2; ctx.strokeRect(sx + 0.5, sy + 0.5, w, hh); ctx.setLineDash([]);
-    ctx.font = '10px ' + FONT_MONO; ctx.fillStyle = '#3cc8ff';
+    ctx.fillStyle = withAlpha(SC.sel, 0.08); ctx.fillRect(sx, sy, w, hh);
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = SC.sel; ctx.lineWidth = 1.2; ctx.strokeRect(sx + 0.5, sy + 0.5, w, hh); ctx.setLineDash([]);
+    ctx.font = '10px ' + FONT_MONO; ctx.fillStyle = SC.sel;
     ctx.fillText(`${Math.round(zoneDraft.w)} × ${Math.round(zoneDraft.h)}`, sx, sy - 6);
   }
   ctx.restore();

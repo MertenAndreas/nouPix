@@ -1,6 +1,6 @@
-// openLedMapper · js/output.js
+// nouPix · js/output.js
 // Output: gamma, turning sampled colours into DMX channels (buildOutput), the outgoing frame, the clock that
-// renders and sends every tick, and the WebSocket to the bridge (openledmapper.py), which sends Art-Net.
+// renders and sends every tick, and the WebSocket to the bridge (noupix.py), which sends Art-Net.
 
 /* ---------- DMX frame ---------- */
 // One lookup table per gamma value in use (fixtures have their own)
@@ -169,7 +169,7 @@ function startClock() {
   ticker.postMessage(period);
 }
 
-/* ---------- bridge (WebSocket to openledmapper.py) ---------- */
+/* ---------- bridge (WebSocket to noupix.py) ---------- */
 const bridge = { ws: null, connected: false, state: 'idle', hello: null, stats: null, nodes: new Map(), retry: null, lastError: '' };
 function bridgeUrl() {
   if (project.settings.bridgeUrl) return project.settings.bridgeUrl.trim();
@@ -204,7 +204,7 @@ function connectBridge() {
       if (ui.dockTab === 'nodes') renderDock();
     }
     else if (m.t === 'error') { toast(m.msg, 'warn'); }
-    else if (m.t === 'takeover' && ui.outputOn) { ui.outputOn = false; keepAwake(false); updateBridgeUI(); toast('Art-Net was switched on in another openLedMapper window, so this window stopped sending.', 'warn'); }
+    else if (m.t === 'takeover' && ui.outputOn) { ui.outputOn = false; keepAwake(false); updateBridgeUI(); toast('Art-Net was switched on in another nouPix window, so this window stopped sending.', 'warn'); }
     else remoteHostMessage(m);
   };
   ws.onclose = () => {

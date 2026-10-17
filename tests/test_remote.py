@@ -45,7 +45,7 @@ try:
     host.goto(f"http://127.0.0.1:{PORT}/"); host.wait_for_function("window.olm && olm.bridge.connected")
     # 10 frames a second: this test runs the main window and three copies of the interface on one computer, each
     # rendering in software; real devices each have their own processor and graphics
-    host.evaluate("(() => { localStorage.removeItem('openledmapper.remote'); const p = demoProject(); p.settings.fps = 10; olm.loadProject(p); })()")
+    host.evaluate("(() => { localStorage.removeItem('noupix.remote'); const p = demoProject(); p.settings.fps = 10; olm.loadProject(p); })()")
     H = host.evaluate
 
     # ---------- switching it on, in Settings
@@ -62,13 +62,13 @@ try:
     check("Settings shows the address to open on the other devices", until(host, f"document.querySelector('#remoteSec') && document.querySelector('#remoteSec').innerText.includes(':{RP}/')"), st)
     check("the address is this computer's network address", any(not u.startswith("http://127.") for u in st["urls"]) or not st["urls"], st["urls"])
     check("the top-bar button shows it is on", "on" in host.get_attribute("#btnRemote", "class"))
-    check("the setting is kept in this browser", H("JSON.parse(localStorage.getItem('openledmapper.remote'))") == {"on": True, "port": RP, "password": "open sesame"})
+    check("the setting is kept in this browser", H("JSON.parse(localStorage.getItem('noupix.remote'))") == {"on": True, "port": RP, "password": "open sesame"})
 
     # ---------- what the network server serves
     for path, kind in [("/", "html"), ("/app", "html"), ("/remote", "html"), ("/css/remote.css", "css"), ("/css/app.css", "css"), ("/js/remote-app.js", "javascript"), ("/js/app.js", "javascript"), ("/js/vendor/isf.js", "javascript")]:
         s, ct, _ = req("GET", path)
         check(f"serves {path}", s == 200 and kind in ct, (s, ct))
-    for path in ["/ws", "/openledmapper.py", "/js/../openledmapper.py", "/js/%2e%2e/openledmapper.py", "/tests/harness.py", "/login.html/..", "/examples/01-led-bars.json", "/index.html"]:
+    for path in ["/ws", "/noupix.py", "/js/../noupix.py", "/js/%2e%2e/noupix.py", "/tests/harness.py", "/login.html/..", "/examples/01-led-bars.json", "/index.html"]:
         s, _, _ = req("GET", path)
         check(f"does not serve {path}", s == 404, s)
     s, _, out = req("GET", "/info"); info = json.loads(out)
@@ -93,7 +93,7 @@ try:
     phctx = br.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     ph = phctx.new_page(); watch(ph, "phone")
     ph.goto(f"http://127.0.0.1:{RP}/")
-    check("the login page asks who you are, three choices", ph.locator(".role").count() == 3 and "Who are you?" in ph.inner_text("h1"))
+    check("the login page asks who you are, three choices", ph.locator(".role").count() == 3 and "Who are you?" in ph.text_content("h1"))
     ph.click(".role[data-role=remote]"); ph.click("#go")
     check("Remote opens the phone page, live", until(ph, "document.querySelectorAll('.zone').length > 0 && document.querySelector('#conn').classList.contains('ok')"))
     zn = ph.locator(".zone .zhead b").all_inner_texts()
@@ -149,7 +149,7 @@ try:
     op.goto(f"http://127.0.0.1:{RP}/"); op.click(".role[data-role=operator]"); op.click("#go")
     check("operator: the interface, with the project of the main computer", until(op, "window.olm && remote.loaded && olm.project.fixtures.length === 9", 15000))
     O = op.evaluate
-    check("the top bar says Operator; no Art-Net, Highlight or Nodes", "Operator" in op.inner_text("#btnRemote") and not op.is_visible("#btnOutput") and not op.is_visible("#hl") and not op.is_visible("#dockTabs [data-tab=nodes]"))
+    check("the top bar says Operator; no Art-Net, Highlight or Nodes", "Operator" in op.text_content("#btnRemote") and not op.is_visible("#btnOutput") and not op.is_visible("#hl") and not op.is_visible("#dockTabs [data-tab=nodes]"))
     check("no tools that draw fixtures, no + Add or SVG", op.locator("#rail button:visible").count() == 1 and not op.is_visible("#btnAddFx") and not op.is_visible("#btnImportSvg"))
     # the stage: select, but nothing moves
     fx = O("(() => { const f = olm.project.fixtures[0]; const r = document.querySelector('#view').getBoundingClientRect(); const [x, y] = toS(f.cx, f.cy); return [r.left + x, r.top + y, f.cx]; })()")

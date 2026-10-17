@@ -1,9 +1,12 @@
-// openLedMapper · js/model.js
+// nouPix · js/model.js
 // The project and its parts: constants and defaults, the project and ui state, factories (newFixture, newZone,
 // newController…), groups, the selection, look-ups by id, saved preferences. Uses util.
 
 /* ---------- constants, state, factories ---------- */
-const TAGS = ['#3cc8ff', '#ffb341', '#b58cff', '#46e08c', '#ff6f86', '#6fe3e3', '#e8d56a', '#ff9657'];
+// The colours a group or a zone can be given (none at first): muted, so they never compete with the light on the
+// stage or with the interface's red, white and yellow. Its fixtures and its scenes show it; they have none of their own.
+const TAGS = ['#6f8fb8', '#5ba59b', '#8ea865', '#b3a074', '#b5806a', '#a487b8', '#b07a96', '#7f9aa6'];
+const isTag = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
 const ORDERS = ['RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR', 'RGBW', 'GRBW', 'WRGB', 'W'];
 const TYPE_LABEL = { line: 'Line', circle: 'Circle', matrix: 'Matrix', path: 'Path' };
 // Dimming curves: how a pixel's level (its content after the fixture's dimmer and trims and the master) becomes its
@@ -58,15 +61,16 @@ const ui = {
   midiOn: false, midiOff: [], midiMon: false, midiVc: false, midiView: 'list', bayOpen: [],
   // the parts of the macros opened ('color1', 'color2', 'shared'; 'links': what an effect follows, in its Parameters)
   macroOpen: [],
+  theme: 'dark',   // the interface: 'dark' (black) or 'light' (white), on this computer
 };
-const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'midiView', 'bayOpen', 'macroOpen'];
+const UI_PREFS = ['hlMode', 'contentOp', 'showContent', 'guideOp', 'showGuide', 'showGrid', 'snap', 'showLabels', 'showWiring', 'showZones', 'dockTab', 'rightTab', 'dockH', 'dockCollapsed', 'rightHidden', 'scanOff', 'colorMode', 'midiOn', 'midiOff', 'midiMon', 'midiVc', 'midiView', 'bayOpen', 'macroOpen', 'theme'];
 let geomDirty = true, patchDirty = true;
 const markGeom = () => { geomDirty = true; };
 const markPatch = () => { patchDirty = true; };
 function blankProject(name = 'Untitled') {
   const settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   return {
-    format: 'openledmapper-project', version: 3, name, settings,
+    format: 'noupix-project', version: 4, name, settings,
     fixtures: [], groups: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
     midi: { maps: [], order: [] }, macros: defaultMacros(), macroLinks: {},
   };
@@ -79,6 +83,8 @@ const newMidiMap = (key, to) => ({ id: uid(), key, to, takeover: 'pickup', mode:
 // A group is a named set of fixtures. Its fixtures stay next to each other in the list (and so in drawing and
 // Auto-patch order), where its first one is. One level only: no groups inside groups.
 const groupById = id => project.groups.find(g => g.id === id);
+// A fixture's colour: its group's, if the group has one ('' when none)
+const fxTag = f => { const g = f.group != null && groupById(f.group); return g && g.tag ? g.tag : ''; };
 const membersOf = (g, p = project) => p.fixtures.filter(f => f.group === g.id);
 function normalizeGroups(p = project) {
   const known = new Set(p.groups.map(g => g.id)), placed = new Set(), out = [];
@@ -130,7 +136,7 @@ function newLayer(src = null) { return { id: uid(), src, params: {}, opacity: 1,
 const cloneLayers = layers => JSON.parse(JSON.stringify(layers));
 // A zone is a rectangle of the canvas with its own layers, scenes and playlists; content is drawn to fit it.
 // Zones later in the list are higher up and cover the ones below, as far as their opacity goes.
-function newZone(props = {}) { return Object.assign({ id: uid(), name: 'Zone 1', tag: TAGS[1], x: 0, y: 0, w: 1000, h: 640, opacity: 1, layers: [], scenes: [], scene: null, playlists: [] }, props); }
+function newZone(props = {}) { return Object.assign({ id: uid(), name: 'Zone 1', tag: '', x: 0, y: 0, w: 1000, h: 640, opacity: 1, layers: [], scenes: [], scene: null, playlists: [] }, props); }
 // A playlist plays some of its zone's scenes in turn (playlists.js). A step's fade null follows the playlist's,
 // and the playlist's null follows each scene's own. end: 'loop', 'stop', or the id of the playlist to play next.
 function newPlaylist(props = {}) { return Object.assign({ id: uid(), name: 'Playlist 1', steps: [], fade: null, end: 'loop', autoplay: false }, props); }
@@ -156,7 +162,7 @@ const FIXTURE_FIELDS = {
 function newFixture(type, props = {}) {
   const f = {
     id: uid(), type, name: nextName(type), enabled: true, locked: false,
-    tag: TAGS[project.fixtures.length % TAGS.length], order: 'RGB', reverse: false, dimmer: 1, trim: [1, 1, 1, 1], gamma: clampGamma(project.settings.gamma),
+    order: 'RGB', reverse: false, dimmer: 1, trim: [1, 1, 1, 1], gamma: clampGamma(project.settings.gamma),
     bits: 8, curve: 'gamma', strength: 1,
   };
   if (FIXTURE_FIELDS[type]) Object.assign(f, JSON.parse(JSON.stringify(FIXTURE_FIELDS[type])));
@@ -210,4 +216,4 @@ const selZone = () => zoneById(ui.zone) || project.zones[project.zones.length - 
 const selLayer = () => { const z = selZone(); return z ? z.layers.find(L => L.id === ui.layer) || z.layers[z.layers.length - 1] || null : null; };
 
 /* ---------- preferences ---------- */
-function savePrefs() { const o = {}; for (const k of UI_PREFS) o[k] = ui[k]; store.set('openledmapper.ui', o); }
+function savePrefs() { const o = {}; for (const k of UI_PREFS) o[k] = ui[k]; store.set('noupix.ui', o); }

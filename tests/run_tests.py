@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run openLedMapper's test suites, one after the other, and print one line per suite.
+"""Run nouPix's test suites, one after the other, and print one line per suite.
 
     python tests/run_tests.py            everything (about 12 minutes)
     python tests/run_tests.py --quick    skip the golden output, soak and fuzz runs (about 5 minutes)
@@ -110,6 +110,7 @@ SUITES = [   # name, function, part of --quick
     ("links", simple("test_links.py", 8186, 400), True),
     ("bay", simple("test_bay.py", 8188, 400), True),
     ("sceneswin", simple("test_scenes_window.py", 8190, 400), True),
+    ("look", simple("test_look.py", 8192, 400), True),
     ("profile", last_line("test_profile_move.py", [], 60, lambda l: "ALL PASS" in l), True),
 ]
 

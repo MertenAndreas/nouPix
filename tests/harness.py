@@ -1,4 +1,4 @@
-# Shared test harness: fake Art-Net node + openLedMapper bridge + headless Chromium
+# Shared test harness: fake Art-Net node + nouPix bridge + headless Chromium
 import socket, struct, subprocess, sys, threading, time, os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo: the app is in its root
 WEFT = os.environ.get("WEFT", ROOT)
@@ -27,9 +27,11 @@ class FakeNode:
     def close(self): self.alive = False; self.s.close()
 
 def bridge_script(build):
-    """openledmapper.py, or weft.py in builds from before the rename"""
-    p = os.path.join(build, "openledmapper.py")
-    return p if os.path.exists(p) else os.path.join(build, "weft.py")
+    """noupix.py, or openledmapper.py or weft.py in builds from before the names changed"""
+    for name in ("noupix.py", "openledmapper.py"):
+        p = os.path.join(build, name)
+        if os.path.exists(p): return p
+    return os.path.join(build, "weft.py")
 
 def start_bridge(port=8099, extra=()):
     p = subprocess.Popen([sys.executable, bridge_script(WEFT), "--no-browser", "--bind-port", "0", "--port", str(port), *extra],

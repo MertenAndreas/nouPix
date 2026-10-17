@@ -1,6 +1,6 @@
 {
- "format": "openledmapper-project",
- "version": 3,
+ "format": "noupix-project",
+ "version": 4,
  "name": "Rings and arcs",
  "settings": {
   "compW": 1000,
@@ -18,12 +18,11 @@
  },
  "fixtures": [
   {
-   "id": "ju1oiok1",
+   "id": "mhcw9bih",
    "type": "circle",
    "name": "Ring 1",
    "enabled": true,
    "locked": false,
-   "tag": "#b58cff",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -44,15 +43,14 @@
    "start": 0,
    "sweep": 360,
    "ccw": false,
-   "group": "qh2sm89q"
+   "group": "ts8pn6su"
   },
   {
-   "id": "bnn3q6ed",
+   "id": "2jrcpep4",
    "type": "circle",
    "name": "Ring 2",
    "enabled": true,
    "locked": false,
-   "tag": "#b58cff",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -73,15 +71,14 @@
    "start": 0,
    "sweep": 360,
    "ccw": false,
-   "group": "qh2sm89q"
+   "group": "ts8pn6su"
   },
   {
-   "id": "aa71fyd1",
+   "id": "xqhmximg",
    "type": "circle",
    "name": "Ring 3",
    "enabled": true,
    "locked": false,
-   "tag": "#b58cff",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -102,15 +99,14 @@
    "start": 0,
    "sweep": 360,
    "ccw": false,
-   "group": "qh2sm89q"
+   "group": "ts8pn6su"
   },
   {
-   "id": "j95s4l93",
+   "id": "i9tf1p04",
    "type": "circle",
    "name": "Arc 1",
    "enabled": true,
    "locked": false,
-   "tag": "#46e08c",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -131,15 +127,14 @@
    "start": 270,
    "sweep": 180,
    "ccw": false,
-   "group": "b8n63vz3"
+   "group": "s2yu08rh"
   },
   {
-   "id": "k2lx4bjc",
+   "id": "h2v5zgig",
    "type": "circle",
    "name": "Arc 2",
    "enabled": true,
    "locked": false,
-   "tag": "#46e08c",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -160,15 +155,14 @@
    "start": 270,
    "sweep": 180,
    "ccw": true,
-   "group": "b8n63vz3"
+   "group": "s2yu08rh"
   },
   {
-   "id": "17pk3qhi",
+   "id": "ewuzuxvj",
    "type": "circle",
    "name": "Oval",
    "enabled": true,
    "locked": false,
-   "tag": "#ff6f86",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -192,12 +186,11 @@
    "ry": 50
   },
   {
-   "id": "u73rpqf4",
+   "id": "6phlu799",
    "type": "circle",
    "name": "Ring CCW",
    "enabled": true,
    "locked": false,
-   "tag": "#6fe3e3",
    "order": "GRB",
    "reverse": false,
    "dimmer": 1,
@@ -222,21 +215,21 @@
  ],
  "groups": [
   {
-   "id": "qh2sm89q",
+   "id": "ts8pn6su",
    "name": "Rings",
-   "tag": "#b58cff",
+   "tag": "",
    "open": true
   },
   {
-   "id": "b8n63vz3",
+   "id": "s2yu08rh",
    "name": "Arcs",
-   "tag": "#46e08c",
+   "tag": "",
    "open": true
   }
  ],
  "controllers": [
   {
-   "id": "nyl5jehl",
+   "id": "ykvig1vb",
    "name": "Ring controller",
    "ip": "10.0.0.70",
    "enabled": true,
@@ -246,19 +239,19 @@
    "split": false,
    "chains": [
     [
-     "ju1oiok1",
-     "bnn3q6ed",
-     "aa71fyd1"
+     "mhcw9bih",
+     "2jrcpep4",
+     "xqhmximg"
     ],
     [
-     "j95s4l93",
-     "k2lx4bjc"
+     "i9tf1p04",
+     "h2v5zgig"
     ],
     [
-     "17pk3qhi"
+     "ewuzuxvj"
     ],
     [
-     "u73rpqf4"
+     "6phlu799"
     ]
    ]
   }
@@ -459,9 +452,9 @@
  ],
  "zones": [
   {
-   "id": "sncshfph",
+   "id": "dnk44o2v",
    "name": "All",
-   "tag": "#b58cff",
+   "tag": "",
    "x": 0,
    "y": 0,
    "w": 1000,
@@ -469,7 +462,7 @@
    "opacity": 1,
    "layers": [
     {
-     "id": "s6algie1",
+     "id": "gxo5mqbh",
      "src": "b-pulse",
      "params": {
       "b-pulse": {
@@ -483,13 +476,12 @@
    ],
    "scenes": [
     {
-     "id": "91ia8bg2",
+     "id": "1fwdroq9",
      "name": "Pulse rings",
-     "tag": "#3cc8ff",
      "fade": 1,
      "layers": [
       {
-       "id": "s6algie1",
+       "id": "gxo5mqbh",
        "src": "b-pulse",
        "params": {
         "b-pulse": {
@@ -503,13 +495,12 @@
      ]
     },
     {
-     "id": "vspzbx6q",
+     "id": "ceacy4p6",
      "name": "Radar",
-     "tag": "#b58cff",
      "fade": 1.5,
      "layers": [
       {
-       "id": "ws9jpb81",
+       "id": "nwkda9mj",
        "src": "b-sweep",
        "params": {
         "b-sweep": {
@@ -523,13 +514,12 @@
      ]
     },
     {
-     "id": "xz3iwslj",
+     "id": "02ggt2a3",
      "name": "Comets",
-     "tag": "#ff6f86",
      "fade": 1,
      "layers": [
       {
-       "id": "autzcgn4",
+       "id": "anz3euas",
        "src": "b-comet",
        "params": {
         "b-comet": {
@@ -544,13 +534,12 @@
      ]
     },
     {
-     "id": "1f8j0wl8",
+     "id": "a3go5vf8",
      "name": "Aurora",
-     "tag": "#6fe3e3",
      "fade": 4,
      "layers": [
       {
-       "id": "d1pnyukx",
+       "id": "4yveceif",
        "src": "b-aurora",
        "params": {},
        "opacity": 1,
@@ -560,9 +549,71 @@
      ]
     }
    ],
-   "scene": "91ia8bg2",
+   "scene": "1fwdroq9",
    "playlists": []
   }
  ],
- "guide": null
+ "guide": null,
+ "midi": {
+  "maps": [],
+  "order": []
+ },
+ "macros": {
+  "speed": {
+   "v": 1
+  },
+  "intensity": {
+   "v": 1
+  },
+  "saturation": {
+   "v": 1
+  },
+  "color1": {
+   "on": false,
+   "mode": "hsv",
+   "h": 200,
+   "s": 1,
+   "v": 1
+  },
+  "color2": {
+   "on": false,
+   "mode": "hsv",
+   "h": 320,
+   "s": 1,
+   "v": 1
+  },
+  "angle": {
+   "on": false,
+   "v": 0.5
+  },
+  "softness": {
+   "on": false,
+   "v": 0.5
+  },
+  "scale": {
+   "on": false,
+   "v": 0.5
+  },
+  "count": {
+   "on": false,
+   "v": 0.5
+  },
+  "size": {
+   "on": false,
+   "v": 0.5
+  },
+  "width": {
+   "on": false,
+   "v": 0.5
+  },
+  "density": {
+   "on": false,
+   "v": 0.5
+  },
+  "decay": {
+   "on": false,
+   "v": 0.5
+  }
+ },
+ "macroLinks": {}
 }

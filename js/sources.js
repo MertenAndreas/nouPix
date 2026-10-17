@@ -1,4 +1,4 @@
-// openLedMapper · js/sources.js
+// nouPix · js/sources.js
 // Content sources: the WebGL canvas, ISF shader runtimes, parameters and speeds, images and videos (play, trim,
 // loop, sound), the format check for media files, and the small preview of each source. Uses util and model.
 
@@ -256,7 +256,7 @@ function playVideo(src, el) {
   el.play().catch(e => {   // browsers may refuse sound before a click: play it silent, say so once
     if (e && e.name === 'NotAllowedError' && !el.muted) {
       el.muted = true; el.play().catch(() => {});
-      if (!el._audioWarned) { el._audioWarned = true; toast(`${src ? src.name : 'Video'}: the browser blocked its sound until you click in openLedMapper. It plays silent for now.`, 'warn'); }
+      if (!el._audioWarned) { el._audioWarned = true; toast(`${src ? src.name : 'Video'}: the browser blocked its sound until you click in nouPix. It plays silent for now.`, 'warn'); }
     }
   });
 }
@@ -281,7 +281,7 @@ function videoTick() {
   }
 }
 const refreshMediaPanel = () => { if (ui.rightTab === 'content' && $('#rightBody .vtl')) renderRight(); };
-// The formats openLedMapper takes. What really plays depends on the browser's codecs: a file is tried before it
+// The formats nouPix takes. What really plays depends on the browser's codecs: a file is tried before it
 // is accepted (probeMedia), so one that cannot play gets a clear message instead of a black layer.
 const VIDEO_EXT = ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'ogv'], IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'bmp', 'svg'];
 const MEDIA_FORMATS = 'Videos: MP4 or MOV with H.264, WebM (VP8, VP9 or AV1), MKV with those codecs. Images: PNG, JPEG, GIF, WebP, AVIF, BMP.';
@@ -295,7 +295,7 @@ function mediaKindOf(file) {
 function probeMedia(file, timeout = 20000) {
   return new Promise((resolve, reject) => {
     const kind = mediaKindOf(file);
-    if (!kind) return reject(new Error(`${file.name} is not a video or image file openLedMapper can play. ${MEDIA_FORMATS}`));
+    if (!kind) return reject(new Error(`${file.name} is not a video or image file nouPix can play. ${MEDIA_FORMATS}`));
     const url = URL.createObjectURL(file);
     let el, timer = null;
     const end = (ok, v) => {

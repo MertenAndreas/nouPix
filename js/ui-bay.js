@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-bay.js
+// nouPix · js/ui-bay.js
 // The patch bay: the MIDI window's second view (the list is the first; both show the same mappings). Three columns
 // joined by wires: the MIDI controls; what they can drive (the output, the zones with their scenes and playlists,
 // the macros); and the controls of the project's effects. A yellow wire is a mapping, from a control to what it

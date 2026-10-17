@@ -1,4 +1,4 @@
-// openLedMapper · js/actions.js
+// nouPix · js/actions.js
 // What the user can do to the project, whichever button, key or menu asks: add, delete, duplicate, group, lock,
 // nudge, align, turn and resize fixtures; copy and paste; zones, layers and scenes; adding sources from files.
 
@@ -67,7 +67,7 @@ function zoneAbove(i) {
 }
 // New zones go under the others: zones higher in the list cover the ones below
 function addZone(rect) {
-  const z = newZone(Object.assign({ name: nextZoneName(), tag: TAGS[(project.zones.length + 1) % TAGS.length] }, rect));
+  const z = newZone(Object.assign({ name: nextZoneName() }, rect));
   clampZone(z);
   project.zones.unshift(z);
   ui.zone = z.id; ui.layer = null;
@@ -240,7 +240,7 @@ function groupSel() {
   const sel = selected(), same = wholeGroup(sel);
   if (sel.length < 2) { toast('Select two or more fixtures to group them.'); return; }
   if (same) { toast(`${groupName(same)} is a group already.`); return; }
-  const g = { id: uid(), name: nextGroupName(), tag: TAGS[(project.groups.length + 2) % TAGS.length], open: true };
+  const g = { id: uid(), name: nextGroupName(), tag: '', open: true };
   const before = project.fixtures.slice(0, project.fixtures.indexOf(sel[0])).filter(f => !ui.sel.has(f.id)).length;
   const rest = project.fixtures.filter(f => !ui.sel.has(f.id));
   rest.splice(before, 0, ...sel);
@@ -384,7 +384,7 @@ function goScene(z, sc, cut = false) {
 function storeScene(z) {
   let n = z.scenes.length + 1;
   while (z.scenes.some(s => s.name === 'Scene ' + n)) n++;
-  const sc = { id: uid(), name: 'Scene ' + n, fade: project.settings.fade, tag: TAGS[z.scenes.length % TAGS.length], layers: snapshotLayers(z) };
+  const sc = { id: uid(), name: 'Scene ' + n, fade: project.settings.fade, layers: snapshotLayers(z) };
   z.scenes.push(sc);
   z.scene = sc.id; ui.zone = z.id;
   commit();
@@ -558,7 +558,7 @@ async function startCapture(src) {
     markThumb(src);
     renderSrcList(); renderRight();
   } catch (e) {
-    toast(e && e.name === 'NotAllowedError' ? 'Screen capture was blocked or cancelled. It works when openLedMapper is opened from openledmapper.py in a desktop browser.' : 'Screen capture is not available in this browser.', 'warn');
+    toast(e && e.name === 'NotAllowedError' ? 'Screen capture was blocked or cancelled. It works when nouPix is opened from noupix.py in a desktop browser.' : 'Screen capture is not available in this browser.', 'warn');
   }
 }
 function stopCapture(src) {
@@ -592,22 +592,22 @@ function restackSel(front) {
 }
 
 /* ---------- copy and paste ---------- */
-// Copied fixtures go on the system clipboard as text, so they paste into another project, another openLedMapper
+// Copied fixtures go on the system clipboard as text, so they paste into another project, another nouPix
 // window, or the desktop app; they are also kept here for "Paste here" when the clipboard can't be read.
-let clip = store.get('openledmapper.clip', null);
-const isClip = d => isObj(d) && d.openledmapper === 'fixtures' && Array.isArray(d.fixtures);
+let clip = store.get('noupix.clip', null);
+const isClip = d => isObj(d) && (d.noupix === 'fixtures' || d.openledmapper === 'fixtures') && Array.isArray(d.fixtures);   // and copies from before the name
 function clipOfSel() {
   const sel = selected();
   if (!sel.length) return null;
   const groups = selUnits(sel).filter(u => u.g).map(u => ({ id: u.g.id, name: u.g.name, tag: u.g.tag, ...(u.g.rot ? { rot: u.g.rot } : {}) }));
   const whole = new Set(groups.map(g => g.id));
   const fixtures = sel.map(f => { const c = JSON.parse(JSON.stringify(snapshotGeom(f))); if (!whole.has(c.group)) delete c.group; delete c.addr; return c; });
-  return { openledmapper: 'fixtures', version: 1, fixtures, groups };
+  return { noupix: 'fixtures', version: 1, fixtures, groups };
 }
 function copySel(e) {
   const d = clipOfSel();
   if (!d) return false;
-  clip = d; store.set('openledmapper.clip', d);
+  clip = d; store.set('noupix.clip', d);
   const text = JSON.stringify(d);
   if (e && e.clipboardData) e.clipboardData.setData('text/plain', text);
   else if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
@@ -620,7 +620,7 @@ function pasteFixtures(d, point) {
   const ids = new Set(project.fixtures.map(f => f.id)), names = new Set(project.fixtures.map(f => f.name));
   const gnames = new Set(project.groups.map(g => groupName(g)));
   const gmap = new Map((Array.isArray(d.groups) ? d.groups : []).filter(g => isObj(g) && isId(g.id)).map((g, i) => [String(g.id),
-    { id: uid(), name: typeof g.name === 'string' && g.name ? (gnames.has(g.name) ? nextCopyName(g.name, gnames) : g.name) : nextGroupName(), tag: typeof g.tag === 'string' ? g.tag : TAGS[(project.groups.length + 2 + i) % TAGS.length], open: true,
+    { id: uid(), name: typeof g.name === 'string' && g.name ? (gnames.has(g.name) ? nextCopyName(g.name, gnames) : g.name) : nextGroupName(), tag: isTag(g.tag) ? g.tag : '', open: true,
       ...(Number.isFinite(g.rot) && g.rot ? { rot: wrap180(g.rot) } : {}) }]));
   const list = d.fixtures.filter(f => isObj(f) && TYPE_LABEL[f.type]).map((f0, i) => {
     const f = JSON.parse(JSON.stringify(f0));

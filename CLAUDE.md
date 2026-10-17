@@ -1,13 +1,13 @@
-# openLedMapper: architecture and conventions
+# nouPix: architecture and conventions
 
-A pixel-mapping tool for LED installations. The interface is a web page; a small Python program, the bridge,
+A pixel-mapping tool for LED installations (called openLedMapper until 1.0). The interface is a web page; a small Python program, the bridge,
 serves it and turns its frames into Art-Net. The desktop apps are an Electron window around the page, with the
 bridge packed inside.
 
 ```
 index.html, css/, js/  ── the interface (browser): fixtures, content, scenes, playlists, patch; renders and builds DMX
         │  WebSocket /ws: JSON messages + binary frames of universes
-openledmapper.py       ── the bridge (Python 3.8+, standard library only): serves the page, sends Art-Net
+noupix.py              ── the bridge (Python 3.8+, standard library only): serves the page, sends Art-Net
         │  with remote control on: a second web server on the network (default port 8090)
 login.html, remote.html── what other devices open: the login page, and the phone page; /app is index.html
 desktop/               ── Electron window that starts the bridge and loads http://127.0.0.1:<port>/
@@ -23,7 +23,7 @@ order by `<script src>` tags at the end of `index.html`:
 | `vendor/isf.js` | ISF shader renderer by VIDVOX (third party, unchanged) | `interactiveShaderFormat` |
 | `builtins.js` | The 32 built-in effects, as ISF code and categories (data) | `BUILTINS` |
 | `util.js` | Helpers used everywhere: elements, numbers and text, local storage, toasts, error reports, icons; the window the user works in (`uiDoc`: this page, or the MIDI or Scenes window), where toasts, menus and dialogs show | `$` `$$` `h` `isEl` `clamp` `wrap180` `wrap360` `pct` `fmtN` `store` `toast` `uiDocNow` `watchDoc` `debounce` `report` `replacer` `MOD` |
-| `model.js` | The project and its parts: constants (`CURVES`, `CURVE_STRENGTH`), defaults, the `project` and `ui` state, factories, groups, selection, look-ups by id | `project` `ui` `blankProject` `newFixture` `fxBits` `fxCurve` `curveParam` `newZone` `newLayer` `newPlaylist` `newStep` `newController` `selected` `selUnits` `fxById` `markGeom` `markPatch` |
+| `model.js` | The project and its parts: constants (`CURVES`, `CURVE_STRENGTH`, `TAGS`: the colours a group or zone can be given), defaults, the `project` and `ui` state, factories, groups, selection, look-ups by id, a fixture's colour (its group's) | `project` `ui` `blankProject` `newFixture` `fxBits` `fxCurve` `curveParam` `newZone` `newLayer` `newPlaylist` `newStep` `newController` `selected` `selUnits` `fxById` `fxTag` `isTag` `markGeom` `markPatch` |
 | `macros.js` | Macros: their list (`MACROS`: Speed, Intensity, Saturation, Color 1 and 2, the shared controls), defaults and repair, which control of an effect follows which (by name, or as chosen for that effect in `project.macroLinks`), a value with its macro on it, colour parts | `MACROS` `macroDef` `defaultMacros` `fixMacros` `macroRoles` `macroChoices` `macroRolesOf` `fixMacroLinks` `macroActive` `macroOver` `macroPart` `macroPartPatch` |
 | `geometry.js` | Mapping math: each fixture's pixel positions, lengths, bounds, distances; moving, turning, scaling a fixture and the frame around several | `computePoints` `rebuildGeometry` `computeBB` `rotateFixture` `scaleFixture` `frameOf` `snap45` |
 | `patch.js` | Addressing: universe and channels of every pixel on its controller output (`BPP`: channels per pixel, doubled on 16-bit fixtures), conflicts | `computePatch` `ensurePatch` `universes` `addrOf` `BPP` `assign` `unassign` |
@@ -35,9 +35,9 @@ order by `<script src>` tags at the end of `index.html`:
 | `playlists.js` | Playlists: a zone plays some of its scenes in turn on the frame clock; which fade a step uses; play, pause, next, the end; the state devices see | `playlistTick` `playPlaylist` `togglePlaylist` `pausePlaylist` `resumePlaylist` `stepPlaylist` `playlistManual` `stepFade` `playingList` `playElapsed` `playState` |
 | `midi.js` | MIDI in: Web MIDI and its ports, messages, the mappings' targets (master, blackout, group dimmer `gr:<group>`, zone level, scene, next scene, playlist, macro, a control of an effect), pickup and jump, toggle and hold (Follow for a fader, the default when one is learnt onto something on or off), learn | `midi` `startMidi` `setMidiOn` `midiMessage` `midiIn` `midiTarget` `effectTarget` `midiApply` `midiSetLearn` `midiLearnTarget` `midiConnect` `midiSetMap` `midiDisconnect` |
 | `actions.js` | What the user can do, whichever button, key or menu asks: fixtures, selection, align/turn/resize, copy and paste, zones, layers, scenes, playlists, controllers, macros and what an effect follows, an effect's control set everywhere it plays, adding sources from files | `addFixture` `deleteSel` `duplicateSel` `groupSel` `alignSel` `rotateSel` `pasteFixtures` `addZone` `addLayer` `goScene` `storeScene` `playlistDo` `addPlaylist` `addToPlaylist` `moveStep` `deleteController` `setMacro` `setMacroLink` `setEffectControl` |
-| `ui-forms.js` | Building blocks for the panels: rows, inputs, sliders (a value typed on double-click, Shift + scroll in notches), segmented buttons, lists that reorder by dragging and their move animation, rows that scroll sideways with ‹ › (`hscroller`), scroll positions kept when a panel is drawn anew (`keepScroll`, `data-keep`), a window this page draws into dressed like it (`dressWindow`) | `row` `numRow` `sliderRow` `shiftWheel` `notchFrom` `seg` `checkRow` `reorderable` `flipRows` `hscroller` `keepScroll` `dressWindow` |
+| `ui-forms.js` | Building blocks for the panels: rows, inputs, sliders (a value typed on double-click, Shift + scroll in notches; the track filled up to the value, `rangeFill`, kept by the value setter and input events), a group's or zone's colour (`tagSwatches`), segmented buttons, lists that reorder by dragging and their move animation, rows that scroll sideways with ‹ › (`hscroller`), scroll positions kept when a panel is drawn anew (`keepScroll`, `data-keep`), a window this page draws into dressed like it (`dressWindow`) | `row` `numRow` `sliderRow` `shiftWheel` `notchFrom` `seg` `checkRow` `reorderable` `flipRows` `hscroller` `keepScroll` `dressWindow` |
 | `ui-color.js` | The colour picker for shader colour controls: wheel and intensity, RGB, HSV, hex, lighting presets, recent colours | `colorRow` `openColorPicker` `hsvToRgb` `rgbToHsv` |
-| `ui-stage.js` | The stage canvas: view and zoom, drawing, zones on the stage, hit testing, handles, tools, pointer, pixel finder, guide image | `drawView` `fitView` `setTool` `hitFixture` `dragHandle` `endDrag` `defaultFixtureAt` |
+| `ui-stage.js` | The stage canvas: view and zoom, drawing (its fonts and colours read from the page's, `stageLook`, again when the look changes), zones on the stage, hit testing, handles, tools, pointer, pixel finder, guide image | `drawView` `stageLook` `fitView` `setTool` `hitFixture` `dragHandle` `endDrag` `defaultFixtureAt` |
 | `ui-lists.js` | The left column: fixture list (groups, badges, drag and drop) and source list (categories, search) | `renderFxList` `renderSrcList` |
 | `ui-inspector.js` | The right panel: fixture (with resolution, dimming curve, its Gamma or Strength slider and the graph, which follows the slider live), multi-selection, group and zone inspectors, Content tab (shader angles with buttons every 45°), video controls, Settings | `renderRight` `onSelection` `showRight` `dimmingRows` `strengthRow` `curveGraph` `isAngle` `anglePresets` |
 | `ui-dock.js` | The bottom dock: scenes (with the fade time on each scene's button), patch and controller editor, Art-Net nodes, DMX monitor; the Scenes window (the scenes and playlists in a popup this page draws into, `olm-scenes`; the Scenes tab says where they are meanwhile) | `renderDock` `onPatchChanged` `refreshScenes` `fadeControl` `autoPatch` `openScenesWindow` `drawScenesWindow` `scenesDoc` `scenesRoots` |
@@ -46,8 +46,8 @@ order by `<script src>` tags at the end of `index.html`:
 | `ui-remote.js` | Remote control in the interface: the top-bar button and menu, the Settings section, the waiting screen on devices, `lockPanel` for operators | `updateRemoteUI` `remoteMenu` `remoteSection` `remoteOverlay` `lockPanel` |
 | `ui-macros.js` | The macros panel of the MIDI window (colour parts in HSV or RGB, the shared controls folded; its own binders, `macroBinders`), the "Follows Speed" note under an effect's control, "Macros it follows" in an effect's Parameters (what each control follows, for that effect), the Content tab's values and an open colour picker refreshed once a frame | `macrosPanel` `macroFollows` `macroLinksFold` `syncContentSoon` `updateMacrosUI` |
 | `ui-midi.js` | MIDI in the interface: the top-bar button, the MIDI window (a popup this page draws into: Learn, controllers and the macros under them, mappings (while learning, the control just moved at the top with a list to choose its target), monitor, the virtual controller: on-screen faders and pads sent through `midiIn` as port `MIDI_VIRTUAL`), the learn bar, learning by touching anything marked `data-midi` in either window (`midiCapture`), the yellow line and tags on what a control drives | `updateMidiUI` `openMidiWindow` `renderMidiWindow` `midiSlot` `midiButton` `markMidi` `initMidiUI` |
-| `ui-bay.js` | The patch bay, the MIDI window's second view (`ui.midiView`: 'list' or 'bay'): controls, targets (output, zones, macros) and effects' controls (colours too) in three columns, a yellow wire per mapping and blue wires from a macro to the effect controls that follow it (`bayLinks`, shown for the macro pointed at or pinned; SVG over the columns; dashed into a folded group or past a column's edge), wires drawn by dragging from a dot (`bayDrawStart`, `bayDropAt`: `midiAddMap`, `setMacroLink`), a wire picked with its settings and Remove (Delete, `bayRemoveSel`), rows that move their target, folding (`ui.bayOpen`), controls forgotten (×, `midiForget`) and put in order by dragging (`project.midi.order`, `midiSetOrder`; the list follows) | `bay` `bayView` `bayWires` `bayUpdate` `bayKeys` `bayLinks` `bayDrawStart` |
-| `app.js` | Top bar and status bar, wiring buttons and keys, the frame loop, `boot()`, and `window.olm` | `initUI` `onKey` `renderAll` `boot` |
+| `ui-bay.js` | The patch bay, the MIDI window's second view (`ui.midiView`: 'list' or 'bay'): controls, targets (output, zones, macros) and effects' controls (colours too) in three columns, a yellow wire per mapping and aluminium wires from a macro to the effect controls that follow it (`bayLinks`, shown for the macro pointed at or pinned; SVG over the columns; dashed into a folded group or past a column's edge), wires drawn by dragging from a dot (`bayDrawStart`, `bayDropAt`: `midiAddMap`, `setMacroLink`), a wire picked with its settings and Remove (Delete, `bayRemoveSel`), rows that move their target, folding (`ui.bayOpen`), controls forgotten (×, `midiForget`) and put in order by dragging (`project.midi.order`, `midiSetOrder`; the list follows) | `bay` `bayView` `bayWires` `bayUpdate` `bayKeys` `bayLinks` `bayDrawStart` |
+| `app.js` | Top bar and status bar, the look (black or white: `ui.theme`, the top bar's button and Settings), wiring buttons and keys, the frame loop, `boot()`, and `window.olm` | `initUI` `setTheme` `applyTheme` `onKey` `renderAll` `boot` |
 
 ### How the files fit together
 
@@ -111,10 +111,16 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   Content tab's controls read the layer's value on each sync, so they follow.
 - A group's dimmer is `g.level` (0 to 1; absent at 1, so files without dimmed groups don't change): `setGroupLevel`
   sets it and every slider showing it; `buildOutput` multiplies it in.
-- Files: `{ format: 'openledmapper-project', version: 3, … }`. `hydrate` (project-io.js) repairs anything opened
-  (older versions, Weft files, hand edits) so the rest of the code can trust the project. A new field gets its
-  default there.
-- `ui` holds view and selection state; the part listed in `UI_PREFS` is kept between sessions (`savePrefs`).
+- Colours: only a group (`g.tag`) or a zone (`z.tag`) has one, a hex from `TAGS` or `''` for none (the default: nothing
+  gets one unless the user gives it). Fixtures show their group's (`fxTag`), scenes their zone's; neither has its own.
+  `hydrate` drops fixtures' and scenes' colours, and groups' and zones' from files before version 4 (they were given
+  automatically then).
+- Files: `{ format: 'noupix-project', version: 4, … }`, saved as `.noupix.json`. `hydrate` (project-io.js) repairs
+  anything opened (older versions, openLedMapper and Weft files, hand edits) so the rest of the code can trust the
+  project. A new field gets its default there.
+- `ui` holds view and selection state; the part listed in `UI_PREFS` is kept between sessions (`savePrefs`, under
+  `noupix.ui`; that includes `ui.theme`, which a script in `index.html`'s head applies before anything is drawn).
+  What the browser kept under `openledmapper.*` (or `weft.*`) moves to `noupix.*` once (`carryOverStorage`).
 
 ## Remote control
 
@@ -136,7 +142,7 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   only the main window plays: devices show where they are from the `live` message (`play`). A device never sends
   Art-Net (`setOutput` does nothing), and can't add files or screen capture.
 - **The remote as an app:** `remote.html` links `remote.webmanifest` (start `/remote`, standalone, icons
-  `icons/remote-*.png` made from `icons/openledmapper.svg`) and registers `remote-sw.js` (network first, a cached copy
+  `icons/remote-*.png` made from `icons/noupix.svg`) and registers `remote-sw.js` (network first, a cached copy
   of the page and its files when the computer can't be reached). The network server serves them (`REMOTE_FILES`).
   Chrome installs only from a secure address: plain http on the network needs its "insecure origins treated as
   secure" setting; the page's full screen button covers the rest.
@@ -148,13 +154,13 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
 - **The operator's lock** is in the interface (`mappingLocked()`: stage, keys, menus, lists, `lockPanel`) for
   convenience, and in `contentOf` for real.
 
-## The bridge (openledmapper.py)
+## The bridge (noupix.py)
 
-Python standard library only. Serves `/` and `/index.html`, plain-named files in `css/`, `js/` and `js/vendor/`
-(nothing else), and the WebSocket at `/ws`; with remote control on, the network server described above. The
+Python standard library only. Serves `/` and `/index.html`, plain-named `.css`, `.js` and `.woff2` files in `css/`,
+`js/` and `js/vendor/` (nothing else), and the WebSocket at `/ws`; with remote control on, the network server described above. The
 page sends binary frames (`layoutFrame` in output.js describes the layout) that the bridge turns into Art-Net
 packets, plus JSON messages (discovery polls, settings, remote control). `VERSION`
-is the app's version; it shows next to the name in the top bar. `openledmapper.spec` packs the bridge and the
+is the app's version; it shows next to the name in the top bar. `noupix.spec` packs the bridge and the
 interface files for the desktop apps; `.github/workflows/release.yml` builds them when a `v<VERSION>` tag is
 pushed.
 
@@ -163,13 +169,21 @@ pushed.
 - **Code style:** match the file around you: two-space indents, single quotes, semicolons, `camelCase`,
   `UPPER_CASE` for constant tables. Elements are built with `h(tag, attrs, ...children)`; small helpers over
   classes. Comments are plain sentences that say why or what for, above the code they describe.
+- **The look:** described in `docs/brand.md`. Every colour is a variable in `css/app.css`'s `:root`, redefined for the
+  white look under `:root[data-theme="light"]`; anything new uses them (or `color-mix` of them), never a literal, so
+  both looks keep working. Red (`--accent`) marks what is selected and what acts, in small doses: an edge, a line, a
+  dot, text, never a large red area (a selected row is `--sel-soft` with a red edge). White (`--live`) means a light
+  is on, yellow (`--midi`) is MIDI's alone, aluminium (`--fader`) is what you move. Corners are square (`--r: 0`),
+  except what is really round (status dots, the colour wheel, switch knobs); no drop shadows. Running text is Saira
+  300, labels (panel heads, tabs, buttons) Chakra Petch uppercase (`--label`), numbers JetBrains Mono; the fonts are
+  in `css/` (`fonts.css`, `OFL.txt`), so the app needs no internet.
 - **Interface text:** short plain sentences, sentence case, no jargon where a word will do. Messages to the user go
   through `toast()`. Shortcuts are shown with `MOD` (⌘ on a Mac, Ctrl elsewhere).
 - **No dependencies** in the interface or the bridge. Third-party code goes in `js/vendor/` unchanged, with its
   licence noted.
 - **A new file in js/:** add its `<script src>` tag in the right place in `index.html` (nothing else needed: the
   bridge serves it and the desktop build packs the whole folder), and add it to the table above.
-- **Versions:** bump `VERSION` in `openledmapper.py`, `desktop/package.json` (and its lock file), the README
+- **Versions:** bump `VERSION` in `noupix.py`, `desktop/package.json` (and its lock file), the README
   title and the user guide's first line together.
 
 ## Tests
@@ -192,10 +206,15 @@ the virtual controller. `test_macros.py` checks the macros: what follows what, S
 Saturation, the colours, the shared controls, scenes and thumbnails, files and undo, the Macros section, MIDI onto a
 macro and a colour's part, devices. `test_links.py` checks what an effect follows as chosen (engine, files, undo, the
 fold, the operator's lock), MIDI onto an effect's controls (learn, pickup and jump, every layer, scenes, speed, lists,
-ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. `test_scenes_window.py` checks the Scenes window (opening, playing, levels both ways, menus,
+ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. `test_look.py` checks the look and the name: the fonts served and nothing fetched from outside, black by default,
+white from the top bar and Settings (kept, from the start, the windows and the stage following), colours only on
+groups and zones (none at first, shown by their fixtures and scenes, undo), files (old colours dropped, the old
+format opened, `.noupix.json`), the sliders' fill, the scene tiles' cuts, openLedMapper's stored data carried over.
+`test_profile_move.py` checks the window profile moving from `~/.openledmapper` or `~/.weft` to `~/.noupix`.
+`test_scenes_window.py` checks the Scenes window (opening, playing, levels both ways, menus,
 dialogs and messages there, keys, MIDI learn and tags, closing every way). `test_bay.py` checks the patch bay
 (the switch, columns, wires, folding, a wire's settings, Remove and Delete, undo, learn, the rows, forgetting and ordering
-controls, drawing wires either way, the macros' blue wires: pointed at, pinned, picked, removed, drawn, refused). The simulated Web MIDI
+controls, drawing wires either way, the macros' aluminium wires: pointed at, pinned, picked, removed, drawn, refused). The simulated Web MIDI
 is `FAKE_MIDI` in `harness.py`. `test_playlist.py` checks playlists
 (files, the panel folding and opening, timing and fades, the end, pause and resume, undo, editing while playing, the
 fade on a scene's button, play on open, the phone).

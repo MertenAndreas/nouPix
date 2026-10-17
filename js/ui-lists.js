@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-lists.js
+// nouPix · js/ui-lists.js
 // The left column: the fixture list (groups, badges, drag and drop) and the source list with its categories.
 
 /* ---------- fixture list ---------- */
@@ -28,7 +28,7 @@ function groupRow(g, m, whole) {
     h('span', { class: 'nm' }, groupName(g), h('span', { class: 'cnt' }, m.length), m.every(f => f.locked) ? h('span', { class: 'muted glock', title: 'Locked' }, icon('lock')) : null,
       h('span', { class: 'gdim', 'data-group-pct': g.id, hidden: groupLevel(g) >= 1, title: 'Its dimmer (in the Inspector)' }, pct(groupLevel(g)))),   // dimmed: how far
     h('span', { class: 'meta' }, fmtN(px) + 'px'), groupBadge(m));
-  li.style.setProperty('--gtag', g.tag);
+  li.style.setProperty('--gtag', g.tag || 'var(--muted)');
   li.addEventListener('click', e => {
     const ids = m.map(f => f.id);
     if (e.metaKey || e.ctrlKey || e.shiftKey) { if (whole) ids.forEach(id => ui.sel.delete(id)); else ids.forEach(id => ui.sel.add(id)); }
@@ -58,7 +58,7 @@ function renderFxList() {
     if (x && !x.g.open) return;
     const li = fixtureRow(f);
     if (x) {
-      li.classList.add('in'); li.style.setProperty('--gtag', x.g.tag);
+      li.classList.add('in'); li.style.setProperty('--gtag', x.g.tag || 'var(--line3)');
       if (!F[i + 1] || F[i + 1].group !== f.group) li.classList.add('end');
       if (x.whole) { li.classList.remove('sel'); li.classList.add('insel'); }   // the group is selected: its header shows it
     }
@@ -86,7 +86,7 @@ function updateLockButton() {
 }
 function fixtureRow(f) {
   const li = h('li', { class: (ui.sel.has(f.id) ? 'sel ' : '') + (f.enabled ? '' : 'off'), draggable: true, 'data-id': f.id, title: `${f.name} · ${TYPE_LABEL[f.type]} · ${pixelCount(f)} px · ${f.order}\nDrag to change the order, into or out of a group, or onto a patch output` },
-    h('span', { class: 'tag', style: { background: f.tag } }),
+    h('span', { class: 'tag', style: { background: fxTag(f) || 'transparent' } }),
     h('span', { class: 'ty' }, icon(f.type)),
     h('span', { class: 'nm' }, f.name, f.locked ? h('span', { class: 'muted', style: { marginLeft: '6px' } }, icon('lock')) : null),
     h('span', { class: 'meta' }, pixelCount(f) + 'px'),

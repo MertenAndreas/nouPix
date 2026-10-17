@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-midi.js
+// nouPix · js/ui-midi.js
 // MIDI in the interface: the top-bar button (its light blinks with each message, it turns yellow while learning),
 // the MIDI window (MIDI on or off, Learn, the controllers, the mappings, the monitor, a virtual controller), the bar that says what to do
 // while learning, and the marks on what a control drives: a thin yellow line on a slider where its fader is, and the
@@ -57,7 +57,7 @@ function openMidiWindow() {
   const w = window.open('', 'olm-midi', 'popup,width=1180,height=760');
   if (!w) { toast('The MIDI window could not open: allow pop-up windows for this page.', 'err'); return; }
   midiWin = w;
-  const d = dressWindow(w, 'MIDI · openLedMapper', 'midiwin');
+  const d = dressWindow(w, 'MIDI · nouPix', 'midiwin');
   w.addEventListener('keydown', e => {
     if (e.key === 'Escape' && midi.learn.on) midiSetLearn(false);
     // the patch bay: Delete removes the wire picked, Esc lets it go
@@ -148,7 +148,7 @@ function renderMidiWindow(D) {
     body = h('div', { class: 'midipanel off' }, h('div', { class: 'moff' },
       h('p', null, 'Play this project from a MIDI controller: its faders, knobs and pads can move the master, blackout and the zones\' levels, and play their scenes and playlists.'),
       h('button', { class: 'btn primary', type: 'button', onclick: () => setMidiOn(true) }, 'Turn MIDI on'),
-      h('p', { class: 'note' }, 'The browser may ask whether openLedMapper can use your MIDI devices.')));
+      h('p', { class: 'note' }, 'The browser may ask whether nouPix can use your MIDI devices.')));
   } else if (ui.midiView === 'bay') body = bayView();
   else body = h('div', { class: 'midipanel' + (ui.midiMon ? '' : ' monshut') }, midiPorts(), midiMaps(), midiMonitor());
   const scrolled = $$('.bcol', D).map(c => [c.classList[1], c.scrollTop]);   // the bay's columns keep where they were
@@ -161,7 +161,7 @@ function midiPorts() {
   const known = (ui.midiVc ? [MIDI_VIRTUAL] : []).concat(midi.ports.map(p => p.name));
   for (const w of project.midi.maps) { const k = midiKeyParts(w.key); if (k && !known.includes(k.port)) known.push(k.port); }
   const note = { asking: 'Asking for your MIDI devices… The browser may show a question at the top of the main window.',
-    none: 'This browser has no MIDI: use Chrome or Edge, or the openLedMapper app.',
+    none: 'This browser has no MIDI: use Chrome or Edge, or the nouPix app.',
     blocked: 'MIDI was refused, or this computer has none. In Chrome, allow MIDI devices for this page (its site settings), then turn MIDI off and on again.',
     ok: midi.ports.length ? 'Plug controllers in or out at any time: each is found again by its name. On Windows a MIDI port works in one program at a time.' : 'No MIDI controller found: plug one in and it shows here.' }[midi.status] || '';
   return h('div', { class: 'mcol mports' }, h('h3', null, 'Controllers'),

@@ -1,4 +1,4 @@
-// openLedMapper · js/remote.js
+// nouPix · js/remote.js
 // Remote control: other devices on the network use this project through the main window. The main window (the host)
 // keeps the project and sends Art-Net; devices log in as programmer, operator or remote (phones), send it changes,
 // and get the project back. This page is either the host or, opened from a device at /app, a client.
@@ -20,10 +20,10 @@ const remote = {
 const mappingLocked = () => remote.role === 'operator';
 const isRemoteClient = () => REMOTE_CLIENT;
 function remoteLoadCfg() {
-  const c = store.get('openledmapper.remote', {});
+  const c = store.get('noupix.remote', {});
   remote.cfg = { on: !!(c && c.on), port: clamp(Math.round(numOr(c && c.port, REMOTE_PORT)), 1024, 65535), password: typeof (c && c.password) === 'string' ? c.password : '' };
 }
-function remoteSaveCfg() { store.set('openledmapper.remote', remote.cfg); }
+function remoteSaveCfg() { store.set('noupix.remote', remote.cfg); }
 
 /* ---------- the host ---------- */
 // Switches remote control on or off (or changes its port or password) on the bridge
@@ -69,7 +69,7 @@ function remoteState() {
   const name = id => { const s = srcById(id); return s ? s.name : null; };
   return { t: 'state', name: project.name, master: project.settings.master, blackout: ui.blackout,
     zones: project.zones.slice().reverse().map(z => ({ id: z.id, name: z.name, tag: z.tag, opacity: z.opacity, scene: z.scene,
-      scenes: z.scenes.map(sc => ({ id: sc.id, name: sc.name, tag: sc.tag, fade: sc.fade })),
+      scenes: z.scenes.map(sc => ({ id: sc.id, name: sc.name, fade: sc.fade })),
       content: z.layers.filter(L => L.on && L.src && name(L.src)).map(L => name(L.src)),
       playlists: z.playlists.map(pl => ({ id: pl.id, name: pl.name, length: playlistLength(pl), steps: pl.steps.length })),
       play: playForPhone(z) })) };

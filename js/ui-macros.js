@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-macros.js
+// nouPix · js/ui-macros.js
 // The macros, in the MIDI window (under the controllers): Speed, Intensity and Saturation; Color 1 and Color 2 (on
 // or off, their swatch, and opened, a slider for each part, HSV or RGB); and the shared controls (Angle, Softness…),
 // folded. Every slider can be learnt by a MIDI control. In the Content tab: under an effect's control, a note says

@@ -1,4 +1,4 @@
-// openLedMapper · js/midi.js
+// nouPix · js/midi.js
 // MIDI in: the faders, knobs, buttons and pads of MIDI controllers drive the master, blackout, the zones' levels,
 // their scenes and their playlists, the macros, and the controls of the effects. The mappings are part of the project
 // (project.midi.maps, see newMidiMap); whether MIDI is on and which ports are switched off belong to this computer

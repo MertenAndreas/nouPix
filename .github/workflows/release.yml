@@ -1,6 +1,6 @@
-# Builds the openLedMapper desktop apps (Windows, macOS Apple silicon, macOS Intel): the Art-Net bridge is packed
-# with PyInstaller (openledmapper.spec), then wrapped with the interface window in an Electron app (desktop/).
-#   - Push a tag named after the version in openledmapper.py (git tag v0.8.3 && git push origin v0.8.3):
+# Builds the nouPix desktop apps (Windows, macOS Apple silicon, macOS Intel): the Art-Net bridge is packed
+# with PyInstaller (noupix.spec), then wrapped with the interface window in an Electron app (desktop/).
+#   - Push a tag named after the version in noupix.py (git tag v1.0.0 && git push origin v1.0.0):
 #     the apps are built, tested and attached to a new GitHub release.
 #   - Or run it by hand from the Actions tab: the apps are built and kept as run artifacts, no release.
 name: Build apps
@@ -43,28 +43,28 @@ jobs:
       - name: Read the version
         id: version
         run: |
-          version=$(python -c "import re; print(re.search(r'^VERSION = \"(.+)\"', open('openledmapper.py', encoding='utf-8').read(), re.M).group(1))")
+          version=$(python -c "import re; print(re.search(r'^VERSION = \"(.+)\"', open('noupix.py', encoding='utf-8').read(), re.M).group(1))")
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME doesn't match VERSION = \"$version\" in openledmapper.py"
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match VERSION = \"$version\" in noupix.py"
             exit 1
           fi
 
       - name: Build the Art-Net bridge
         run: |
           pip install "pyinstaller==6.*"
-          pyinstaller --noconfirm openledmapper.spec
+          pyinstaller --noconfirm noupix.spec
 
       - name: Check the bridge starts and serves the interface
         run: |
-          dist/openledmapper-bridge/openledmapper-bridge --no-browser &
+          dist/noupix-bridge/noupix-bridge --no-browser &
           pid=$!
           ok=
           for i in $(seq 1 30); do
             if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html && curl -fsS -o app.js http://127.0.0.1:8080/js/app.js; then ok=1; break; fi
             sleep 1
           done
-          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openledmapper-bridge.exe //F; else kill "$pid"; fi
+          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM noupix-bridge.exe //F; else kill "$pid"; fi
           [ -n "$ok" ] || { echo "::error::The bridge did not serve the interface"; exit 1; }
           sleep 2
 
@@ -83,7 +83,7 @@ jobs:
         run: |
           # Without a Developer ID certificate the app still needs an ad hoc signature: Apple silicon Macs
           # don't run unsigned code at all. The bridge's files first, then the whole app.
-          app=$(ls -d dist/mac*/openLedMapper.app)
+          app=$(ls -d dist/mac*/nouPix.app)
           find "$app/Contents/Resources/bridge" -type f | while read -r f; do
             if file -b "$f" | grep -q Mach-O; then codesign --force --sign - "$f"; fi
           done
@@ -92,8 +92,8 @@ jobs:
 
       - name: Check the app starts its bridge, and stops it when killed
         run: |
-          if [ "$RUNNER_OS" = Windows ]; then app=desktop/dist/win-unpacked/openLedMapper.exe
-          else app="$(ls -d desktop/dist/mac*/openLedMapper.app)/Contents/MacOS/openLedMapper"; fi
+          if [ "$RUNNER_OS" = Windows ]; then app=desktop/dist/win-unpacked/nouPix.exe
+          else app="$(ls -d desktop/dist/mac*/nouPix.app)/Contents/MacOS/nouPix"; fi
           "$app" &
           pid=$!
           up=
@@ -101,29 +101,29 @@ jobs:
             if curl -fsS -o page.html http://127.0.0.1:8080/ && grep -q "<title>" page.html && curl -fsS -o app.js http://127.0.0.1:8080/js/app.js; then up=1; break; fi
             sleep 1
           done
-          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM openLedMapper.exe //F || true; else kill -9 "$pid" || true; fi
+          if [ "$RUNNER_OS" = Windows ]; then taskkill //IM nouPix.exe //F || true; else kill -9 "$pid" || true; fi
           stopped=
           for i in $(seq 1 15); do
             sleep 1
             if ! curl -fsS -o /dev/null http://127.0.0.1:8080/; then stopped=1; break; fi
           done
-          cat ~/.openledmapper/openledmapper.log || true
+          cat ~/.noupix/noupix.log || true
           [ -n "$up" ] || { echo "::error::The app did not start its bridge"; exit 1; }
           [ -n "$stopped" ] || { echo "::error::The bridge kept running after the app was killed"; exit 1; }
 
       - name: Package
         run: |
-          name="openLedMapper-${{ steps.version.outputs.version }}-${{ matrix.suffix }}"
+          name="nouPix-${{ steps.version.outputs.version }}-${{ matrix.suffix }}"
           mkdir out
           if [ "$RUNNER_OS" = Windows ]; then
-            cp desktop/dist/openLedMapper-*-windows-setup.exe "out/$name-setup.exe"
+            cp desktop/dist/nouPix-*-windows-setup.exe "out/$name-setup.exe"
           else
             # A disk image with the app and a shortcut to Applications to drag it onto
             mkdir dmg
-            ditto "$(ls -d desktop/dist/mac*/openLedMapper.app)" dmg/openLedMapper.app
+            ditto "$(ls -d desktop/dist/mac*/nouPix.app)" dmg/nouPix.app
             ln -s /Applications dmg/Applications
             for i in 1 2 3; do  # hdiutil sometimes fails with "resource busy" on GitHub's Macs
-              hdiutil create -volname openLedMapper -srcfolder dmg -ov -format UDZO "out/$name.dmg" && break
+              hdiutil create -volname nouPix -srcfolder dmg -ov -format UDZO "out/$name.dmg" && break
               sleep 5
             done
             [ -f "out/$name.dmg" ]
@@ -150,17 +150,17 @@ jobs:
 
       - uses: softprops/action-gh-release@v3
         with:
-          name: openLedMapper ${{ github.ref_name }}
+          name: nouPix ${{ github.ref_name }}
           files: out/*
           fail_on_unmatched_files: true
           generate_release_notes: true
           body: |
             **Download** the file for your computer:
-            - **Windows:** `…-windows-setup.exe`, then run it. It installs openLedMapper for you and adds it to the Start menu.
+            - **Windows:** `…-windows-setup.exe`, then run it. It installs nouPix for you and adds it to the Start menu.
             - **Mac with Apple silicon (M1 or newer):** `…-macos-apple-silicon.dmg`
             - **Mac with an Intel processor:** `…-macos-intel.dmg`
 
-              Open the disk image and drag openLedMapper onto Applications.
-            - **Linux, or any computer with Python 3.8+:** the source code below, then `python3 openledmapper.py`
+              Open the disk image and drag nouPix onto Applications.
+            - **Linux, or any computer with Python 3.8+:** the source code below, then `python3 noupix.py`
 
             The apps aren't signed yet, so Windows and macOS warn the first time you open them. See *Download* in the README for what to click.

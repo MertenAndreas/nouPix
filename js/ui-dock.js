@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-dock.js
+// nouPix · js/ui-dock.js
 // The bottom dock: scenes, the patch table and controller editor, Art-Net nodes, and the DMX monitor.
 
 /* ---------- bottom dock ---------- */
@@ -78,7 +78,7 @@ function openScenesWindow() {
   const w = window.open('', 'olm-scenes', 'popup,width=1180,height=460');
   if (!w) { toast('The Scenes window could not open: allow pop-up windows for this page.', 'err'); return; }
   scenesWin = w;
-  const d = dressWindow(w, 'Scenes · openLedMapper', 'sceneswin');
+  const d = dressWindow(w, 'Scenes · nouPix', 'sceneswin');
   d.body.append(h('div', { class: 'dockbody', id: 'dockBody' }), h('div', { class: 'toasts', id: 'toasts' }));
   watchScenes(d);
   midiCapture(d);   // learning picks a scene or a playlist there too
@@ -127,21 +127,16 @@ function sceneMenu(anchor, z, sc) {
       ['New playlist with it…', () => newPlaylistDialog(z, sc.id)],
     ] }],
     [`Update with ${z.name}'s current layers`, () => { sc.layers = snapshotLayers(z); z.scene = sc.id; commit(); toast(`${sc.name} updated`); }],
-    ['Rename, fade time, color…', () => editScene(sc)],
+    ['Rename, fade time…', () => editScene(sc)],
     ['Duplicate', () => { const c = Object.assign(JSON.parse(JSON.stringify(sc)), { id: uid(), name: nextCopyName(sc.name, new Set(z.scenes.map(x => x.name))) }); z.scenes.splice(z.scenes.indexOf(sc) + 1, 0, c); commit(); }],
     '-',
     ['Delete', () => { z.scenes = z.scenes.filter(x => x !== sc); if (z.scene === sc.id) z.scene = null; dropSceneSteps(z, sc.id); commit(); toast(`${sc.name} deleted. Ctrl Z brings it back.`); }, { danger: true }],
   ]);
 }
 function editScene(sc) {
-  const tmp = { name: sc.name, fade: sc.fade, tag: sc.tag };
+  const tmp = { name: sc.name, fade: sc.fade };
   const close = () => bg.remove();
-  const save = () => { sc.name = tmp.name.trim() || sc.name; sc.fade = tmp.fade; sc.tag = tmp.tag; close(); commit(); };
-  const sw = h('div', { class: 'swatches' });
-  for (const c of TAGS) {
-    const b = h('button', { type: 'button', class: tmp.tag === c ? 'on' : '', style: { background: c }, 'aria-label': 'Color ' + c, onclick: () => { tmp.tag = c; $$('button', sw).forEach(x => x.classList.toggle('on', x === b)); } });
-    sw.append(b);
-  }
+  const save = () => { sc.name = tmp.name.trim() || sc.name; sc.fade = tmp.fade; close(); commit(); };
   const nameIn = textInput(tmp, 'name', { aria: 'Scene name' });
   nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
   const bg = h('div', { class: 'modal-bg', onclick: e => { if (e.target === bg) close(); } },
@@ -150,7 +145,6 @@ function editScene(sc) {
       h('div', { class: 'mb' },
         row('Name', nameIn),
         numRow('Fade (s)', tmp, 'fade', { min: 0, max: 60, step: 0.1 }),
-        row('Color', sw),
         h('p', { class: 'note' }, 'The fade is how long the zone takes to change to this scene when you click it. 0 cuts straight to it. It can also be changed on the scene\'s button: drag its fade time sideways, or click it to type one.')),
       h('footer', null, h('button', { class: 'btn', type: 'button', onclick: close }, 'Cancel'), h('button', { class: 'btn primary', type: 'button', onclick: save }, 'Save'))));
   uiDocNow().body.append(bg);   // in the window it was asked for from
@@ -222,7 +216,7 @@ function sceneTile(z, sc, i, keys, look) {
       edited ? h('span', { class: 'badge warn', title: 'The layers have changed since this scene was recalled. ⋯ → Update saves the changes into it.' }, 'edited') : null),
     h('i', { class: 'prog' }));
   tile.querySelector('.s').prepend(fadeControl(tile, { name: sc.name, get: () => sc.fade, set: v => { sc.fade = v; } }));
-  tile.style.setProperty('--tag', sc.tag);
+  if (z.tag) tile.style.setProperty('--tag', z.tag);   // its zone's colour, when it has one
   midiButton(tile, `sc:${z.id}:${sc.id}`);   // a MIDI pad can play it
   tile.querySelector('.t').insertBefore(tile.querySelector(':scope > .ftag'), tile.querySelector('.t > .x'));   // its tag on the top line, before ⋯
   tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));
@@ -410,7 +404,7 @@ function renderCtrlEditor(edit, c) {
       const mv = (txt, d, off, label) => h('button', { type: 'button', disabled: off, title: label, 'aria-label': `${label}: ${fx.name}`, onclick: e => { e.stopPropagation(); moveOnOutput([fid], d); } }, txt);
       const row = h('div', { class: 'prow' + (ui.sel.has(fid) ? ' sel' : '') + (p && p.overflow ? ' ovf' : ''), draggable: true, 'data-id': fid, 'data-name': fx.name.toLowerCase(),
         title: `${fx.name} · ${pixelCount(fx)} px ${fx.order}${p && p.first >= 0 ? '\n' + addrText(p) : ''}${p && p.overflow ? `\n${p.overflow} pixels overflow` : ''}\n↑ ↓ or Alt ↑ ↓ move it on the output; drag to reorder` },
-        h('span', { class: 'pgrip', 'aria-hidden': 'true' }), h('span', { class: 'ix' }, k + 1), h('span', { class: 'tag', style: { background: fx.tag } }), h('span', { class: 'nm' }, fx.name),
+        h('span', { class: 'pgrip', 'aria-hidden': 'true' }), h('span', { class: 'ix' }, k + 1), h('span', { class: 'tag', style: { background: fxTag(fx) || 'transparent' } }), h('span', { class: 'nm' }, fx.name),
         h('span', { class: 'px' }, pixelCount(fx) + ' px'), h('span', { class: 'ad' }, ad),
         h('span', { class: 'mv' }, mv('↑', -1, k === 0, 'Move earlier'), mv('↓', 1, k === chain.length - 1, 'Move later')),
         h('button', { class: 'x', type: 'button', title: 'Unpatch', 'aria-label': 'Unpatch ' + fx.name, onclick: e => { e.stopPropagation(); unassign(fid); markPatch(); commit(); renderRight(); } }, icon('x')));
@@ -542,7 +536,7 @@ function renderNodes(body) {
       ? (all.length ? `${all.length} node${all.length === 1 ? ' is' : 's are'} on networks turned off for scans.` : nets.length
         ? 'No nodes found yet. Press Discover: ArtPoll goes out on the networks ticked above, and Art-Net devices on them reply. A device on a network with another address range (a 2.x.x.x node while this computer has 192.168.x.x) needs an address in its range on this computer.'
         : 'No nodes found yet. Press Discover. Nodes reply to ArtPoll on the broadcast address of their network: 2.255.255.255 for a 2.x.x.x Art-Net network, 10.255.255.255 for 10.x.x.x.')
-      : 'Node discovery needs openLedMapper running on this computer (the app, or openledmapper.py): a web page on its own cannot send or receive Art-Net.'));
+      : 'Node discovery needs nouPix running on this computer (the app, or noupix.py): a web page on its own cannot send or receive Art-Net.'));
   } else {
     scroll.append(h('table', { class: 'table' },
       h('thead', null, h('tr', null, ['IP', 'Name', 'Network', 'Output ports', 'Universes', 'MAC', 'Status', ''].map(t => h('th', null, t)))),
@@ -658,18 +652,19 @@ function drawMonitor(now) {
   const U = universes.find(u => u.key === ui.monitorKey);
   const c = monCanvas.getContext('2d');
   const cw = 26, chh = 20;
-  c.fillStyle = '#0a0b0e'; c.fillRect(0, 0, monCanvas.width, monCanvas.height);
+  const cs = getComputedStyle(document.documentElement);
+  c.fillStyle = cs.getPropertyValue('--bg0').trim(); c.fillRect(0, 0, monCanvas.width, monCanvas.height);
   if (!U) return;
   const map = monitorMap(U);
   c.font = '9px ' + (FONT_MONO || 'monospace'); c.textAlign = 'center'; c.textBaseline = 'middle';
   const tint = { R: [255, 80, 90], G: [70, 224, 140], B: [80, 150, 255], W: [235, 235, 235] };
   for (let ch = 0; ch < 512; ch++) {
     const x = (ch % 32) * cw, y = Math.floor(ch / 32) * chh, v = U.data[ch], m = map[ch];
-    if (!m) { c.fillStyle = '#111318'; c.fillRect(x + 1, y + 1, cw - 2, chh - 2); continue; }
+    if (!m) { c.fillStyle = cs.getPropertyValue('--bg3').trim(); c.fillRect(x + 1, y + 1, cw - 2, chh - 2); continue; }
     const t = tint[m.c] || tint.W, k = 0.12 + 0.88 * v / 255;
     c.fillStyle = `rgb(${t[0] * k | 0},${t[1] * k | 0},${t[2] * k | 0})`;
     c.fillRect(x + 1, y + 1, cw - 2, chh - 2);
-    c.fillStyle = v > 150 ? '#05070a' : '#c9ced6';
+    c.fillStyle = v > 150 ? '#000000' : '#dce1e6';   // on the channel's own colour, the same in either look
     c.fillText(String(v), x + cw / 2, y + chh / 2 + 0.5);
   }
 }

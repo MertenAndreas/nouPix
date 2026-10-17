@@ -1,6 +1,6 @@
 {
- "format": "openledmapper-project",
- "version": 3,
+ "format": "noupix-project",
+ "version": 4,
  "name": "Stage, mixed fixtures",
  "settings": {
   "compW": 1000,
@@ -18,12 +18,11 @@
  },
  "fixtures": [
   {
-   "id": "govk77k5",
+   "id": "373gtn51",
    "type": "line",
    "name": "Truss 1",
    "enabled": true,
    "locked": false,
-   "tag": "#3cc8ff",
    "order": "GRBW",
    "reverse": false,
    "dimmer": 1,
@@ -42,15 +41,14 @@
    "x2": 270,
    "y2": 60,
    "pixels": 72,
-   "group": "mewzdb9m"
+   "group": "fcmh9tr8"
   },
   {
-   "id": "dmcpof47",
+   "id": "r2zh4uzf",
    "type": "line",
    "name": "Truss 2",
    "enabled": true,
    "locked": false,
-   "tag": "#3cc8ff",
    "order": "GRBW",
    "reverse": false,
    "dimmer": 1,
@@ -69,15 +67,14 @@
    "x2": 500,
    "y2": 60,
    "pixels": 72,
-   "group": "mewzdb9m"
+   "group": "fcmh9tr8"
   },
   {
-   "id": "xw29kxki",
+   "id": "56ejv1co",
    "type": "line",
    "name": "Truss 3",
    "enabled": true,
    "locked": false,
-   "tag": "#3cc8ff",
    "order": "GRBW",
    "reverse": false,
    "dimmer": 1,
@@ -96,15 +93,14 @@
    "x2": 730,
    "y2": 60,
    "pixels": 72,
-   "group": "mewzdb9m"
+   "group": "fcmh9tr8"
   },
   {
-   "id": "umzfx4d3",
+   "id": "sr4w4a6c",
    "type": "line",
    "name": "Truss 4",
    "enabled": true,
    "locked": false,
-   "tag": "#3cc8ff",
    "order": "GRBW",
    "reverse": false,
    "dimmer": 1,
@@ -123,15 +119,14 @@
    "x2": 960,
    "y2": 60,
    "pixels": 72,
-   "group": "mewzdb9m"
+   "group": "fcmh9tr8"
   },
   {
-   "id": "bf7i64qm",
+   "id": "dcba8ad9",
    "type": "path",
    "name": "Floor curve",
    "enabled": true,
    "locked": false,
-   "tag": "#46e08c",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -213,12 +208,11 @@
    "pixels": 150
   },
   {
-   "id": "li07lk4p",
+   "id": "4enct8m7",
    "type": "matrix",
    "name": "Centre panel",
    "enabled": true,
    "locked": false,
-   "tag": "#b58cff",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -244,12 +238,11 @@
    "snake": true
   },
   {
-   "id": "kw8unh1t",
+   "id": "2k44409e",
    "type": "circle",
    "name": "Left ring",
    "enabled": true,
    "locked": false,
-   "tag": "#ffb341",
    "order": "RGB",
    "reverse": false,
    "dimmer": 0.8,
@@ -270,15 +263,14 @@
    "start": 0,
    "sweep": 360,
    "ccw": false,
-   "group": "f3zlff67"
+   "group": "2vpx3epv"
   },
   {
-   "id": "cs2gd1me",
+   "id": "2h2402t0",
    "type": "circle",
    "name": "Right ring",
    "enabled": true,
    "locked": false,
-   "tag": "#ffb341",
    "order": "RGB",
    "reverse": false,
    "dimmer": 0.8,
@@ -299,19 +291,18 @@
    "start": 0,
    "sweep": 360,
    "ccw": false,
-   "group": "f3zlff67",
+   "group": "2vpx3epv",
    "addr": {
     "u": 13,
     "ch": 1
    }
   },
   {
-   "id": "nfxioh45",
+   "id": "2lpwelw0",
    "type": "line",
    "name": "Spare strip (locked, off)",
    "enabled": false,
    "locked": true,
-   "tag": "#e8d56a",
    "order": "RGB",
    "reverse": false,
    "dimmer": 1,
@@ -334,21 +325,21 @@
  ],
  "groups": [
   {
-   "id": "mewzdb9m",
+   "id": "fcmh9tr8",
    "name": "Truss",
-   "tag": "#3cc8ff",
+   "tag": "",
    "open": true
   },
   {
-   "id": "f3zlff67",
+   "id": "2vpx3epv",
    "name": "Rings",
-   "tag": "#ffb341",
+   "tag": "",
    "open": true
   }
  ],
  "controllers": [
   {
-   "id": "gytws18i",
+   "id": "kzfzu7i1",
    "name": "Main controller",
    "ip": "10.0.0.80",
    "enabled": true,
@@ -358,21 +349,21 @@
    "split": true,
    "chains": [
     [
-     "govk77k5",
-     "dmcpof47",
-     "xw29kxki",
-     "umzfx4d3"
+     "373gtn51",
+     "r2zh4uzf",
+     "56ejv1co",
+     "sr4w4a6c"
     ],
     [
-     "bf7i64qm"
+     "dcba8ad9"
     ],
     [
-     "li07lk4p"
+     "4enct8m7"
     ],
     [
-     "kw8unh1t",
-     "cs2gd1me",
-     "nfxioh45"
+     "2k44409e",
+     "2h2402t0",
+     "2lpwelw0"
     ]
    ]
   }
@@ -573,9 +564,9 @@
  ],
  "zones": [
   {
-   "id": "kv14l6d8",
+   "id": "dfuotlqm",
    "name": "Everything",
-   "tag": "#ffb341",
+   "tag": "",
    "x": 0,
    "y": 0,
    "w": 1000,
@@ -583,7 +574,7 @@
    "opacity": 1,
    "layers": [
     {
-     "id": "t6fmf6aq",
+     "id": "o59aupqq",
      "src": "b-breathe",
      "params": {
       "b-breathe": {
@@ -608,13 +599,12 @@
    ],
    "scenes": [
     {
-     "id": "ig0ineiu",
+     "id": "3nz4jhhe",
      "name": "Warm wash",
-     "tag": "#ffb341",
      "fade": 3,
      "layers": [
       {
-       "id": "t6fmf6aq",
+       "id": "o59aupqq",
        "src": "b-breathe",
        "params": {
         "b-breathe": {
@@ -639,13 +629,12 @@
      ]
     },
     {
-     "id": "ba7yh4xh",
+     "id": "zzfm8izw",
      "name": "Clouds",
-     "tag": "#6fe3e3",
      "fade": 4,
      "layers": [
       {
-       "id": "nkut6ing",
+       "id": "psrq7qth",
        "src": "b-clouds",
        "params": {},
        "opacity": 1,
@@ -655,13 +644,12 @@
      ]
     },
     {
-     "id": "s7j6gq7z",
+     "id": "ic1s3l7a",
      "name": "Confetti",
-     "tag": "#ff6f86",
      "fade": 0.5,
      "layers": [
       {
-       "id": "ov7qtewu",
+       "id": "2q9jwq90",
        "src": "b-confetti",
        "params": {},
        "opacity": 1,
@@ -671,27 +659,27 @@
      ]
     }
    ],
-   "scene": "ig0ineiu",
+   "scene": "3nz4jhhe",
    "playlists": [
     {
-     "id": "7nfss8wh",
+     "id": "q3owu9w3",
      "name": "Evening",
      "steps": [
       {
-       "id": "xw4245uk",
-       "scene": "ig0ineiu",
+       "id": "ky8d7900",
+       "scene": "3nz4jhhe",
        "time": 90,
        "fade": null
       },
       {
-       "id": "l2qy1ynp",
-       "scene": "ba7yh4xh",
+       "id": "i96fpud5",
+       "scene": "zzfm8izw",
        "time": 60,
        "fade": null
       },
       {
-       "id": "ghq3h7xg",
-       "scene": "ig0ineiu",
+       "id": "fdkovbju",
+       "scene": "3nz4jhhe",
        "time": 90,
        "fade": 8
       }
@@ -701,38 +689,38 @@
      "autoplay": false
     },
     {
-     "id": "onvvi9hl",
+     "id": "1mapig9y",
      "name": "Party",
      "steps": [
       {
-       "id": "w8kb5qhu",
-       "scene": "s7j6gq7z",
+       "id": "ind3ewu4",
+       "scene": "ic1s3l7a",
        "time": 20,
        "fade": null
       },
       {
-       "id": "4ufsrqqj",
-       "scene": "ba7yh4xh",
+       "id": "qx51irsd",
+       "scene": "zzfm8izw",
        "time": 10,
        "fade": null
       },
       {
-       "id": "r9h4nmg4",
-       "scene": "s7j6gq7z",
+       "id": "s565yzc6",
+       "scene": "ic1s3l7a",
        "time": 20,
        "fade": null
       }
      ],
      "fade": 0.5,
-     "end": "7nfss8wh",
+     "end": "q3owu9w3",
      "autoplay": false
     }
    ]
   },
   {
-   "id": "xxj9onz0",
+   "id": "ye4vwqn2",
    "name": "Truss",
-   "tag": "#3cc8ff",
+   "tag": "",
    "x": 40,
    "y": 30,
    "w": 940,
@@ -740,7 +728,7 @@
    "opacity": 1,
    "layers": [
     {
-     "id": "pfbfq6e3",
+     "id": "cg41itg0",
      "src": "b-wipe",
      "params": {
       "b-wipe": {
@@ -754,13 +742,12 @@
    ],
    "scenes": [
     {
-     "id": "c646arab",
+     "id": "mpnk49zb",
      "name": "Wipe",
-     "tag": "#3cc8ff",
      "fade": 1,
      "layers": [
       {
-       "id": "pfbfq6e3",
+       "id": "cg41itg0",
        "src": "b-wipe",
        "params": {
         "b-wipe": {
@@ -774,13 +761,12 @@
      ]
     },
     {
-     "id": "3x6z75ai",
+     "id": "wun0x9vq",
      "name": "Hits",
-     "tag": "#e8d56a",
      "fade": 0,
      "layers": [
       {
-       "id": "9jayy042",
+       "id": "evqgt8zr",
        "src": "b-hits",
        "params": {
         "b-hits": {
@@ -794,21 +780,21 @@
      ]
     }
    ],
-   "scene": "c646arab",
+   "scene": "mpnk49zb",
    "playlists": [
     {
-     "id": "2pk50wx1",
+     "id": "mgayem6l",
      "name": "Hits",
      "steps": [
       {
-       "id": "f9wb7ag5",
-       "scene": "c646arab",
+       "id": "q860t6ro",
+       "scene": "mpnk49zb",
        "time": 8,
        "fade": null
       },
       {
-       "id": "edoe1793",
-       "scene": "3x6z75ai",
+       "id": "abz74hdc",
+       "scene": "wun0x9vq",
        "time": 4,
        "fade": 0
       }
@@ -820,9 +806,9 @@
    ]
   },
   {
-   "id": "qlatxeei",
+   "id": "ktoptk5e",
    "name": "Centre",
-   "tag": "#b58cff",
+   "tag": "",
    "x": 330,
    "y": 130,
    "w": 340,
@@ -830,7 +816,7 @@
    "opacity": 0.85,
    "layers": [
     {
-     "id": "0wxnbqjf",
+     "id": "ckayssnz",
      "src": "b-noise",
      "params": {},
      "opacity": 1,
@@ -838,7 +824,7 @@
      "on": true
     },
     {
-     "id": "m7dlyfot",
+     "id": "ljoivk4o",
      "src": "b-shape",
      "params": {
       "b-shape": {
@@ -852,13 +838,12 @@
    ],
    "scenes": [
     {
-     "id": "1a2w9rxt",
+     "id": "9cv5phs9",
      "name": "Shape over noise",
-     "tag": "#b58cff",
      "fade": 2,
      "layers": [
       {
-       "id": "0wxnbqjf",
+       "id": "ckayssnz",
        "src": "b-noise",
        "params": {},
        "opacity": 1,
@@ -866,7 +851,7 @@
        "on": true
       },
       {
-       "id": "m7dlyfot",
+       "id": "ljoivk4o",
        "src": "b-shape",
        "params": {
         "b-shape": {
@@ -880,13 +865,12 @@
      ]
     },
     {
-     "id": "h52wj7vh",
+     "id": "l9y89cb9",
      "name": "Disco",
-     "tag": "#ff6f86",
      "fade": 0.5,
      "layers": [
       {
-       "id": "tzbwqmxo",
+       "id": "wu3a4w4d",
        "src": "b-discodots",
        "params": {
         "b-discodots": {
@@ -900,9 +884,71 @@
      ]
     }
    ],
-   "scene": "1a2w9rxt",
+   "scene": "9cv5phs9",
    "playlists": []
   }
  ],
- "guide": null
+ "guide": null,
+ "midi": {
+  "maps": [],
+  "order": []
+ },
+ "macros": {
+  "speed": {
+   "v": 1
+  },
+  "intensity": {
+   "v": 1
+  },
+  "saturation": {
+   "v": 1
+  },
+  "color1": {
+   "on": false,
+   "mode": "hsv",
+   "h": 200,
+   "s": 1,
+   "v": 1
+  },
+  "color2": {
+   "on": false,
+   "mode": "hsv",
+   "h": 320,
+   "s": 1,
+   "v": 1
+  },
+  "angle": {
+   "on": false,
+   "v": 0.5
+  },
+  "softness": {
+   "on": false,
+   "v": 0.5
+  },
+  "scale": {
+   "on": false,
+   "v": 0.5
+  },
+  "count": {
+   "on": false,
+   "v": 0.5
+  },
+  "size": {
+   "on": false,
+   "v": 0.5
+  },
+  "width": {
+   "on": false,
+   "v": 0.5
+  },
+  "density": {
+   "on": false,
+   "v": 0.5
+  },
+  "decay": {
+   "on": false,
+   "v": 0.5
+  }
+ },
+ "macroLinks": {}
 }

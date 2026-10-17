@@ -25,11 +25,12 @@ with sync_playwright() as p:
     pg.click("#dockTabs button[data-tab=scenes]")
     top = pg.locator(".scenerow").nth(0)   # the top zone (All) is the first row
     # edit dialog
-    top.locator(".scene").nth(0).locator("button.x").click(); pg.click(".menu >> text=Rename, fade time, color…")
+    top.locator(".scene").nth(0).locator("button.x").click(); pg.click(".menu >> text=Rename, fade time…")
+    no_colour = pg.locator(".modal .swatches").count() == 0   # a scene shows its zone's colour, it has none of its own
     pg.fill(".modal input[type=text]", "Opening"); pg.fill(".modal input[type=number]", "5")
-    pg.locator(".modal .swatches button").nth(3).click(); pg.click(".modal >> text=Save"); time.sleep(0.1)
+    pg.click(".modal >> text=Save"); time.sleep(0.1)
     sc = pg.evaluate("olm.project.zones[2].scenes[0]")
-    check("edit dialog saves name, fade, colour", (sc["name"], sc["fade"], sc["tag"]) == ("Opening", 5, "#46e08c"), (sc["name"], sc["fade"], sc["tag"]))
+    check("edit dialog saves name and fade (and has no colour)", (sc["name"], sc["fade"], "tag" in sc, no_colour) == ("Opening", 5, False, True), (sc["name"], sc["fade"], sc.get("tag"), no_colour))
     # edited badge, then Update clears it
     top.locator(".scene").nth(1).click(modifiers=["Shift"]); time.sleep(0.3)
     pg.evaluate("olm.project.zones[2].layers[0].opacity = 0.3; olm.loadSource('b-noise')"); time.sleep(0.3)

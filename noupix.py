@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-openLedMapper - local server and Art-Net bridge.
+nouPix - local server and Art-Net bridge.
 
 Browsers cannot send UDP, so this script does the network side:
   * serves the mapper interface (index.html) on http://127.0.0.1:<port>/
@@ -12,15 +12,15 @@ Browsers cannot send UDP, so this script does the network side:
 
 Python 3.8+ and the standard library only. No installs needed.
 
-    python3 openledmapper.py                    # start and open it in its own browser window
-    python3 openledmapper.py --port 9000        # different web port
-    python3 openledmapper.py --bind-ip 2.0.0.10 # send Art-Net from a specific network card
-    python3 openledmapper.py --default-browser  # use your normal browser instead of its own window
-    python3 openledmapper.py --no-browser
-    python3 openledmapper.py --background       # no terminal needed: see BACKGROUND below
+    python3 noupix.py                    # start and open it in its own browser window
+    python3 noupix.py --port 9000        # different web port
+    python3 noupix.py --bind-ip 2.0.0.10 # send Art-Net from a specific network card
+    python3 noupix.py --default-browser  # use your normal browser instead of its own window
+    python3 noupix.py --no-browser
+    python3 noupix.py --background       # no terminal needed: see BACKGROUND below
 
 The downloadable apps (desktop/) are an Electron window around the interface. They run this script,
-packed with PyInstaller (openledmapper.spec), with --embedded.
+packed with PyInstaller (noupix.spec), with --embedded.
 """
 
 import argparse
@@ -43,7 +43,7 @@ import time
 import urllib.parse
 import webbrowser
 
-VERSION = "0.9.11"
+VERSION = "1.0.0"
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 ARTNET_PORT = 6454
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -66,7 +66,7 @@ class ArtNet:
     def __init__(self, bind_ip="0.0.0.0", bind_port=ARTNET_PORT):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # No SO_REUSEADDR: on Windows it lets two programs share UDP 6454, and then neither reliably
-        # receives. Without it, a busy port is detected and openLedMapper falls back to sending without discovery.
+        # receives. Without it, a busy port is detected and nouPix falls back to sending without discovery.
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         if hasattr(socket, "SIO_UDP_CONNRESET"):  # Windows: ignore ICMP port-unreachable resets
             try:
@@ -116,7 +116,7 @@ class ArtNet:
         self.held, self.last_frame = payload, time.time()
         if self.holding:
             self.holding = False
-            log("Frames from the openLedMapper window resumed.")
+            log("Frames from the nouPix window resumed.")
 
     def send_frame(self, p):
         # [u8 type=1][u8 flags][u16 count] then count x ([4 ip][u16 universe][u16 length][data])
@@ -149,7 +149,7 @@ class ArtNet:
                 continue
             if not self.holding:
                 self.holding = True
-                log("No frames from the openLedMapper window for %.0f s: repeating the last frame. "
+                log("No frames from the nouPix window for %.0f s: repeating the last frame. "
                     "Is the window minimised, or the computer asleep?" % HOLD_AFTER)
             if now - last >= HOLD_EVERY:
                 last = now
@@ -435,12 +435,12 @@ def network_interfaces():
 
 
 # The interface's styles and scripts: only files in css/ and js/ (and js/vendor/), named plainly, so nothing else is served
-STATIC = re.compile(r"^/(?:css|js|js/vendor)/[A-Za-z0-9_-]+\.(css|js)$")
-STATIC_TYPES = {"css": "text/css; charset=utf-8", "js": "text/javascript; charset=utf-8"}
+STATIC = re.compile(r"^/(?:css|js|js/vendor)/[A-Za-z0-9_-]+\.(css|js|woff2)$")   # woff2: the fonts in css/
+STATIC_TYPES = {"css": "text/css; charset=utf-8", "js": "text/javascript; charset=utf-8", "woff2": "font/woff2"}
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
-    server_version = "openLedMapper/" + VERSION
+    server_version = "nouPix/" + VERSION
     protocol_version = "HTTP/1.1"
 
     def log_message(self, *args):
@@ -451,7 +451,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == "/ws" and self.headers.get("Upgrade", "").lower() == "websocket":
             return self.websocket()
         if path == "/favicon.ico":
-            return self.send_file(os.path.join(HERE, "icons", "openledmapper.ico"), "image/x-icon")
+            return self.send_file(os.path.join(HERE, "icons", "noupix.ico"), "image/x-icon")
         if path in ("/", "/index.html"):
             return self.send_file(os.path.join(HERE, "index.html"), "text/html; charset=utf-8")
         m = STATIC.match(path)
@@ -464,7 +464,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with open(fn, "rb") as f:
                 body = f.read()
         except OSError:
-            return self.send_error(404, "%s not found next to openledmapper.py" % os.path.relpath(fn, HERE))
+            return self.send_error(404, "%s not found next to noupix.py" % os.path.relpath(fn, HERE))
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
@@ -530,7 +530,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             art.listeners.discard(on_node)
             if art.owner is ws:
                 art.owner = None
-                log("The openLedMapper window closed or disconnected while Art-Net was on.")
+                log("The nouPix window closed or disconnected while Art-Net was on.")
             self.server.remote.host_gone(ws)
 
     @staticmethod
@@ -588,7 +588,7 @@ class Server(http.server.ThreadingHTTPServer):
 
 # --------------------------------------------------------------------------- remote control
 # With Remote control switched on (Settings, in the main window), phones, tablets and other computers on the network
-# can use openLedMapper. They get a second web server on all network cards, apart from the local one that only this
+# can use nouPix. They get a second web server on all network cards, apart from the local one that only this
 # computer reaches: a login page that asks who you are, then
 #   programmer  the whole interface, with the password set in the main window
 #   operator    the interface with the mapping locked: content, layers, scenes, zone levels
@@ -786,7 +786,7 @@ class RemoteHandler(Handler):
         if path == "/rws" and self.headers.get("Upgrade", "").lower() == "websocket":
             return self.remote_socket()
         if path == "/favicon.ico":
-            return self.send_file(os.path.join(HERE, "icons", "openledmapper.ico"), "image/x-icon")
+            return self.send_file(os.path.join(HERE, "icons", "noupix.ico"), "image/x-icon")
         if path == "/info":
             r = self.server.remote
             return self.send_json(200, {"version": VERSION, "hasPassword": bool(r.password), "host": r.host is not None})
@@ -842,7 +842,7 @@ class RemoteHandler(Handler):
         remote = self.server.remote
         c = remote.join(token, ws, self.connection, self.client_address[0])
         if not c:
-            ws.send_json({"t": "denied", "reason": "Log in again: openLedMapper was restarted or remote control was switched off and on."})
+            ws.send_json({"t": "denied", "reason": "Log in again: nouPix was restarted or remote control was switched off and on."})
             return
         try:
             while ws.alive:
@@ -858,10 +858,10 @@ class RemoteHandler(Handler):
 
 # --------------------------------------------------------------------------- background mode
 # BACKGROUND: the apps have no terminal window, so there is nothing to close to stop the server. Instead it
-# stops by itself a few seconds after the last openLedMapper window closes; starting it again while it runs
+# stops by itself a few seconds after the last nouPix window closes; starting it again while it runs
 # only opens another window to the running copy; and what it would print goes to a log file.
 
-LOG_FILE = os.path.join(os.path.expanduser("~"), ".openledmapper", "openledmapper.log")
+LOG_FILE = os.path.join(os.path.expanduser("~"), ".noupix", "noupix.log")
 QUIT_AFTER_CLOSE = 10.0     # seconds with no window before it stops (a page reload takes far less)
 QUIT_IF_NO_WINDOW = 120.0   # ...or after starting, if no window ever connects
 
@@ -880,22 +880,22 @@ def alert(msg):
     try:
         if sys.platform == "win32":
             import ctypes
-            ctypes.windll.user32.MessageBoxW(None, msg, "openLedMapper", 0x10)  # MB_ICONERROR
+            ctypes.windll.user32.MessageBoxW(None, msg, "nouPix", 0x10)  # MB_ICONERROR
         elif sys.platform == "darwin":
             text = msg.replace("\\", "\\\\").replace('"', '\\"')
-            subprocess.run(["osascript", "-e", 'display alert "openLedMapper" message "%s" as critical' % text],
+            subprocess.run(["osascript", "-e", 'display alert "nouPix" message "%s" as critical' % text],
                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
     except Exception:
         pass
 
 
 def running_copy(host, first_port):
-    """The address of an openLedMapper already running on one of the ports this one would try, or None."""
+    """The address of an nouPix already running on one of the ports this one would try, or None."""
     for port in range(first_port, first_port + 10):
         conn = http.client.HTTPConnection(host, port, timeout=0.5)
         try:
             conn.request("GET", "/favicon.ico")
-            if conn.getresponse().getheader("Server", "").startswith("openLedMapper/"):
+            if conn.getresponse().getheader("Server", "").startswith(("nouPix/", "openLedMapper/")):   # or one from before the name
                 return "http://%s:%d/" % (host, port)
         except (OSError, http.client.HTTPException):
             pass
@@ -912,7 +912,7 @@ def stop_when_input_closes(server):
             pass
     except (OSError, ValueError):
         pass
-    log("The openLedMapper app closed. Stopping.")
+    log("The nouPix app closed. Stopping.")
     server.shutdown()
 
 
@@ -921,7 +921,7 @@ def stop_when_parent_ends(server, pid):
     copies of it), so the bridge also checks every second that the app is still there."""
     while process_alive(pid) and (os.name == "nt" or os.getppid() == pid):
         time.sleep(1.0)
-    log("The openLedMapper app is gone. Stopping.")
+    log("The nouPix app is gone. Stopping.")
     server.shutdown()
 
 
@@ -951,7 +951,7 @@ def quit_when_closed(server):
         with server.windows_lock:
             windows, seen, idle = server.windows, server.seen_window, time.monotonic() - server.windows_changed
         if windows <= 0 and idle > (QUIT_AFTER_CLOSE if seen else QUIT_IF_NO_WINDOW):
-            log("No openLedMapper window open%s. Stopping." % ("" if seen else " since it started"))
+            log("No nouPix window open%s. Stopping." % ("" if seen else " since it started"))
             server.shutdown()
             return
 
@@ -960,11 +960,12 @@ def quit_when_closed(server):
 
 # Chromium switches that stop the browser from slowing down or pausing a window that is
 # minimised, covered by other windows or in the background. They only apply to a browser
-# started with its own profile, which is why openLedMapper gets a separate window and profile.
+# started with its own profile, which is why nouPix gets a separate window and profile.
 KEEP_RUNNING = ["--disable-background-timer-throttling", "--disable-renderer-backgrounding",
                 "--disable-backgrounding-occluded-windows"]
-PROFILE = os.path.join(os.path.expanduser("~"), ".openledmapper", "browser-profile")
-OLD_HOME = os.path.join(os.path.expanduser("~"), ".weft")  # this app was called Weft before
+PROFILE = os.path.join(os.path.expanduser("~"), ".noupix", "browser-profile")
+# this app was called openLedMapper, and Weft before that: the first of their folders found is moved
+OLD_HOMES = [os.path.join(os.path.expanduser("~"), ".openledmapper"), os.path.join(os.path.expanduser("~"), ".weft")]
 
 
 def find_browser():
@@ -985,17 +986,18 @@ def find_browser():
 
 
 def profile_dir():
-    """The window's own browser profile. The first time, the one Weft used is moved here, with the project
-    kept in it; if that window is still open, its profile is used where it is."""
+    """The window's own browser profile. The first time, the one openLedMapper (or Weft) used is moved here, with
+    the project kept in it; if that window is still open, its profile is used where it is."""
     new_home = os.path.dirname(PROFILE)
-    old = os.path.join(OLD_HOME, "browser-profile")
-    if os.path.exists(new_home) or not os.path.isdir(OLD_HOME):
+    old_home = next((d for d in OLD_HOMES if os.path.isdir(d)), None)
+    if os.path.exists(new_home) or not old_home:
         return PROFILE
+    old = os.path.join(old_home, "browser-profile")
     if os.path.lexists(os.path.join(old, "SingletonLock")):  # the old window is open (macOS, Linux)
         return old
     try:
-        os.rename(OLD_HOME, new_home)
-        log("Moved the window profile from %s to %s (the app was called Weft before)." % (OLD_HOME, new_home))
+        os.rename(old_home, new_home)
+        log("Moved the window profile from %s to %s (the app had another name before)." % (old_home, new_home))
         return PROFILE
     except OSError:  # in use (Windows)
         return old
@@ -1014,7 +1016,7 @@ def open_window(exe, url):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="openLedMapper - local server and Art-Net bridge")
+    ap = argparse.ArgumentParser(description="nouPix - local server and Art-Net bridge")
     ap.add_argument("--port", type=int, default=8080, help="web interface port (default 8080)")
     ap.add_argument("--host", default="127.0.0.1", help="web interface address (use 0.0.0.0 to reach it from other devices)")
     ap.add_argument("--bind-ip", default="0.0.0.0", help="network card to send Art-Net from (default: all)")
@@ -1044,14 +1046,14 @@ def main():
         except Exception:
             import traceback
             traceback.print_exc()
-            alert("openLedMapper stopped because of an error. Details are in %s" % LOG_FILE)
+            alert("nouPix stopped because of an error. Details are in %s" % LOG_FILE)
             sys.exit(1)
     else:
         run(args, background)
 
 
 def show_running_copy(args):
-    """If openLedMapper is already running, opens another window to it (instead of starting a second copy
+    """If nouPix is already running, opens another window to it (instead of starting a second copy
     with its own port, without discovery) and returns True. Leaves the running copy's log alone."""
     url = running_copy(shown_host(args), args.port)
     if not url:
@@ -1088,7 +1090,7 @@ def run(args, background):
 
     exe = None if args.no_browser or args.default_browser else (args.browser_path or find_browser())
     print("")
-    print("  openLedMapper %s" % VERSION)
+    print("  nouPix %s" % VERSION)
     print("  Interface   %s" % url)
     if exe:
         print("  Window      own window (%s), keeps running when hidden" % os.path.basename(exe))
@@ -1102,9 +1104,9 @@ def run(args, background):
         print("  Discovery   off - %s" % art.discovery_note)
     print("  This PC     %s" % ", ".join(local_ips()))
     if args.embedded:
-        print("  Stops       when the openLedMapper app quits")
+        print("  Stops       when the nouPix app quits")
     elif background and not args.no_browser:
-        print("  Stops       %d s after the last openLedMapper window closes" % QUIT_AFTER_CLOSE)
+        print("  Stops       %d s after the last nouPix window closes" % QUIT_AFTER_CLOSE)
     else:
         print("  Press Ctrl+C to stop.")
     print("")

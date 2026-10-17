@@ -2,8 +2,8 @@
 cd /d "%~dp0"
 where py >nul 2>nul
 if %errorlevel%==0 (
-  py -3 openledmapper.py
+  py -3 noupix.py
 ) else (
-  python openledmapper.py
+  python noupix.py
 )
 pause

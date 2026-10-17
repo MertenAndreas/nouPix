@@ -1,6 +1,6 @@
 # Examples
 
-Files to open or import in openLedMapper, to see what it does without building a layout first.
+Files to open or import in nouPix, to see what it does without building a layout first.
 The projects have no real network behind them: their controllers use made-up 10.0.0.x addresses, so point them
 at your own controllers (in the Patch tab of the dock) before sending.
 

@@ -1,4 +1,4 @@
-// openLedMapper · js/macros.js
+// nouPix · js/macros.js
 // Macros: a few controls that move the same kind of control in every effect at once. Speed (0 to 2×: the effects'
 // clocks run slower or faster), Intensity (every layer's level), Saturation, Color 1 and Color 2 (a colour, set as
 // hue, saturation and value), and the controls most built-in effects share (Angle, Softness, Scale, Count, Size,

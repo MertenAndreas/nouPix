@@ -1,4 +1,4 @@
-// openLedMapper · js/project-io.js
+// nouPix · js/project-io.js
 // Project files: repairing what is opened (hydrate), saving and autosave, undo and redo, project and CSV files,
 // SVG import and the demo project. Uses the engine files above; after a change it redraws through renderAll and friends.
 
@@ -45,7 +45,7 @@ function fixFixture(f, i, ids) {
   }
   f.id = uniqueId(isId(f.id) ? String(f.id) : null, ids);   // ids are text, as the list and patch panel hold them
   if (typeof f.name !== 'string') f.name = f.name != null ? String(f.name) : TYPE_LABEL[f.type] + ' ' + (i + 1);
-  if (typeof f.tag !== 'string') f.tag = TAGS[i % TAGS.length];
+  delete f.tag;   // a fixture shows its group's colour; up to 0.9 each had one of its own
   if (!ORDERS.includes(f.order)) { const o = String(f.order || '').toUpperCase(); f.order = ORDERS.includes(o) ? o : 'RGB'; }
   f.dimmer = numOr(f.dimmer, 1);
   if (isObj(f.addr)) f.addr = { u: clamp(Math.round(numOr(f.addr.u, 0)), 0, 32767), ch: clamp(Math.round(numOr(f.addr.ch, 1)), 1, 512) }; else delete f.addr;
@@ -101,9 +101,12 @@ function fixPlaylists(list, scenes) {
 function hydrate(p) {
   if (!isObj(p)) p = {};
   const base = blankProject(typeof p.name === 'string' && p.name ? p.name : 'Untitled');
+  const { name, format, version } = base;   // before the file's own are copied over them
   const out = Object.assign(base, p);
-  if (typeof out.name !== 'string') out.name = base.name;
-  out.format = base.format; out.version = base.version; // the file's structure is brought up to date below
+  if (typeof out.name !== 'string') out.name = name;
+  out.format = format; out.version = version; // the file's structure is brought up to date below
+  // colours: from version 4 a group or a zone has one only when the user gave it one; before, every one got one
+  const chosen = numOr(p.version, 0) >= 4, tagOf = c => (chosen && isTag(c) ? c : '');
   if (out.guide != null && !isObj(out.guide)) out.guide = null;
   out.settings = fixSettings(p.settings);
   // up to 0.4 the red, green and blue trims were one setting for all fixtures: each fixture starts from it
@@ -117,7 +120,7 @@ function hydrate(p) {
   for (const f of out.fixtures) { if (isId(f.group)) f.group = String(f.group); else delete f.group; }
   out.groups = (Array.isArray(p.groups) ? p.groups : []).filter(isObj).map((g, i) => ({
     id: uniqueId(isId(g.id) ? String(g.id) : null, grpIds), name: typeof g.name === 'string' ? g.name : 'Group ' + (i + 1),
-    tag: typeof g.tag === 'string' ? g.tag : TAGS[(i + 2) % TAGS.length], open: g.open !== false,
+    tag: tagOf(g.tag), open: g.open !== false,
     ...(numOr(g.rot, 0) ? { rot: numOr(g.rot, 0) } : {}),
     ...(numOr(g.level, 1) < 1 ? { level: clamp(numOr(g.level, 1), 0, 1) } : {}) }));   // its dimmer, kept only when down
   normalizeGroups(out);
@@ -153,13 +156,13 @@ function hydrate(p) {
     L.on = L.on !== false;
     return L;
   };
-  const fixScenes = list => (Array.isArray(list) ? list : []).filter(isObj).map((sc, i) => Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2, tag: TAGS[i % TAGS.length] }, sc, { layers: (Array.isArray(sc.layers) ? sc.layers : []).map(fixLayer) }));
+  const fixScenes = list => (Array.isArray(list) ? list : []).filter(isObj).map((sc, i) => { const o = Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2 }, sc, { layers: (Array.isArray(sc.layers) ? sc.layers : []).map(fixLayer) }); delete o.tag; return o; });   // a scene shows its zone's colour
   const zoneIds = new Set();
   out.zones = out.zones.map((zn, i) => {
     const z = Object.assign(newZone({ name: 'Zone ' + (i + 1) }), zn);
     z.id = uniqueId(z.id, zoneIds);
     if (typeof z.name !== 'string') z.name = 'Zone ' + (i + 1);
-    if (typeof z.tag !== 'string') z.tag = TAGS[1];
+    z.tag = tagOf(zn.tag);
     z.layers = (Array.isArray(z.layers) ? z.layers : []).map(fixLayer);
     z.scenes = fixScenes(z.scenes);
     z.opacity = isFinite(z.opacity) ? clamp(+z.opacity, 0, 1) : 1;
@@ -240,12 +243,12 @@ const saveSoon = debounce(() => {
   const g = project.guide && project.guide.src ? project.guide : null;
   if ((g && g.src) !== guideKept) {
     guideKept = g && g.src;
-    if (g && !store.set('openledmapper.guide', { name: g.name, src: g.src })) {
-      store.remove('openledmapper.guide');
+    if (g && !store.set('noupix.guide', { name: g.name, src: g.src })) {
+      store.remove('noupix.guide');
       if (!saveWarned) { toast('The guide image is too large to keep between sessions; everything else is saved.', 'warn'); saveWarned = true; }
-    } else if (!g) store.remove('openledmapper.guide');
+    } else if (!g) store.remove('noupix.guide');
   }
-  store.set('openledmapper.project', serialize(false));
+  store.set('noupix.project', serialize(false));
 }, 400);
 function commit() {
   pushHistory();
@@ -270,14 +273,14 @@ function loadProject(p, { resetView = true } = {}) {
 
 /* ---------- files ---------- */
 function saveProjectFile() {
-  const name = (project.name || 'openledmapper-project').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'openledmapper-project';
-  download(name + '.openledmapper.json', JSON.stringify(JSON.parse(serialize(true)), null, 1));
-  toast('Project saved as ' + name + '.openledmapper.json');
+  const name = (project.name || 'noupix-project').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'noupix-project';
+  download(name + '.noupix.json', JSON.stringify(JSON.parse(serialize(true)), null, 1));
+  toast('Project saved as ' + name + '.noupix.json');
 }
 async function openProjectFile(file) {
   try {
     const p = JSON.parse(await file.text());
-    if (!p || !Array.isArray(p.fixtures)) throw new Error('not an openLedMapper project');
+    if (!p || !Array.isArray(p.fixtures)) throw new Error('not a nouPix project');
     loadProject(p);
     toast(`Opened ${project.name}: ${project.fixtures.length} fixtures`);
   } catch (e) { toast('Could not open that file: ' + e.message, 'err'); }
@@ -294,7 +297,7 @@ function exportCSV() {
     rows.push([f.name, TYPE_LABEL[f.type], pixelCount(f), f.order, fxBits(f), p ? p.ctrl.name : '', p ? p.ctrl.ip : '', p ? p.out + 1 : '', p ? p.pos + 1 : '', a ? a.u : '', a ? a.ch : '', b ? b.u : '', b ? b.ch : '', p ? p.overflow : '']);
   }
   const csv = rows.map(r => r.map(v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(',')).join('\n');
-  download((project.name || 'openledmapper').replace(/\s+/g, '-') + '-patch.csv', csv, 'text/csv');
+  download((project.name || 'noupix').replace(/\s+/g, '-') + '-patch.csv', csv, 'text/csv');
   toast('Patch list exported');
 }
 
@@ -433,35 +436,35 @@ function demoProject() {
   project = blankProject('Demo layout');
   project.settings.compW = 1000; project.settings.compH = 640;
   const F = (t, p) => { const f = newFixture(t, p); project.fixtures.push(f); return f; };
-  const panel = F('matrix', { name: 'Panel A', cx: 170, cy: 190, w: 240, h: 240, cols: 16, rows: 16, start: 'TL', dir: 'H', snake: true, tag: TAGS[0] });
-  const strips = [0, 1, 2, 3].map(i => F('line', { name: 'Strip ' + (i + 1), x1: 380, y1: 90 + i * 45, x2: 940, y2: 90 + i * 45, pixels: 57, reverse: i % 2 === 1, tag: TAGS[1] }));
-  const rings = [0, 1, 2].map(i => F('circle', { name: 'Ring ' + (i + 1), cx: 500 + i * 190, cy: 460, r: 80, pixels: 60, order: i === 1 ? 'GRB' : 'RGB', tag: TAGS[2] }));
+  const panel = F('matrix', { name: 'Panel A', cx: 170, cy: 190, w: 240, h: 240, cols: 16, rows: 16, start: 'TL', dir: 'H', snake: true });
+  const strips = [0, 1, 2, 3].map(i => F('line', { name: 'Strip ' + (i + 1), x1: 380, y1: 90 + i * 45, x2: 940, y2: 90 + i * 45, pixels: 57, reverse: i % 2 === 1 }));
+  const rings = [0, 1, 2].map(i => F('circle', { name: 'Ring ' + (i + 1), cx: 500 + i * 190, cy: 460, r: 80, pixels: 60, order: i === 1 ? 'GRB' : 'RGB' }));
   const pts = [];
   for (let i = 0; i <= 24; i++) { const x = 60 + i * 12; pts.push(x, 470 + Math.sin(i / 24 * Math.PI * 2) * 70); }
-  const wave = F('path', { name: 'Wave', pts, pixels: 48, tag: TAGS[3] });
-  const gStrips = { id: uid(), name: 'Strips', tag: TAGS[1], open: true }, gRings = { id: uid(), name: 'Rings', tag: TAGS[2], open: true };
+  const wave = F('path', { name: 'Wave', pts, pixels: 48 });
+  const gStrips = { id: uid(), name: 'Strips', tag: '', open: true }, gRings = { id: uid(), name: 'Rings', tag: '', open: true };
   strips.forEach(s => { s.group = gStrips.id; }); rings.forEach(r => { r.group = gRings.id; });
   project.groups.push(gStrips, gRings);
   const c = newController({ name: 'Pixel controller A', ip: '10.0.0.50', outputs: 4, upo: 4, startUniverse: 0 });
   c.chains = [[panel.id], strips.map(s => s.id), rings.map(r => r.id), [wave.id]];
   project.controllers.push(c);
   const L = (src, o = {}) => Object.assign(newLayer(src), o, { params: o.params ? { [src]: o.params } : {} });
-  const S = (name, tag, fade, layers) => ({ id: uid(), name, tag, fade, layers });
-  const zAll = newZone({ name: 'All', tag: TAGS[1], scenes: [
-    S('Plasma', TAGS[0], 2, [L('b-plasma')]),
-    S('Fire and sparks', TAGS[1], 3, [L('b-fire'), L('b-twinkle', { blend: 'add', opacity: 0.7, params: { color: [1, 0.75, 0.3, 1], density: 0.15 } })]),
-    S('Rainbow comets', TAGS[4], 1.5, [L('b-rainbow', { params: { mode: 1 } }), L('b-comet', { blend: 'multiply', params: { mode: 2, color: [1, 1, 1, 1], count: 3, tail: 0.6 } })]),
-    S('Blue pool', TAGS[5], 4, [L('b-water')]),
+  const S = (name, fade, layers) => ({ id: uid(), name, fade, layers });
+  const zAll = newZone({ name: 'All', scenes: [
+    S('Plasma', 2, [L('b-plasma')]),
+    S('Fire and sparks', 3, [L('b-fire'), L('b-twinkle', { blend: 'add', opacity: 0.7, params: { color: [1, 0.75, 0.3, 1], density: 0.15 } })]),
+    S('Rainbow comets', 1.5, [L('b-rainbow', { params: { mode: 1 } }), L('b-comet', { blend: 'multiply', params: { mode: 2, color: [1, 1, 1, 1], count: 3, tail: 0.6 } })]),
+    S('Blue pool', 4, [L('b-water')]),
   ] });
-  const zRings = newZone({ name: 'Rings', tag: TAGS[2], x: 390, y: 360, w: 600, h: 210, scenes: [
-    S('Comets', TAGS[2], 1.5, [L('b-comet', { params: { mode: 2, count: 3, tail: 0.55, color: [0.2, 0.85, 1, 1] } }), L('b-twinkle', { blend: 'add', opacity: 0.8, params: { color: [1, 0.8, 0.5, 1], density: 0.2, cells: 8 } })]),
-    S('Color wipe', TAGS[4], 1, [L('b-wipe', { params: { mode: 2 } })]),
-    S('Pulse', TAGS[0], 0.5, [L('b-pulse')]),
-    S('Strobe hit', TAGS[6], 0, [L('b-strobe', { params: { rate: 8 } })]),
+  const zRings = newZone({ name: 'Rings', x: 390, y: 360, w: 600, h: 210, scenes: [
+    S('Comets', 1.5, [L('b-comet', { params: { mode: 2, count: 3, tail: 0.55, color: [0.2, 0.85, 1, 1] } }), L('b-twinkle', { blend: 'add', opacity: 0.8, params: { color: [1, 0.8, 0.5, 1], density: 0.2, cells: 8 } })]),
+    S('Color wipe', 1, [L('b-wipe', { params: { mode: 2 } })]),
+    S('Pulse', 0.5, [L('b-pulse')]),
+    S('Strobe hit', 0, [L('b-strobe', { params: { rate: 8 } })]),
   ] });
-  const zStrips = newZone({ name: 'Strips', tag: TAGS[3], x: 360, y: 60, w: 620, h: 190, scenes: [
-    S('Rain', TAGS[5], 2, [L('b-rain', { params: { angle: 90 } })]),
-    S('Bars', TAGS[0], 1, [L('b-bars', { params: { count: 6, angle: 0 } })]),
+  const zStrips = newZone({ name: 'Strips', x: 360, y: 60, w: 620, h: 190, scenes: [
+    S('Rain', 2, [L('b-rain', { params: { angle: 90 } })]),
+    S('Bars', 1, [L('b-bars', { params: { count: 6, angle: 0 } })]),
   ] });
   for (const z of [zAll, zRings, zStrips]) { z.scene = z.scenes[0].id; z.layers = cloneLayers(z.scenes[0].layers); }
   project.zones = [zStrips, zRings, zAll]; // All is on top: lower its opacity to see Rings and Strips

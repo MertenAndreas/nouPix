@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-menus.js
+// nouPix · js/ui-menus.js
 // Menus: the menu system, every right-click menu, the highlight menu, the SVG import dialog, and the
 // copy, cut and paste keys.
 

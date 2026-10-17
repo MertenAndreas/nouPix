@@ -1,8 +1,8 @@
 {
-  "name": "openledmapper-desktop",
-  "productName": "openLedMapper",
-  "version": "0.9.11",
-  "description": "openLedMapper desktop app: the interface in its own window, with the Art-Net bridge inside",
+  "name": "noupix-desktop",
+  "productName": "nouPix",
+  "version": "1.0.0",
+  "description": "nouPix desktop app: the interface in its own window, with the Art-Net bridge inside",
   "license": "GPL-3.0",
   "author": "nouled studio",
   "repository": "github:nouled-studio/openLEDmapper",
@@ -17,8 +17,8 @@
     "electron-builder": "^26.15.3"
   },
   "build": {
-    "appId": "studio.nouled.openledmapper",
-    "productName": "openLedMapper",
+    "appId": "studio.nouled.noupix",
+    "productName": "nouPix",
     "copyright": "GPL-3.0",
     "directories": {
       "output": "dist"
@@ -29,27 +29,27 @@
     ],
     "extraResources": [
       {
-        "from": "../dist/openledmapper-bridge",
+        "from": "../dist/noupix-bridge",
         "to": "bridge"
       }
     ],
     "mac": {
       "target": "dir",
-      "icon": "../icons/openledmapper.icns",
+      "icon": "../icons/noupix.icns",
       "category": "public.app-category.graphics-design",
       "identity": null,
       "minimumSystemVersion": "12.0"
     },
     "win": {
       "target": "nsis",
-      "icon": "../icons/openledmapper.ico"
+      "icon": "../icons/noupix.ico"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": true,
       "runAfterFinish": true,
-      "artifactName": "openLedMapper-${version}-windows-setup.${ext}"
+      "artifactName": "nouPix-${version}-windows-setup.${ext}"
     }
   }
 }

@@ -1,4 +1,4 @@
-// openLedMapper · js/geometry.js
+// nouPix · js/geometry.js
 // Mapping math: where each pixel of a fixture is (computePoints, rebuildGeometry), lengths, bounds and distances,
 // and moving, turning and scaling a fixture or the frame around several. Uses util and model.
 

@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-forms.js
+// nouPix · js/ui-forms.js
 // Form building blocks for the panels: rows, number and slider inputs, selects, segmented buttons, lists that
 // reorder by dragging, and the animation of rows that move.
 
@@ -193,7 +193,9 @@ function hscroller(el, keep) {
 // messages, menus and dialogs asked for there show there (watchDoc)
 function dressWindow(w, title, cls) {
   const d = w.document;
-  d.head.replaceChildren(...$$('head link[rel=stylesheet], head link[rel=preconnect], head link[rel=icon]').map(l => { const c = d.createElement('link'); c.rel = l.rel; c.href = l.href; return c; }));
+  d.head.replaceChildren(...$$('head link[rel=stylesheet], head link[rel=icon]').map(l => { const c = d.createElement('link'); c.rel = l.rel; c.href = l.href; return c; }));
+  d.documentElement.dataset.theme = document.documentElement.dataset.theme || 'dark';   // its look follows this page's
+  d.addEventListener('input', rangeInput, true);
   d.title = title;
   d.body.className = cls;
   d.body.replaceChildren();
@@ -220,9 +222,12 @@ function seg(options, value, onChange) {
   return el;
 }
 
-// The colour tag swatches of a fixture, group or zone
+// The colour of a group or a zone: none (the first swatch), or one of TAGS
 function tagSwatches(o, label) {
-  return h('div', { class: 'swatches' }, TAGS.map(c => h('button', { type: 'button', class: o.tag === c ? 'on' : '', style: { background: c }, 'aria-label': label + ' ' + c, onclick: () => { o.tag = c; commit(); renderRight(); } })));
+  const pick = c => () => { o.tag = c; commit(); renderRight(); redrawStage(); };
+  return h('div', { class: 'swatches' },
+    h('button', { type: 'button', class: 'none' + (o.tag ? '' : ' on'), title: 'No colour', 'aria-label': label + ': none', onclick: pick('') }),
+    TAGS.map(c => h('button', { type: 'button', class: o.tag === c ? 'on' : '', style: { background: c }, 'aria-label': label + ' ' + c, onclick: pick(c) })));
 }
 // The row a list shows when it is empty
 function emptyRow(text) { return h('li', { class: 'empty', style: { display: 'block', height: 'auto', cursor: 'default' } }, text); }
@@ -240,7 +245,7 @@ function selectionActions() {
 // Items of a list are dragged to put them in another order: the dragged item goes above or below the one it
 // is dropped on, by which half of that item the pointer is over. Sliders and buttons inside an item keep
 // working. The drag can start on one element (a zone's header) and be dropped on a bigger one (its row).
-const dragType = kind => 'application/x-openledmapper-' + kind;
+const dragType = kind => 'application/x-noupix-' + kind;
 function reorderable(handle, target, kind, ids, onDrop) {
   const locked = () => kind === 'zone' && mappingLocked();   // the order of zones is part of the mapping
   handle.draggable = !locked();
@@ -302,6 +307,22 @@ function replayFlip() {
       el.animate([{ transform: `translateY(${it.dy}px)` }, { transform: 'none' }], { duration: FLIP_MS, delay: -t, easing: 'cubic-bezier(.2,.75,.25,1)' })
         .finished.then(() => { el.style.zIndex = ''; el.style.position = ''; }, () => {});
     }
-    if (it.mine) el.animate([{ boxShadow: '0 0 0 1px #3cc8ff, 0 0 14px rgba(60,200,255,.55)' }, { boxShadow: '0 0 0 1px rgba(60,200,255,0), 0 0 14px rgba(60,200,255,0)' }], { duration: FLASH_MS, delay: -t, easing: 'ease-out' });
+    if (it.mine) { const a = getComputedStyle(el).getPropertyValue('--accent').trim(); el.animate([{ boxShadow: `0 0 0 1px ${a}` }, { boxShadow: '0 0 0 1px transparent' }], { duration: FLASH_MS, delay: -t, easing: 'ease-out' }); }
   }
 }
+
+/* ---------- sliders: the track filled up to the value ---------- */
+// css/app.css fills a slider's track up to --p. Code that moves a slider (MIDI, a fade, a device, undo) sets its
+// value, so the value setter keeps --p; the user moves it with input events, caught here and in every window this
+// page draws into (dressWindow). A slider built by h() gets min and max after its value: a microtask settles it.
+function rangeFill(el) {
+  const min = el.min === '' ? 0 : +el.min, max = el.max === '' ? 100 : +el.max;
+  el.style.setProperty('--p', (max > min ? clamp((+el.value - min) / (max - min), 0, 1) * 100 : 0) + '%');
+}
+const rangeInput = e => { if (isEl(e.target) && e.target.type === 'range') rangeFill(e.target); };
+(() => {
+  const d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  Object.defineProperty(HTMLInputElement.prototype, 'value', { configurable: true, enumerable: d.enumerable, get() { return d.get.call(this); },
+    set(v) { d.set.call(this, v); if (this.type === 'range') { rangeFill(this); queueMicrotask(() => rangeFill(this)); } } });
+  document.addEventListener('input', rangeInput, true);
+})();

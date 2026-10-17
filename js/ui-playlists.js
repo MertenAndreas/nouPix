@@ -1,4 +1,4 @@
-// openLedMapper · js/ui-playlists.js
+// nouPix · js/ui-playlists.js
 // Playlists in the Scenes panel. Under a zone's scenes, one line holds its playlists as tabs, with the one playing
 // and its time left. Clicking a tab opens that playlist (its steps, the step editor, + Add, its settings); clicking
 // it again, or Close, folds it back to the one line. Also the New playlist window and the playlist menu.
@@ -53,7 +53,7 @@ function playlistArea(z) {
   if (open) {
     box.append(playlistLane(z, open));
     if (ui.playlistAdd === z.id) box.append(h('div', { class: 'paddbar' }, `Add a step to ${open.name}:`,
-      z.scenes.map(sc => h('button', { class: 'btn sm', type: 'button', style: { borderLeft: '3px solid ' + sc.tag }, onclick: () => addToPlaylist(z, open, sc.id) }, sc.name)),
+      z.scenes.map(sc => h('button', { class: 'btn sm', type: 'button', onclick: () => addToPlaylist(z, open, sc.id) }, sc.name)),
       h('span', { class: 'muted' }, z.scenes.length ? '· or drag a scene onto the playlist' : 'Store some scenes first.')));
     const ed = stepEditor(z, open);
     if (ed) box.append(ed);
@@ -148,7 +148,7 @@ function stepTile(z, pl, st, i) {
     h('div', { class: 't' }, h('span', { class: 'k' }, i + 1), h('span', { class: 'nm' }, sc ? sc.name : '?')),
     h('div', { class: 's' }, h('span', null, fmtPlayTime(st.time))),
     h('div', { class: 'pbar' }, h('i', { class: 'ramp', style: { width: (st.time ? Math.min(1, f.v / st.time) * 100 : 0) + '%' } }), h('i', { class: 'fill' })));
-  t.style.setProperty('--tag', sc ? sc.tag : 'var(--line2)');
+  if (z.tag) t.style.setProperty('--tag', z.tag);   // its zone's colour, when it has one
   // the step's fade: its own (blue) once it is changed here, whatever the scene's; typing nothing goes back to automatic
   const from = () => { const g = stepFade(z, pl, st); return g.from === 'step' ? 'its own, in this playlist only' : g.from === 'playlist' ? "the playlist's (One for all)" : `the scene's own (${sc ? sc.name : ''})`; };
   $('.s', t).append(fadeControl(t, { name: `Step ${i + 1}`,
@@ -273,7 +273,7 @@ function newPlaylistDialog(z, only = null) {
         h('span', { class: 'ix', title: pk.on ? 'Step ' + (n + 1) : 'Not in the playlist' }, pk.on ? ++n : ''),
         h('label', { class: 'pick' },
           h('input', { type: 'checkbox', checked: pk.on, 'aria-label': pk.sc.name, onchange: e => { pk.on = e.target.checked; paint(); list.children[picks.indexOf(pk) + 1].querySelector('input[type=checkbox]').focus(); } }),
-          h('i', { style: { background: pk.sc.tag } }), h('span', { class: 'nm' }, pk.sc.name)),
+          h('i', { style: { background: z.tag || 'var(--line2)' } }), h('span', { class: 'nm' }, pk.sc.name)),
         fade, time,
         h('span', { class: 'mv' }, mv('up', '↑', -1, 'Move earlier'), mv('dn', '↓', 1, 'Move later')));
       row.addEventListener('keydown', e => {

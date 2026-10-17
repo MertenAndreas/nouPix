@@ -344,8 +344,8 @@ function stageLook(again = false) {
   if (SC && !again) return;
   const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
   FONT_MONO = v('--mono'); FONT_UI = v('--ui');
-  SC = { sel: v('--accent'), selInk: v('--accent-ink'), first: v('--danger'), pick: v('--warn'), text: v('--text'), text2: v('--text2'), muted: v('--muted'),
-    line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotSmall: v('--dot-small'), dotEdge: v('--dot-edge'), handle: '#ffffff' };
+  SC = { sel: v('--sel'), selInk: v('--sel-ink'), first: v('--danger'), pick: v('--warn'), text: v('--text'), text2: v('--text2'), muted: v('--muted'),
+    line2: v('--line2'), bg0: v('--bg0'), bg1: v('--bg1'), canvas: v('--canvas'), dot: v('--dot'), dotSmall: v('--dot-small'), dotEdge: v('--dot-edge'), handle: v('--bg1') };
 }
 // #rrggbb at an opacity
 const withAlpha = (c, a) => /^#[0-9a-f]{6}$/i.test(c) ? `rgba(${parseInt(c.slice(1, 3), 16)},${parseInt(c.slice(3, 5), 16)},${parseInt(c.slice(5, 7), 16)},${a})` : c;

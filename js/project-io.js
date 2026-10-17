@@ -156,7 +156,7 @@ function hydrate(p) {
     L.on = L.on !== false;
     return L;
   };
-  const fixScenes = list => (Array.isArray(list) ? list : []).filter(isObj).map((sc, i) => { const o = Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2 }, sc, { layers: (Array.isArray(sc.layers) ? sc.layers : []).map(fixLayer) }); delete o.tag; return o; });   // a scene shows its zone's colour
+  const fixScenes = list => (Array.isArray(list) ? list : []).filter(isObj).map((sc, i) => { const o = Object.assign({ id: uid(), name: 'Scene ' + (i + 1), fade: 2 }, sc, { layers: (Array.isArray(sc.layers) ? sc.layers : []).map(fixLayer) }); if (tagOf(o.tag)) o.tag = tagOf(o.tag); else delete o.tag; return o; });   // its colour, if the user gave it one
   const zoneIds = new Set();
   out.zones = out.zones.map((zn, i) => {
     const z = Object.assign(newZone({ name: 'Zone ' + (i + 1) }), zn);

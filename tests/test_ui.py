@@ -25,12 +25,15 @@ with sync_playwright() as p:
     pg.click("#dockTabs button[data-tab=scenes]")
     top = pg.locator(".scenerow").nth(0)   # the top zone (All) is the first row
     # edit dialog
-    top.locator(".scene").nth(0).locator("button.x").click(); pg.click(".menu >> text=Rename, fade time…")
-    no_colour = pg.locator(".modal .swatches").count() == 0   # a scene shows its zone's colour, it has none of its own
+    top.locator(".scene").nth(0).locator("button.x").click(); pg.click(".menu >> text=Rename, fade time, colour…")
+    none_first = "on" in pg.locator(".modal .swatches button").nth(0).get_attribute("class")   # no colour until one is chosen
     pg.fill(".modal input[type=text]", "Opening"); pg.fill(".modal input[type=number]", "5")
-    pg.click(".modal >> text=Save"); time.sleep(0.1)
+    pg.locator(".modal .swatches button").nth(3).click(); pg.click(".modal >> text=Save"); time.sleep(0.1)
     sc = pg.evaluate("olm.project.zones[2].scenes[0]")
-    check("edit dialog saves name and fade (and has no colour)", (sc["name"], sc["fade"], "tag" in sc, no_colour) == ("Opening", 5, False, True), (sc["name"], sc["fade"], sc.get("tag"), no_colour))
+    check("edit dialog saves name, fade and colour (none at first)", (sc["name"], sc["fade"], sc.get("tag"), none_first) == ("Opening", 5, pg.evaluate("TAGS[2]"), True), (sc["name"], sc["fade"], sc.get("tag"), none_first))
+    pg.evaluate("(() => { const z = olm.project.zones[2]; goScene(z, z.scenes[0], true); })()"); time.sleep(0.3)
+    check("its colour is the mark of the playing scene", pg.evaluate("getComputedStyle(document.querySelector('#dockBody .scene.live'), '::after').backgroundImage").count("rgb(") == 2
+          and pg.evaluate("document.querySelector('#dockBody .scene.live').style.getPropertyValue('--mark')") == pg.evaluate("TAGS[2]"))
     # edited badge, then Update clears it
     top.locator(".scene").nth(1).click(modifiers=["Shift"]); time.sleep(0.3)
     pg.evaluate("olm.project.zones[2].layers[0].opacity = 0.3; olm.loadSource('b-noise')"); time.sleep(0.3)

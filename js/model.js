@@ -3,9 +3,10 @@
 // newController…), groups, the selection, look-ups by id, saved preferences. Uses util.
 
 /* ---------- constants, state, factories ---------- */
-// The colours a group or a zone can be given (none at first): muted, so they never compete with the light on the
-// stage or with the interface's red, white and yellow. Its fixtures and its scenes show it; they have none of their own.
-const TAGS = ['#6f8fb8', '#5ba59b', '#8ea865', '#b3a074', '#b5806a', '#a487b8', '#b07a96', '#7f9aa6'];
+// The colours a group, a zone or a scene can be given (none at first: nothing gets one unless the user gives it).
+// Saturated, and none of them red or yellow, which the interface keeps for what acts and for MIDI. A group's shows on
+// its fixtures, a zone's on its scenes' edge, a scene's on its mark while it plays.
+const TAGS = ['#2f7bff', '#00c2ff', '#00d68f', '#8fe000', '#ff8a00', '#ff2fd1', '#9b5cff', '#ff5c8a'];
 const isTag = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
 const ORDERS = ['RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR', 'RGBW', 'GRBW', 'WRGB', 'W'];
 const TYPE_LABEL = { line: 'Line', circle: 'Circle', matrix: 'Matrix', path: 'Path' };

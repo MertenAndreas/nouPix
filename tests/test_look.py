@@ -72,7 +72,7 @@ try:
     # ---------- colours: only a group's and a zone's, none at first
     ev("(() => { olm.loadProject(demoProject()); })()"); settle(0.5)
     p = ev("JSON.parse(serialize(true))")
-    check("the demo has no colours: no fixture or scene has one, groups and zones none chosen",
+    check("the demo has no colours: none on fixtures or scenes, none chosen for groups and zones",
           not any("tag" in f for f in p["fixtures"]) and not any("tag" in s for z in p["zones"] for s in z["scenes"])
           and all(g["tag"] == "" for g in p["groups"]) and all(z["tag"] == "" for z in p["zones"]), [g["tag"] for g in p["groups"]])
     ev("(() => { addFixture(newFixture('line', { x1: 10, y1: 10, x2: 200, y2: 10 })); })()"); settle(0.2)
@@ -81,7 +81,7 @@ try:
     check("a new group, fixture and zone get none", g["tag"] == "" and "tag" not in ev("project.fixtures.at(-1)") and ev("(() => { addZone({ x: 0, y: 0, w: 100, h: 100 }); return project.zones.at(-1).tag; })()") == "")
     ev("(() => { const g = project.groups.find(g => g.name === 'Rings'); ui.sel = new Set(project.fixtures.filter(f => f.group === g.id).map(f => f.id)); ui.rightTab = 'inspector'; onSelection(); renderRight(); })()"); settle(0.3)
     sw = pg.locator(".right .swatches button")
-    check("the group's colour: None, then the eight muted ones", sw.count() == 9 and "none" in sw.nth(0).get_attribute("class") and "on" in sw.nth(0).get_attribute("class"))
+    check("the group's colour: None, then the eight saturated ones", sw.count() == 9 and "none" in sw.nth(0).get_attribute("class") and "on" in sw.nth(0).get_attribute("class"))
     sw.nth(2).click(); settle(0.3)
     rings = ev("project.groups.find(g => g.name === 'Rings')")
     check("one is chosen", rings["tag"] == ev("TAGS[1]"))

@@ -120,14 +120,14 @@
     if (!dragging.has(z.id)) { card.querySelector('.dim input').value = Math.round(z.opacity * 100); paintLevel(card, z.opacity); }
     const box = card.querySelector('.scenes');
     // the buttons are made again only when the scenes change, so a tap is never lost; otherwise the playing one moves
-    const key = JSON.stringify(z.scenes.map(s => [s.id, s.name, s.fade]));
+    const key = JSON.stringify(z.scenes.map(s => [s.id, s.name, s.tag, s.fade]));
     if (box.dataset.key === key) {
       box.querySelectorAll('.scene').forEach(b => { const on = b.dataset.id === z.scene; b.classList.toggle('live', on); b.setAttribute('aria-pressed', String(on)); });
       return;
     }
     box.dataset.key = key;
     box.replaceChildren(...(z.scenes.length ? z.scenes.map(s => el('button', { 'data-id': s.id,
-      class: 'scene' + (s.id === z.scene ? ' live' : ''), type: 'button', 'aria-pressed': String(s.id === z.scene),
+      class: 'scene' + (s.id === z.scene ? ' live' : ''), type: 'button', style: s.tag ? { '--mark': s.tag } : {}, 'aria-pressed': String(s.id === z.scene),
       title: s.fade ? `Fades in ${s.fade} s` : 'Cuts straight to it',
       onclick: e => {
         send({ op: 'scene', zone: z.id, scene: s.id });

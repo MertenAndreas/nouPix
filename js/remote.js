@@ -69,7 +69,7 @@ function remoteState() {
   const name = id => { const s = srcById(id); return s ? s.name : null; };
   return { t: 'state', name: project.name, master: project.settings.master, blackout: ui.blackout,
     zones: project.zones.slice().reverse().map(z => ({ id: z.id, name: z.name, tag: z.tag, opacity: z.opacity, scene: z.scene,
-      scenes: z.scenes.map(sc => ({ id: sc.id, name: sc.name, fade: sc.fade })),
+      scenes: z.scenes.map(sc => ({ id: sc.id, name: sc.name, tag: sc.tag || '', fade: sc.fade })),
       content: z.layers.filter(L => L.on && L.src && name(L.src)).map(L => name(L.src)),
       playlists: z.playlists.map(pl => ({ id: pl.id, name: pl.name, length: playlistLength(pl), steps: pl.steps.length })),
       play: playForPhone(z) })) };

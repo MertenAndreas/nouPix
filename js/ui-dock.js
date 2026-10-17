@@ -127,16 +127,16 @@ function sceneMenu(anchor, z, sc) {
       ['New playlist with it…', () => newPlaylistDialog(z, sc.id)],
     ] }],
     [`Update with ${z.name}'s current layers`, () => { sc.layers = snapshotLayers(z); z.scene = sc.id; commit(); toast(`${sc.name} updated`); }],
-    ['Rename, fade time…', () => editScene(sc)],
+    ['Rename, fade time, colour…', () => editScene(sc)],
     ['Duplicate', () => { const c = Object.assign(JSON.parse(JSON.stringify(sc)), { id: uid(), name: nextCopyName(sc.name, new Set(z.scenes.map(x => x.name))) }); z.scenes.splice(z.scenes.indexOf(sc) + 1, 0, c); commit(); }],
     '-',
     ['Delete', () => { z.scenes = z.scenes.filter(x => x !== sc); if (z.scene === sc.id) z.scene = null; dropSceneSteps(z, sc.id); commit(); toast(`${sc.name} deleted. Ctrl Z brings it back.`); }, { danger: true }],
   ]);
 }
 function editScene(sc) {
-  const tmp = { name: sc.name, fade: sc.fade };
+  const tmp = { name: sc.name, fade: sc.fade, tag: sc.tag || '' };
   const close = () => bg.remove();
-  const save = () => { sc.name = tmp.name.trim() || sc.name; sc.fade = tmp.fade; close(); commit(); };
+  const save = () => { sc.name = tmp.name.trim() || sc.name; sc.fade = tmp.fade; if (tmp.tag) sc.tag = tmp.tag; else delete sc.tag; close(); commit(); };
   const nameIn = textInput(tmp, 'name', { aria: 'Scene name' });
   nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
   const bg = h('div', { class: 'modal-bg', onclick: e => { if (e.target === bg) close(); } },
@@ -145,6 +145,7 @@ function editScene(sc) {
       h('div', { class: 'mb' },
         row('Name', nameIn),
         numRow('Fade (s)', tmp, 'fade', { min: 0, max: 60, step: 0.1 }),
+        row('Colour', tagSwatches(tmp, 'Scene colour', () => {})),
         h('p', { class: 'note' }, 'The fade is how long the zone takes to change to this scene when you click it. 0 cuts straight to it. It can also be changed on the scene\'s button: drag its fade time sideways, or click it to type one.')),
       h('footer', null, h('button', { class: 'btn', type: 'button', onclick: close }, 'Cancel'), h('button', { class: 'btn primary', type: 'button', onclick: save }, 'Save'))));
   uiDocNow().body.append(bg);   // in the window it was asked for from
@@ -217,6 +218,7 @@ function sceneTile(z, sc, i, keys, look) {
     h('i', { class: 'prog' }));
   tile.querySelector('.s').prepend(fadeControl(tile, { name: sc.name, get: () => sc.fade, set: v => { sc.fade = v; } }));
   if (z.tag) tile.style.setProperty('--tag', z.tag);   // its zone's colour, when it has one
+  if (sc.tag) tile.style.setProperty('--mark', sc.tag);   // its own, on its mark while it plays
   midiButton(tile, `sc:${z.id}:${sc.id}`);   // a MIDI pad can play it
   tile.querySelector('.t').insertBefore(tile.querySelector(':scope > .ftag'), tile.querySelector('.t > .x'));   // its tag on the top line, before ⋯
   tile.addEventListener('click', e => goScene(z, sc, e.shiftKey));

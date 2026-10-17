@@ -10,14 +10,17 @@ Pure black, so the light on the stage is the brightest thing on screen.
 
 | Colour | Means | Used for |
 |---|---|---|
-| **Red** `#FF3B3B` (`--accent`) | selected / acts | the selected row's edge, the active tool, the tab underline, the chosen half of a grouped button (a line under it), focus, the primary button, Blackout, the playing scene's small mark, the red dot of the i and the arrows in the logo |
+| **Red** `#FF3B3B` (`--accent`) | acts | the active tool, the tab underline, the chosen half of a grouped button (a line under it), focus, the primary button, Blackout, the playing scene's small mark (when it has no colour of its own), the red dot of the i and the arrows in the logo |
 | **White** `#FFFFFF` (`--live`) | a light is on | Art-Net on (with the app's one glow), the playing scene's edge, the playlist playing, the source playing |
 | **Yellow** `#FFD23F` (`--midi`) | MIDI, and nothing else | learn, the fader lines, CC / Note tags, MIDI wires |
 | **Aluminium** `#DCE1E6` (`--fader`) | something you move | sliders and their fill, levels, the macros' links in the patch bay |
 
+What is selected (fixtures and groups on the stage and in the lists, patch rows, the selected zone and step) is
+outlined in white (`--sel`; black in the white look), so red is left for what acts.
+
 Everything else is a grey on black. **Red comes in small doses:** an edge, a line, a dot, text. Never a red area: a
-selected row is a neutral fill (`--sel-soft`) with a red edge, the chosen part of a grouped button is raised with a
-red line under it, the selected zone in the Scenes panel has a red edge on its left. The only red area is Blackout
+selected row is a neutral fill (`--sel-soft`) with a white edge, the chosen part of a grouped button is raised with a
+red line under it. The only red area is Blackout
 while it is on. No gradients as decoration and no drop shadows; floating things (menus, dialogs, messages) are set
 apart by their borders. Corners are square (`--r: 0`), except what is really round: status dots, the colour wheel
 and its thumbs, switch knobs, the patch bay's wire ends.
@@ -72,10 +75,11 @@ same without the internet; the bridge serves them. They are under the SIL Open F
 
 ## 5. Colours the user gives
 
-Only a group or a zone has a colour, and only when the user gives it one (Inspector → Colour; the first swatch is
-none). Its fixtures show it in the list and on the stage, its scenes on their edge. Fixtures and scenes have none of
-their own. The eight choices are muted, so they never compete with the light on the stage or with red, white and
-yellow: `#6f8fb8` `#5ba59b` `#8ea865` `#b3a074` `#b5806a` `#a487b8` `#b07a96` `#7f9aa6` (`TAGS` in `model.js`).
+A group, a zone or a scene can have a colour, only when the user gives it one (the Inspector, or the scene's dialog;
+the first swatch is none). A group's shows on its fixtures in the list and on the stage, a zone's on its scenes'
+left edge, a scene's on its small mark while it plays (red when it has none). Fixtures have none of their own. The
+eight choices are saturated, and none is red or yellow: `#2f7bff` `#00c2ff` `#00d68f` `#8fe000` `#ff8a00` `#ff2fd1`
+`#9b5cff` `#ff5c8a` (`TAGS` in `model.js`).
 
 ## 6. The name
 

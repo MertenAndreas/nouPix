@@ -101,7 +101,7 @@ button { cursor: pointer; }
 .scene:active { transform: scale(.98); }
 /* playing: a white edge and the one small red mark */
 .scene.live { --edge: var(--live); --fill: #1b1b1b; }
-.scene.live::after { background: linear-gradient(var(--accent), var(--accent)) right 7px top 7px / 6px 6px no-repeat, var(--fill); }
+.scene.live::after { background: linear-gradient(var(--mark, var(--accent)), var(--mark, var(--accent))) right 7px top 7px / 6px 6px no-repeat, var(--fill); }
 .scene.live b { color: var(--live); }
 .empty { color: var(--muted); font-size: 13.5px; }
 /* a zone's playlists, and the one playing */

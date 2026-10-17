@@ -111,10 +111,10 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   Content tab's controls read the layer's value on each sync, so they follow.
 - A group's dimmer is `g.level` (0 to 1; absent at 1, so files without dimmed groups don't change): `setGroupLevel`
   sets it and every slider showing it; `buildOutput` multiplies it in.
-- Colours: only a group (`g.tag`) or a zone (`z.tag`) has one, a hex from `TAGS` or `''` for none (the default: nothing
-  gets one unless the user gives it). Fixtures show their group's (`fxTag`), scenes their zone's; neither has its own.
-  `hydrate` drops fixtures' and scenes' colours, and groups' and zones' from files before version 4 (they were given
-  automatically then).
+- Colours: a group (`g.tag`), a zone (`z.tag`) or a scene (`sc.tag`) may have one, a hex from `TAGS`; none (`''`, or no
+  `tag` on a scene) is the default: nothing gets one unless the user gives it. Fixtures show their group's (`fxTag`);
+  a zone's is its scenes' edge, a scene's its mark while it plays (`--mark`). `hydrate` drops fixtures' colours, and
+  the others from files before version 4 (they were given automatically then).
 - Files: `{ format: 'noupix-project', version: 4, … }`, saved as `.noupix.json`. `hydrate` (project-io.js) repairs
   anything opened (older versions, openLedMapper and Weft files, hand edits) so the rest of the code can trust the
   project. A new field gets its default there.
@@ -171,8 +171,8 @@ pushed.
   classes. Comments are plain sentences that say why or what for, above the code they describe.
 - **The look:** described in `docs/brand.md`. Every colour is a variable in `css/app.css`'s `:root`, redefined for the
   white look under `:root[data-theme="light"]`; anything new uses them (or `color-mix` of them), never a literal, so
-  both looks keep working. Red (`--accent`) marks what is selected and what acts, in small doses: an edge, a line, a
-  dot, text, never a large red area (a selected row is `--sel-soft` with a red edge). White (`--live`) means a light
+  both looks keep working. Red (`--accent`) marks what acts, in small doses: an edge, a line, a dot, text, never a
+  large red area. What is selected is white (`--sel`; a selected row is `--sel-soft` with that edge). White (`--live`) means a light
   is on, yellow (`--midi`) is MIDI's alone, aluminium (`--fader`) is what you move. Corners are square (`--r: 0`),
   except what is really round (status dots, the colour wheel, switch knobs); no drop shadows. Running text is Saira
   300, labels (panel heads, tabs, buttons) Chakra Petch uppercase (`--label`), numbers JetBrains Mono; the fonts are

@@ -222,9 +222,10 @@ function seg(options, value, onChange) {
   return el;
 }
 
-// The colour of a group or a zone: none (the first swatch), or one of TAGS
-function tagSwatches(o, label) {
-  const pick = c => () => { o.tag = c; commit(); renderRight(); redrawStage(); };
+// The colour of a group, a zone or a scene: none (the first swatch), or one of TAGS
+// (a scene's, in its dialog: onPick only marks the choice, Save keeps it)
+function tagSwatches(o, label, onPick = () => { commit(); renderRight(); redrawStage(); }) {
+  const pick = c => e => { o.tag = c; $$('button', e.currentTarget.parentNode).forEach(b => b.classList.toggle('on', b === e.currentTarget)); onPick(); };
   return h('div', { class: 'swatches' },
     h('button', { type: 'button', class: 'none' + (o.tag ? '' : ' on'), title: 'No colour', 'aria-label': label + ': none', onclick: pick('') }),
     TAGS.map(c => h('button', { type: 'button', class: o.tag === c ? 'on' : '', style: { background: c }, 'aria-label': label + ' ' + c, onclick: pick(c) })));

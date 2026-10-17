@@ -19,7 +19,9 @@
   --accent: #ff3b3b;
   --accent-ink: #000000;
   --accent-soft: rgba(255, 59, 59, 0.14);
-  --sel-soft: rgba(255, 255, 255, 0.07);   /* under what is selected: a neutral fill, the red is its edge */
+  --sel: #f0f0f0;      /* what is selected (fixtures, groups, rows, the stage's frames and handles): white, not red */
+  --sel-ink: #000000;
+  --sel-soft: rgba(255, 255, 255, 0.07);   /* under what is selected: a neutral fill, white at its edge */
   --live: #ffffff;
   --live-ink: #000000;
   --live-soft: rgba(255, 255, 255, 0.10);
@@ -60,6 +62,8 @@
   --accent: #c8141a;
   --accent-ink: #ffffff;
   --accent-soft: rgba(200, 20, 26, 0.10);
+  --sel: #111111;
+  --sel-ink: #ffffff;
   --sel-soft: rgba(0, 0, 0, 0.06);
   --live: #000000;
   --live-ink: #ffffff;
@@ -166,7 +170,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .list { list-style: none; margin: 0; padding: 4px 0; }
 .list li { display: grid; grid-template-columns: 10px 16px minmax(0,1fr) auto auto; align-items: center; gap: 7px; padding: 0 8px 0 12px; height: 28px; cursor: pointer; border-left: 2px solid transparent; font-weight: 400; }
 .list li:hover { background: var(--bg2); }
-.list li.sel { background: var(--sel-soft); border-left-color: var(--accent); }
+.list li.sel { background: var(--sel-soft); border-left-color: var(--sel); }
 .list li.off .nm { color: var(--muted); text-decoration: line-through; }
 .list .tag { width: 8px; height: 8px; border-radius: 0; }
 .list .ty { color: var(--muted); display: flex; }
@@ -195,7 +199,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .list li.drop-before-in::after, .list li.drop-after-in::after { content: ''; position: absolute; left: 26px; right: 6px; height: 2px; border-radius: 0; background: var(--accent); }
 .list li.drop-before-in::after { top: -1px; }
 .list li.drop-after-in::after { bottom: -1px; }
-.list li.grp.drop-into { background: var(--sel-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.list li.grp.drop-into { background: var(--sel-soft); box-shadow: inset 0 0 0 1px var(--sel); }
 #fxList { padding-bottom: 28px; }   /* room under the last row to drop a fixture at the end, out of any group */
 .list.drop-end::after { content: ''; display: block; height: 2px; margin: 0 6px; border-radius: 0; background: var(--accent); }
 .list li.live { background: var(--live-soft); border-left-color: var(--live); }
@@ -255,7 +259,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .ctrl-list .items { flex: 1; }
 .ctrl { padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; border-left: 2px solid transparent; display: grid; gap: 3px; }
 .ctrl:hover { background: var(--bg2); }
-.ctrl.sel { background: var(--sel-soft); border-left-color: var(--accent); }
+.ctrl.sel { background: var(--sel-soft); border-left-color: var(--sel); }
 .ctrl .t { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .ctrl .t .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctrl .s { display: flex; justify-content: space-between; color: var(--muted); }
@@ -299,7 +303,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .prow .pgrip { width: 6px; height: 12px; opacity: .45; background-image: radial-gradient(currentColor 1px, transparent 1.2px); background-size: 3px 3px; color: var(--text2); }
 .prow:hover { border-color: var(--muted); }
 .prow:hover .pgrip { opacity: .9; }
-.prow.sel { background: var(--sel-soft); border-color: var(--accent); }
+.prow.sel { background: var(--sel-soft); border-color: var(--sel); }
 .prow.ovf .ad { color: var(--danger); }
 .prow.dragging { opacity: .4; }
 .prow.dropat { box-shadow: 0 -3px 0 var(--accent); }
@@ -358,10 +362,10 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .harrow.r { right: 2px; } .harrow.r svg { transform: rotate(-90deg); }
 .hscroll.canl > .harrow.l, .hscroll.canr > .harrow.r { display: grid; }
 .zoneblock { flex: none; margin: 0 -5px; border-radius: 0; }
-.zoneblock.sel { box-shadow: inset 2px 0 0 var(--accent); }
+.zoneblock.sel { box-shadow: inset 2px 0 0 var(--sel); }
 .zoneblock .scenerow { margin: 0; }
 .zhead { flex: none; width: 176px; height: 54px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 8px 0 10px; border-radius: 0; background: var(--bg2); border: 1px solid var(--line); cursor: pointer; }
-.zhead.sel { border-color: var(--accent); }
+.zhead.sel { border-color: var(--sel); }
 .zhead .zt { display: flex; align-items: center; gap: 7px; font-weight: 600; min-width: 0; }
 .zhead .zt .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zhead .zc { display: flex; align-items: center; gap: 6px; }
@@ -411,8 +415,8 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
   clip-path: polygon(calc(var(--cut) - .4px) 0, 100% 0, 100% calc(100% - var(--cut) + .4px), calc(100% - var(--cut) + .4px) 100%, 0 100%, 0 calc(var(--cut) - .4px)); }
 .scene:hover { --fill: var(--bg4); }
 .scene.live { --edge: var(--live); --fill: color-mix(in srgb, var(--live) 8%, var(--bg3)); }
-/* the playing scene's one red mark */
-.scene.live::after { background: linear-gradient(var(--accent), var(--accent)) right 3px top 3px / 4px 4px no-repeat, var(--fill); }
+/* the playing scene's one small mark: its own colour, or red */
+.scene.live::after { background: linear-gradient(var(--mark, var(--accent)), var(--mark, var(--accent))) right 3px top 3px / 4px 4px no-repeat, var(--fill); }
 .scene .t { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }
 .scene .t .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scene .k { font-family: var(--mono); font-size: 10px; color: var(--muted); }
@@ -500,7 +504,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .pstep.live { --edge: var(--live); --fill: color-mix(in srgb, var(--live) 8%, var(--bg3)); }
 .pstep.live.paused { --edge: var(--warn); --fill: color-mix(in srgb, var(--warn) 10%, var(--bg3)); }
 .pstep.live.paused .fill { background: var(--warn); }
-.pstep.sel { --edge: var(--accent); }
+.pstep.sel { --edge: var(--sel); }
 .pstep.drop::after { box-shadow: inset 3px 0 0 var(--accent); }
 .pstep.dragging { opacity: .4; }
 .pstep.add { width: 70px; border: 1px dashed var(--line2); background: none; color: var(--muted); place-items: center; align-content: center; font-size: 12px; font-family: inherit; }
@@ -572,7 +576,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .monitor .ulist { overflow: auto; border-right: 1px solid var(--line); }
 .monitor .ulist div { padding: 5px 12px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; font-family: var(--mono); font-size: 11px; border-left: 2px solid transparent; }
 .monitor .ulist div:hover { background: var(--bg2); }
-.monitor .ulist div.sel { background: var(--sel-soft); border-left-color: var(--accent); }
+.monitor .ulist div.sel { background: var(--sel-soft); border-left-color: var(--sel); }
 .monitor .grid { position: relative; min-height: 0; overflow: auto; padding: 8px 12px; }
 .monitor canvas { display: block; width: 100%; max-width: 900px; image-rendering: pixelated; }
 .monitor .readout { font-family: var(--mono); font-size: 11px; color: var(--text2); min-height: 16px; margin-top: 6px; }

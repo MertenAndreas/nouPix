@@ -39,10 +39,10 @@ On Windows, allow nouPix (or Python) through the firewall on private networks wh
 
 ## The look
 
-The interface is black, so the light on the stage is the brightest thing on screen. A few colours mean the same everywhere: **red** marks what is selected and what acts (the active tool, the selected fixture, Blackout), **white** means a light is on (Art-Net on, the scene playing, with a small red mark in its corner), **yellow** belongs to MIDI, and **aluminium** is anything you move (sliders, levels). Everything else is a grey.
+The interface is black, so the light on the stage is the brightest thing on screen. A few colours mean the same everywhere: **red** marks what acts (the active tool, Blackout, the primary button), what you select is outlined in **white**, **white** means a light is on (Art-Net on, the scene playing, with a small red mark in its corner), **yellow** belongs to MIDI, and **aluminium** is anything you move (sliders, levels). Everything else is a grey.
 
 - **Black or white:** the sun in the top bar (or **Settings → Interface**) turns the interface white, for daylight; the moon turns it black again. It is this computer's choice, not the project's, and the MIDI and Scenes windows follow it.
-- **Colours of your own:** a group or a zone can be given one of eight muted colours (Inspector, **Colour**; the first swatch is none). Its fixtures show it in the list and on the stage, and its scenes on their edge. Nothing gets a colour unless you give it one, and fixtures and scenes have none of their own.
+- **Colours of your own:** a group or a zone can be given one of eight colours (Inspector, **Colour**; the first swatch is none): a group's fixtures show it in the list and on the stage, a zone's scenes on their edge. A scene can have one too (**⋯ → Rename, fade time, colour…**): it is the small mark on the scene while it plays (red when it has none). Nothing gets a colour unless you give it one.
 - The fonts come with the app, so it looks the same without the internet.
 
 ## Workflow
@@ -161,7 +161,7 @@ Each zone has its own scenes. A scene stores the zone's layers: sources, paramet
 - With a zone's master at 0 you can still recall its scenes; they just don't show until you bring the master up.
 - The fade crossfades the zone's picture, so any two looks fade smoothly into each other. Starting another scene in the middle of a fade continues from what the zone shows at that moment.
 - **The fade time** shows on each scene's button (◢ 2 s, or **cut**). Drag it sideways to change it (**Shift** for bigger steps), click it to type one, or select it and use **↑ ↓**. It works on the scene playing too, so you can try a fade and change it straight away. 0 cuts.
-- **⋯** on a scene: add it to a playlist, update it with the zone's current layers, rename it, change its fade time, duplicate or delete it. Drag scenes to reorder them, or onto another zone's row (even one with no scenes yet) to move them there.
+- **⋯** on a scene: add it to a playlist, update it with the zone's current layers, rename it, change its fade time or colour, duplicate or delete it. Drag scenes to reorder them, or onto another zone's row (even one with no scenes yet) to move them there.
 - **edited** on the current scene means the layers changed since you recalled it.
 - New scenes get the fade time set in the panel. Scenes are saved in the project; **Ctrl Z** undoes a delete.
 - When a zone has more scenes than fit, its row scrolls sideways (the zone stays on the left): **‹ ›** at its ends move it a few scenes at a time, and its edges fade where there are more. The same goes for a playlist's steps. Playing a scene leaves the panel where you scrolled it.

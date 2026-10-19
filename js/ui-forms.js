@@ -100,6 +100,30 @@ function checkRow(text, obj, key, onChange) {
 // arrow keys on it, and Shift + scroll over the slider, move it a notch at a time (o.notch, or about a hundredth of
 // the range). A value shown as a percentage is typed as one. o.wrap: the value goes round (angles), so 370 is 10 and
 // a notch past the top starts again at the bottom. o.int: whole numbers only.
+// A small explanation under anything marked data-tip ("Title|What it does"), after a short pause over it
+function initTips(doc = document) {
+  let el = null, on = null, timer = 0;
+  const hide = () => { clearTimeout(timer); on = null; if (el) el.hidden = true; };
+  doc.addEventListener('pointerover', e => {
+    const t = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (t === on) return;
+    hide();
+    if (!t) return;
+    on = t;
+    timer = setTimeout(() => {
+      if (!el) { el = h('div', { class: 'tip', role: 'tooltip' }); doc.body.append(el); }
+      const [head, text] = t.dataset.tip.split('|');
+      el.replaceChildren(h('b', {}, head), text ? h('span', {}, text) : '');
+      el.hidden = false;
+      const r = t.getBoundingClientRect(), w = el.offsetWidth, vw = doc.documentElement.clientWidth;
+      el.style.left = clamp(r.left + r.width / 2 - w / 2, 6, vw - w - 6) + 'px';
+      el.style.top = r.bottom + 6 + 'px';
+    }, 350);
+  });
+  doc.addEventListener('pointerout', e => { if (!e.relatedTarget) hide(); });
+  doc.addEventListener('pointerdown', hide, true);
+  doc.addEventListener('keydown', hide, true);
+}
 function sliderRow(text, obj, key, o = {}) {
   const fmt = o.fmt || (v => fmtV(v));
   const min = o.min ?? 0, max = o.max ?? 1, step = o.step ?? 0.01, k = o.fmt === pct ? 100 : 1;

@@ -72,6 +72,8 @@ With **Wiring** on, the stage also draws the data cable between fixtures chained
 
 **Ctrl D** duplicates. Copies are numbered on from the original: Matrix 1 becomes Matrix 2, Matrix 10 becomes Matrix 11, skipping numbers already used; a name without a number gets 2 (Wave → Wave 2). The same goes for pasted fixtures and duplicated groups, zones and scenes. When the originals are on one output, the copies go on that output after the fixtures already there, while they fit; a copy that doesn't fit stays unpatched. When the originals are spread over several outputs (for example a group across two outputs), the copies stay unpatched: right-click → **Patch to**.
 
+The stage bar shows the stage's options as icons: content (with its opacity), guide image, grid, snap, labels, wiring and zones; rest the mouse on one to see what it does. The guide image's opacity is in **Settings → Stage**, next to **Load guide image…**. The status bar keeps to the frame rate, the pixels and universes, what isn't patched yet, and the pixel under the mouse.
+
 The Inspector / Content / Settings panel on the right can be hidden for a bigger stage: **»** in its tabs, the panel button at the right of the stage bar, or `H`. Double-clicking a fixture to rename it brings it back.
 
 **Highlight** (💡 in the top bar, or `I`) shows a test on the LEDs instead of the content, to check the installation; ▾ next to it picks the mode. Trace, Flood and Color check light the selected fixtures, or all of them when none is selected.

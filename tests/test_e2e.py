@@ -67,7 +67,8 @@ with sync_playwright() as p:
     check("interrupted fade starts from current colour (no jump)", abs(after[2] - before[2]) <= 30 and abs(after[0] - before[0]) <= 30, f"{before} -> {after}")
     time.sleep(1.2)
     check("interrupted fade ends on the new scene", col() == [255, 0, 0], col())
-    check("status bar names the scene", "Red" in pg.inner_text("#status"))
+    check("the zone plays the new scene", pg.evaluate("(() => { const z = olm.project.zones[0]; return z.scenes.find(s => s.id === z.scene).name; })()") == "Red")
+    check("the status bar keeps to what matters: frame rate, pixels and universes", all(w in pg.inner_text("#status") for w in ("fps", "px", "universes")))
 
     # --- keyboard: key 2 recalls scene 2, Shift cuts
     pg.click("#view", position={"x": 20, "y": 20}); pg.keyboard.press("Shift+Digit2"); time.sleep(0.25)

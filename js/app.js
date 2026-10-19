@@ -79,14 +79,10 @@ function keepAwake(on) {
 function updateStatus() {
   const px = project.fixtures.reduce((a, f) => a + (f._n || 0), 0);
   const unp = project.fixtures.filter(f => !f._patch).length;
+  // Only what matters while working: the frame rate, how much there is, and what isn't patched yet
   const parts = [];
-  parts.push(ui.cursor ? `x ${fmtV(Math.round(ui.cursor[0] * 10) / 10)}  y ${fmtV(Math.round(ui.cursor[1] * 10) / 10)}` : 'x –  y –');
-  parts.push(`zoom ${Math.round(ui.view.zoom * 100)}%`);
-  parts.push(`<b>${project.fixtures.length}</b> fixtures · <b>${fmtN(px)}</b> px` + (unp ? ` · <span style="color:var(--warn)">${unp} unpatched</span>` : ''));
-  parts.push(`<b>${universes.length}</b> universes`);
-  const z = selZone(), sc = z && z.scenes.find(x => x.id === z.scene);
-  if (z) parts.push(`${esc(z.name)}` + (sc ? ` · <b>${esc(sc.name)}</b>` + (z._fade && z._fade.scene === sc.id ? ' (fading)' : '') : ''));
-  parts.push(ui.outputOn && bridge.connected ? `out <b>${outStats.fps.toFixed(1)}</b> fps · ${outStats.universes} U/frame` : `render ${project.settings.fps} fps`);
+  parts.push(ui.outputOn && bridge.connected ? `<b>${outStats.fps.toFixed(1)}</b> fps out` : `<b>${project.settings.fps}</b> fps`);
+  parts.push(`<b>${fmtN(px)}</b> px · <b>${universes.length}</b> universes` + (unp ? ` · <span style="color:var(--warn)">${unp} unpatched</span>` : ''));
   let hov = '';
   const hp = ui.hoverPx;
   if (hp && hp.f && fxById(hp.f.id)) {
@@ -140,9 +136,10 @@ function initUI() {
     el.addEventListener('input', () => { ui[key] = isRange ? parseFloat(el.value) : el.checked; savePrefs(); });
   };
   bindView('#vContent', 'showContent'); bindView('#vContentOp', 'contentOp', true);
-  bindView('#vGuide', 'showGuide'); bindView('#vGuideOp', 'guideOp', true);
+  bindView('#vGuide', 'showGuide');   // its opacity is in Settings → Stage
   bindView('#vGrid', 'showGrid'); bindView('#vSnap', 'snap'); bindView('#vLabels', 'showLabels'); bindView('#vWiring', 'showWiring'); bindView('#vZones', 'showZones');
   $('#btnFit').addEventListener('click', fitView);
+  initTips();
   $$('#rail button').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
   $$('#rightTabs button').forEach(b => b.addEventListener('click', () => { ui.rightTab = b.dataset.tab; savePrefs(); renderRight(); }));
   $$('#dockTabs button[data-tab]').forEach(b => b.addEventListener('click', () => { ui.dockTab = b.dataset.tab; ui.dockCollapsed = false; savePrefs(); renderDock(); }));

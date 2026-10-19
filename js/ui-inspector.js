@@ -611,6 +611,7 @@ function renderSettings(body) {
     h('div', { class: 'actions' },
       h('button', { class: 'btn', type: 'button', onclick: () => $('#fileGuide').click() }, 'Load guide image…'),
       project.guide ? h('button', { class: 'btn', type: 'button', onclick: () => { project.guide = null; guideImg = null; commit(); renderRight(); } }, 'Remove guide') : null),
+    project.guide ? sliderRow('Guide opacity', ui, 'guideOp', { fmt: pct, onInput: savePrefs }) : null,
     h('p', { class: 'note' }, 'A guide image (for example your layout SVG) is drawn over the stage, fitted to the composition, so you can trace fixtures over it.')));
   if (!REMOTE_CLIENT) body.append(remoteSection());
   // Where the page finds noupix.py. The desktop app always uses its own, so there is nothing to set there.

@@ -94,7 +94,9 @@ carries over once (its files open, its storage and window profile move, the desk
 ## 7. Logo and icons
 
 Wordmark: monoline square letters with 45° cuts on the top-left and bottom-right corners (like PCB traces). The x is
-nine rounded pixels, and the dot of the i is the one red "lit" pixel. Icon: the LED schematic symbol (circle, wire,
+nine rounded pixels, and the dot of the i is the one red "lit" pixel. The letters are low and wide: x-height 10.5
+units, letters 11.5 wide with 3.5 between them; the P rises 4.5 above the x-height, its bowl closing just below the
+x-height's top, and the i's dot is level with the top of the P (about 4.4 : 1 overall). Icon: the LED schematic symbol (circle, wire,
 diode, cathode bar) in white, with two red light arrows. The tile has the same two 45° corner cuts.
 
 ### 7a. Icon, master (64 px and up)
@@ -135,45 +137,34 @@ Same as 7b, with stroke-width **4.2** for the circle and diode, and these arrows
 
 ### 7d. Wordmark on dark, master (40 px tall and up)
 
-Aspect ratio 72.4 : 22.4.
+Aspect ratio 77.5 : 17.5. Stroke 1.25, pixels 1.85.
 
 ```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.2 2.8 72.4 22.4" role="img" aria-label="nouPix">
-  <path fill="none" stroke="#F0F0F0" stroke-width="1.2" stroke-linejoin="miter" d="M0,24 L0,10.5 L2.5,8 L10,8 L10,24 M14,10.5 L16.5,8 L24,8 L24,21.5 L21.5,24 L14,24 Z M28,8 L28,24 L35.5,24 L38,21.5 L38,8 M42,24 L42,6.5 L44.5,4 L52,4 L52,11 L49.5,13.5 L42,13.5 M56,8 L56,24"/>
-  <rect x="55.1" y="3.5" width="1.8" height="1.8" rx="0.72" fill="#FF3B3B"/>
-  <g fill="#F0F0F0">
-    <rect x="59.1" y="7.1" width="1.8" height="1.8" rx="0.72"/><rect x="61.6" y="11.1" width="1.8" height="1.8" rx="0.72"/>
-    <rect x="64.1" y="15.1" width="1.8" height="1.8" rx="0.72"/><rect x="66.6" y="19.1" width="1.8" height="1.8" rx="0.72"/>
-    <rect x="69.1" y="23.1" width="1.8" height="1.8" rx="0.72"/><rect x="69.1" y="7.1" width="1.8" height="1.8" rx="0.72"/>
-    <rect x="66.6" y="11.1" width="1.8" height="1.8" rx="0.72"/><rect x="61.6" y="19.1" width="1.8" height="1.8" rx="0.72"/>
-    <rect x="59.1" y="23.1" width="1.8" height="1.8" rx="0.72"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.25 7.75 77.5 17.5" role="img" aria-label="nouPix">
+<path fill="none" stroke="#F0F0F0" stroke-width="1.25" stroke-linejoin="miter" d="M0,24 L0,16 L2.5,13.5 L11.5,13.5 L11.5,24 M15,16 L17.5,13.5 L26.5,13.5 L26.5,21.5 L24,24 L15,24 Z M30,13.5 L30,24 L39,24 L41.5,21.5 L41.5,13.5 M45,24 L45,11.5 L47.5,9 L56.5,9 L56.5,15.5 L54,18 L45,18 M60,13.5 L60,24"/><rect x="59.075" y="9.2" width="1.85" height="1.85" rx="0.74" fill="#FF3B3B"/><g fill="#F0F0F0"><rect x="62.575" y="12.575" width="1.85" height="1.85" rx="0.74"/><rect x="65.45" y="15.2" width="1.85" height="1.85" rx="0.74"/><rect x="68.325" y="17.825" width="1.85" height="1.85" rx="0.74"/><rect x="71.2" y="20.45" width="1.85" height="1.85" rx="0.74"/><rect x="74.075" y="23.075" width="1.85" height="1.85" rx="0.74"/><rect x="74.075" y="12.575" width="1.85" height="1.85" rx="0.74"/><rect x="71.2" y="15.2" width="1.85" height="1.85" rx="0.74"/><rect x="65.45" y="20.45" width="1.85" height="1.85" rx="0.74"/><rect x="62.575" y="23.075" width="1.85" height="1.85" rx="0.74"/></g>
 </svg>
 ```
 
-### 7e. Wordmark on dark, small (the top bar, ~19 px tall)
+### 7e. Wordmark on dark, small (the top bar, 15 px tall)
 
-Heavier line and larger pixels so it stays crisp.
+Aspect ratio 78.6 : 18.6 (about 4.2 : 1). Heavier line (1.8) and larger pixels (2.3) so it stays crisp. The top bar and
+the login page draw it inline at 63.4 × 15 px, in the page's colours (`currentColor`, `var(--accent)`).
 
 ```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.2 2.8 72.4 22.4" width="61.4" height="19" role="img" aria-label="nouPix">
-  <path fill="none" stroke="#F0F0F0" stroke-width="1.7" stroke-linejoin="miter" d="M0,24 L0,10.5 L2.5,8 L10,8 L10,24 M14,10.5 L16.5,8 L24,8 L24,21.5 L21.5,24 L14,24 Z M28,8 L28,24 L35.5,24 L38,21.5 L38,8 M42,24 L42,6.5 L44.5,4 L52,4 L52,11 L49.5,13.5 L42,13.5 M56,8 L56,24"/>
-  <rect x="54.9" y="3.3" width="2.2" height="2.2" rx="0.88" fill="#FF3B3B"/>
-  <g fill="#F0F0F0">
-    <rect x="58.9" y="6.9" width="2.2" height="2.2" rx="0.88"/><rect x="61.4" y="10.9" width="2.2" height="2.2" rx="0.88"/>
-    <rect x="63.9" y="14.9" width="2.2" height="2.2" rx="0.88"/><rect x="66.4" y="18.9" width="2.2" height="2.2" rx="0.88"/>
-    <rect x="68.9" y="22.9" width="2.2" height="2.2" rx="0.88"/><rect x="68.9" y="6.9" width="2.2" height="2.2" rx="0.88"/>
-    <rect x="66.4" y="10.9" width="2.2" height="2.2" rx="0.88"/><rect x="61.4" y="18.9" width="2.2" height="2.2" rx="0.88"/>
-    <rect x="58.9" y="22.9" width="2.2" height="2.2" rx="0.88"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.8 7.2 78.6 18.6" role="img" aria-label="nouPix">
+<path fill="none" stroke="#F0F0F0" stroke-width="1.8" stroke-linejoin="miter" d="M0,24 L0,16 L2.5,13.5 L11.5,13.5 L11.5,24 M15,16 L17.5,13.5 L26.5,13.5 L26.5,21.5 L24,24 L15,24 Z M30,13.5 L30,24 L39,24 L41.5,21.5 L41.5,13.5 M45,24 L45,11.5 L47.5,9 L56.5,9 L56.5,15.5 L54,18 L45,18 M60,13.5 L60,24"/><rect x="58.85" y="9.2" width="2.3" height="2.3" rx="0.92" fill="#FF3B3B"/><g fill="#F0F0F0"><rect x="62.35" y="12.35" width="2.3" height="2.3" rx="0.92"/><rect x="65.225" y="14.975" width="2.3" height="2.3" rx="0.92"/><rect x="68.1" y="17.6" width="2.3" height="2.3" rx="0.92"/><rect x="70.975" y="20.225" width="2.3" height="2.3" rx="0.92"/><rect x="73.85" y="22.85" width="2.3" height="2.3" rx="0.92"/><rect x="73.85" y="12.35" width="2.3" height="2.3" rx="0.92"/><rect x="70.975" y="14.975" width="2.3" height="2.3" rx="0.92"/><rect x="65.225" y="20.225" width="2.3" height="2.3" rx="0.92"/><rect x="62.35" y="22.85" width="2.3" height="2.3" rx="0.92"/></g>
 </svg>
 ```
 
 ### 7f. Wordmark on light (docs, website, print)
 
-Ink `#0A0A0A`, red `#C8141A` (5.3:1 on `#F2F2F2`), stroke 1.4, pixels 2.0 with `rx` 0.8. The positions:
-- red dot at `55,3.4`
-- pixels at `59,7` `61.5,11` `64,15` `66.5,19` `69,23` `69,7` `66.5,11` `61.5,19` `59,23`
+Aspect ratio 77.9 : 17.9. Ink `#0A0A0A`, red `#C8141A` (5.3:1 on `#F2F2F2`), stroke 1.45, pixels 2.0.
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.45 7.55 77.9 17.9" role="img" aria-label="nouPix">
+<path fill="none" stroke="#0A0A0A" stroke-width="1.45" stroke-linejoin="miter" d="M0,24 L0,16 L2.5,13.5 L11.5,13.5 L11.5,24 M15,16 L17.5,13.5 L26.5,13.5 L26.5,21.5 L24,24 L15,24 Z M30,13.5 L30,24 L39,24 L41.5,21.5 L41.5,13.5 M45,24 L45,11.5 L47.5,9 L56.5,9 L56.5,15.5 L54,18 L45,18 M60,13.5 L60,24"/><rect x="59" y="9.2" width="2.0" height="2.0" rx="0.8" fill="#C8141A"/><g fill="#0A0A0A"><rect x="62.5" y="12.5" width="2.0" height="2.0" rx="0.8"/><rect x="65.375" y="15.125" width="2.0" height="2.0" rx="0.8"/><rect x="68.25" y="17.75" width="2.0" height="2.0" rx="0.8"/><rect x="71.125" y="20.375" width="2.0" height="2.0" rx="0.8"/><rect x="74" y="23" width="2.0" height="2.0" rx="0.8"/><rect x="74" y="12.5" width="2.0" height="2.0" rx="0.8"/><rect x="71.125" y="15.125" width="2.0" height="2.0" rx="0.8"/><rect x="65.375" y="20.375" width="2.0" height="2.0" rx="0.8"/><rect x="62.5" y="23" width="2.0" height="2.0" rx="0.8"/></g>
+</svg>
+```
 
 ### Where they are
 

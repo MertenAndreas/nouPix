@@ -169,9 +169,9 @@ function initUI() {
     const n = f.name.toLowerCase();
     if (n.endsWith('.svg')) importSvgDialog(f);
     else if (n.endsWith('.fs') || n.endsWith('.glsl')) addIsfFile(f);
-    else if (n.endsWith('.json')) openProjectFile(f);
+    else if (n.endsWith('.noupix') || n.endsWith('.json')) openProjectFile(f);
     else if (mediaKindOf(f)) { mediaTarget = null; addMediaFile(f); }
-    else toast(`${f.name}: nouPix opens projects (.json), shaders (.fs), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
+    else toast(`${f.name}: nouPix opens projects (.noupix), shaders (.fs), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
   });
   window.addEventListener('keydown', onKey);
   window.addEventListener('keyup', e => { if (e.code === 'Space') { spaceHeld = false; cv.style.cursor = ''; } });
@@ -189,7 +189,7 @@ function onKey(e) {
   const t = e.target;
   const typing = t && (t.tagName === 'INPUT' && !['checkbox', 'range', 'color'].includes(t.type) || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT');
   const mod = e.ctrlKey || e.metaKey;
-  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveProjectFile(); return; }
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveProjectFile(e.shiftKey); return; }
   if (typing) return;
   if ($('.modal-bg')) { if (e.key === 'Escape') $('.modal-bg').remove(); return; }
   const k = e.key.toLowerCase();

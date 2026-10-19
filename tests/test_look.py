@@ -43,7 +43,7 @@ try:
           and "Chakra Petch" in css(".phead h2", "fontFamily") and css(".phead h2", "textTransform") == "uppercase")
     check("square corners", css(".btn", "borderRadius") == "0px" and css(".pill", "borderRadius") == "0px")
     check("Art-Net's rate shows in the status bar, not the top bar, so the top bar doesn't move",
-          ev("(() => { setOutput(true); updateBridgeUI(); const p = document.querySelector('#bridgePill'), r = !!p.closest('.statusbar') && !p.closest('.topbar') && !p.hidden && /pkt\\/s/.test(p.textContent); setOutput(false); updateBridgeUI(); return r; })()"))
+          ev("(() => { setOutput(true); updateBridgeUI(); const p = document.querySelector('#bridgePill'), r = !!p.closest('.statusbar') && !p.closest('.topbar') && !p.hidden && /pkt\\/s/.test(p.textContent); return r; })()"))
     check("Art-Net is on from the start, with no button in the top bar; Blackout is a red icon", ev("ui.outputOn") and pg.locator("#btnOutput").count() == 0
           and css("#btnBlackout", "color") == "rgb(255, 59, 59)" and pg.locator("#btnBlackout svg").count() == 1)
     ev("(() => { ui.rightTab = 'settings'; renderRight(); })()"); settle(0.3)
@@ -117,8 +117,23 @@ try:
     mine = dict(q); mine["groups"] = [dict(q["groups"][0], tag="#5ba59b")] + q["groups"][1:]
     ev("p => olm.loadProject(p)", mine); settle(0.3)
     check("colours chosen in nouPix are kept", ev("project.groups[0].tag") == "#5ba59b", (mine["version"], ev("project.groups.map(g => g.tag)")))
+    # where the browser can't write files, each save downloads a copy, named .noupix
+    ev("(() => { window._picker = window.showSaveFilePicker; window.showSaveFilePicker = undefined; })()")
     with pg.expect_download() as dl: ev("saveProjectFile()")
-    check("projects are saved as .noupix.json", dl.value.suggested_filename.endswith(".noupix.json"), dl.value.suggested_filename)
+    check("projects are saved as .noupix", dl.value.suggested_filename.endswith(".noupix") and not dl.value.suggested_filename.endswith(".json"), dl.value.suggested_filename)
+    # where it can: the first Save asks for the file, the next ones write over it, Save as asks again; autosave follows
+    ev("""(() => { window._asked = 0; window._written = [];
+      const handle = name => ({ name, queryPermission: async () => 'granted', createWritable: async () => ({ write: async t => window._written.push(t), close: async () => {} }) });
+      window.showSaveFilePicker = async o => { window._asked++; return handle(o.suggestedName); }; projectFile = null; })()""")
+    ev("saveProjectFile()"); settle(0.3); ev("saveProjectFile()"); settle(0.3)
+    check("Save asks where only the first time, then writes over the same file", ev("window._asked") == 1 and ev("window._written.length") == 2 and ev("projectFile.name").endswith(".noupix"), (ev("window._asked"), ev("window._written.length")))
+    ev("saveProjectFile(true)"); settle(0.3)
+    check("Save as asks again", ev("window._asked") == 2 and ev("window._written.length") == 3)
+    ev("(() => { setAutosave(true); project.name = 'Autosaved'; commit(); })()"); settle(2.6)
+    check("with autosave on, a change reaches the file by itself", ev("window._asked") == 2 and "Autosaved" in ev("window._written.at(-1)"), ev("window._written.length"))
+    ev("(() => { setAutosave(false); const n = window._written.length; project.name = 'Not autosaved'; commit(); window._n = n; })()"); settle(2.6)
+    check("and with it off, it doesn't", ev("window._written.length === window._n"))
+    ev("(() => { window.showSaveFilePicker = window._picker; projectFile = null; })()")
 
     # ---------- sliders: filled up to their value
     fill = lambda sel: ev(f"document.querySelector({json.dumps(sel)}).style.getPropertyValue('--p')")

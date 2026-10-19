@@ -1,6 +1,6 @@
 # nouPix: detailed reference
 
-Everything nouPix 1.0.0 does, in detail (the version shows next to the app name, top left). Up to 0.9 it was called openLedMapper. This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything nouPix 1.0.1 does, in detail (the version shows next to the app name, top left). Up to 0.9 it was called openLedMapper. This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -20,7 +20,7 @@ The apps aren't signed yet, so the first time you open one:
 
 The app is one window with the Art-Net bridge inside it. It keeps running when you minimise or cover it. Closing the window quits it (it asks first while Art-Net is on), and opening the app again while it runs brings its window to the front. The bridge's messages go to `~/.noupix/noupix.log` (on Windows, `C:\Users\<you>\.noupix\noupix.log`); **Help → Show log file** opens its folder. To send from a specific network card, start the app with `--bind-ip=2.0.0.10` (the other bridge options work the same way: `--port=`, `--bind-port=`, `--host=`).
 
-The app keeps its own copy of the current project, separate from the browser window used when running from the source. The openLedMapper app's copy carries over to nouPix the first time it starts. To move a project between them, use **Project → Save project file** in one and open that file in the other.
+The app keeps its own copy of the current project, separate from the browser window used when running from the source. The openLedMapper app's copy carries over to nouPix the first time it starts. To move a project between them, use **Project → Save** in one and open that file in the other.
 
 **From the source (any system, including Linux).** You need Python 3.8 or newer. Nothing else to install.
 
@@ -357,7 +357,7 @@ A control can drive several things: to learn the same control onto a second thin
 ## Files
 
 - The current project is kept in the browser automatically.
-- **Project → Save project file** writes a `.noupix.json` you can open again later or on another computer. Files from older versions (`.openledmapper.json` files from openLedMapper and `.weft.json` files from Weft too), or edited by hand, open with defaults for anything missing or unreadable.
+- **Project → Save** (`Ctrl S`, `⌘S` on a Mac) writes the project to a `.noupix` file you can open again later or on another computer. The first time it asks where; after that it writes over the same file without asking. **Save as…** (`Ctrl Shift S`) always asks, for a copy under another name. **Project → Autosave** (on or off, kept on this computer) writes every change to that file a moment later. Saving over the same file, and autosave, work in the app and in Chrome or Edge; other browsers download a copy each time. A `.noupix` file is JSON inside: older `.json` and `.noupix.json` files open too. Files from older versions (`.openledmapper.json` files from openLedMapper and `.weft.json` files from Weft too), or edited by hand, open with defaults for anything missing or unreadable.
 - **Project → Export patch list** writes a CSV with every fixture's controller, output and start/end universe and channel, for the install crew.
 - Image and video files are not stored in projects. Browsers don't keep file access between sessions, so re-link them from the Content tab.
 

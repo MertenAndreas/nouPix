@@ -1,4 +1,4 @@
-# nouPix 1.0.0
+# nouPix 1.0.1
 
 <img src="icons/noupix-256.png" alt="" width="96" align="right">
 
@@ -13,6 +13,7 @@ Get the app from the [Releases](https://github.com/nouled-studio/openLEDmapper/r
 | Windows | `…-windows-setup.exe` (installs it and adds it to the Start menu) | Windows 10 or newer |
 | Mac with Apple silicon (M1 or newer) | `…-macos-apple-silicon.dmg` | macOS 12 or newer |
 | Mac with an Intel processor | `…-macos-intel.dmg` | macOS 12 or newer |
+| Linux (or any computer) | no app: run it from the source, `python3 noupix.py` ([below](#run-from-the-source-linux-raspberry-pi-any-computer)) | Python 3.8 or newer, and Chrome, Edge or Chromium |
 
 On a Mac, open the `.dmg` and drag nouPix onto Applications.
 

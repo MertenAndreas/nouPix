@@ -115,7 +115,7 @@ Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimatio
   `tag` on a scene) is the default: nothing gets one unless the user gives it. Fixtures show their group's (`fxTag`);
   a zone's is its scenes' edge, a scene's its corner mark (`--mark`; red without one), dim and bright while it plays. `hydrate` drops fixtures' colours, and
   the others from files before version 4 (they were given automatically then).
-- Files: `{ format: 'noupix-project', version: 4, … }`, saved as `.noupix.json`. `hydrate` (project-io.js) repairs
+- Files: `{ format: 'noupix-project', version: 4, … }`, saved as `.noupix` (JSON; `.json` opens too). Save writes over the file opened or saved (`projectFile`, where the browser lets pages write files), Save as asks, and `ui.autosave` writes every change to it. `hydrate` (project-io.js) repairs
   anything opened (older versions, openLedMapper and Weft files, hand edits) so the rest of the code can trust the
   project. A new field gets its default there.
 - `ui` holds view and selection state; the part listed in `UI_PREFS` is kept between sessions (`savePrefs`, under
@@ -209,7 +209,7 @@ fold, the operator's lock), MIDI onto an effect's controls (learn, pickup and ju
 ticks, events, the MIDI window's list) and Follow for a fader learnt onto something on or off. `test_look.py` checks the look and the name: the fonts served and nothing fetched from outside, black by default,
 white from the top bar and Settings (kept, from the start, the windows and the stage following), colours only on
 groups and zones (none at first, shown by their fixtures and scenes, undo), files (old colours dropped, the old
-format opened, `.noupix.json`), the sliders' fill, the scene tiles' cuts, openLedMapper's stored data carried over.
+format opened, `.noupix`, Save, Save as and autosave), the sliders' fill, the scene tiles' cuts, openLedMapper's stored data carried over.
 `test_profile_move.py` checks the window profile moving from `~/.openledmapper` or `~/.weft` to `~/.noupix`.
 `test_scenes_window.py` checks the Scenes window (opening, playing, levels both ways, menus,
 dialogs and messages there, keys, MIDI learn and tags, closing every way). `test_bay.py` checks the patch bay

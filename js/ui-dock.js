@@ -90,7 +90,7 @@ function openScenesWindow() {
     if (e.key === 'Escape' && midi.learn.on) midiSetLearn(false);
     else if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
     else if (mod && k === 'y') { e.preventDefault(); redo(); }
-    else if (mod && k === 's') { e.preventDefault(); saveProjectFile(); }
+    else if (mod && k === 's') { e.preventDefault(); saveProjectFile(e.shiftKey); }
     else if (!mod && digit) { const z = selZone(), sc = z && z.scenes[+digit[1] - 1]; if (sc) goScene(z, sc, e.shiftKey); }
     else if (!mod && k === 'b') toggleBlackout();
   });

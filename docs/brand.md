@@ -86,7 +86,7 @@ eight choices are saturated, and none is red or yellow: `#2f7bff` `#00c2ff` `#00
 ## 6. The name
 
 **nouPix**: lowercase n, capital P. It is the app's name everywhere: the windows, the bridge (`noupix.py`,
-`noupix.spec`), the desktop app (`studio.nouled.noupix`), the phone app, files (`.noupix.json`, format
+`noupix.spec`), the desktop app (`studio.nouled.noupix`), the phone app, files (`.noupix`, format
 `noupix-project`), the browser's storage (`noupix.*`) and the settings folder (`~/.noupix`). What openLedMapper kept
 carries over once (its files open, its storage and window profile move, the desktop app's data folder is renamed).
 `window.olm` and the popups' window names (`olm-midi`, `olm-scenes`) are internal and stay.

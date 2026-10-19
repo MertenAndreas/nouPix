@@ -28,6 +28,8 @@ with sync_playwright() as pw:
     br = pw.chromium.launch(args=CHROME_ARGS + ["--autoplay-policy=no-user-gesture-required"]); pg = br.new_page(viewport={"width": 1440, "height": 900})
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: errs.append(m.text) if app_error(m) else None)
     pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_function("window.olm && olm.bridge.connected")
+    # these check playback timing closely: Art-Net, on from the start, is switched off so sending doesn't load the machine
+    pg.wait_for_function("ui.outputOn"); pg.evaluate("setOutput(false)")
     ev = pg.evaluate
     toasts = lambda: ev("[...document.querySelectorAll('.toast')].map(t => t.textContent).join(' | ')")
     nsrc = lambda: ev("olm.project.sources.length")

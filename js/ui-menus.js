@@ -310,11 +310,13 @@ function nodeMenu(e, n) {
 function projectMenu(anchor) {
   const m = !mappingLocked();   // an operator can save a copy, not replace the project or its mapping
   menu(anchor, [
-    m && ['New empty project', () => { loadProject(blankProject('Untitled')); toast('New project'); }],
-    m && ['Load demo layout', () => { loadProject(demoProject()); toast('Demo layout loaded'); }],
+    m && ['New empty project', () => { loadProject(blankProject('Untitled')); projectFile = null; toast('New project'); }],
+    m && ['Load demo layout', () => { loadProject(demoProject()); projectFile = null; toast('Demo layout loaded'); }],
     '-',
-    m && ['Open project…', () => $('#fileOpen').click()],
-    ['Save project file  (Ctrl S)', saveProjectFile],
+    m && ['Open project…', openProjectDialog],
+    ['Save', () => saveProjectFile(), { key: MOD + 'S' }],
+    ['Save as…', () => saveProjectFile(true), { key: MOD + '⇧S' }],
+    window.showSaveFilePicker && !REMOTE_CLIENT && [ui.autosave ? 'Autosave: on' : 'Autosave: off', () => setAutosave(!ui.autosave), { title: 'Every change goes to the project file a moment later' }],
     ['Export patch list (CSV)', exportCSV],
     '-',
     m && ['Import SVG…', () => $('#fileSvg').click()],

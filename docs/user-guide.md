@@ -1,6 +1,6 @@
 # nouPix: detailed reference
 
-Everything nouPix 1.0.0 does, in detail (the version shows next to the app name, top left). Up to 0.9 it was called openLedMapper. This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything nouPix 1.0.1 does, in detail (the version shows next to the app name, top left). Up to 0.9 it was called openLedMapper. This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -20,7 +20,7 @@ The apps aren't signed yet, so the first time you open one:
 
 The app is one window with the Art-Net bridge inside it. It keeps running when you minimise or cover it. Closing the window quits it (it asks first while Art-Net is on), and opening the app again while it runs brings its window to the front. The bridge's messages go to `~/.noupix/noupix.log` (on Windows, `C:\Users\<you>\.noupix\noupix.log`); **Help → Show log file** opens its folder. To send from a specific network card, start the app with `--bind-ip=2.0.0.10` (the other bridge options work the same way: `--port=`, `--bind-port=`, `--host=`).
 
-The app keeps its own copy of the current project, separate from the browser window used when running from the source. The openLedMapper app's copy carries over to nouPix the first time it starts. To move a project between them, use **Project → Save project file** in one and open that file in the other.
+The app keeps its own copy of the current project, separate from the browser window used when running from the source. The openLedMapper app's copy carries over to nouPix the first time it starts. To move a project between them, use **Project → Save** in one and open that file in the other.
 
 **From the source (any system, including Linux).** You need Python 3.8 or newer. Nothing else to install.
 
@@ -52,7 +52,7 @@ The interface is black, so the light on the stage is the brightest thing on scre
 3. **Patch.** In the Patch panel, add a controller: IP address, number of outputs, universes per output and first universe. Then drag fixtures from the list onto an output. Fixtures chained on one output are addressed in order, automatically.
 4. **Content.** Click a generator in Sources to play it in the selected layer of the selected zone. Add zones, layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
 5. **Scenes.** When a zone's look is right, press **+ Store** on its row in the Scenes panel. Put scenes in a **playlist** to have the zone play them one after another by itself.
-6. **Art-Net ON.** The status bar's right end then shows how many packets go out each second, or what is wrong.
+6. **Art-Net** goes out from the start, every time nouPix opens. The status bar's right end shows how many packets go out each second, or what is wrong. **Settings → Art-Net connection → Send Art-Net** switches it off (for example while another console drives the lights) and on again. **Blackout** (the slashed sun at the right of the top bar, or `B`) turns every light off at once; it breathes red until you press it again.
 
 **Ovals.** A circle stretches into an oval: drag the side handles of its frame on the stage, or set **Radius X** and **Y** in the Inspector (**Make it round** brings it back). Its pixels are spaced evenly along the curve, as on a real strip. Ellipses in an imported SVG become ovals.
 
@@ -71,6 +71,8 @@ With **Wiring** on, the stage also draws the data cable between fixtures chained
 **Resize** several fixtures, a whole group, or one circle, oval or path (pen curves included): drag one of the eight square handles on the frame around them. Each stretches from the opposite side, along the frame (so a turned group stretches along its own length); **Shift** keeps the proportions. **Inspector → Arrange → Size** sets the width and height exactly, from the middle, with **Keep proportions** on by default. Pixel counts stay as they are: the pixels spread out or move closer. A matrix or oval stretches along its own sides, and a circle stretched one way becomes an oval.
 
 **Ctrl D** duplicates. Copies are numbered on from the original: Matrix 1 becomes Matrix 2, Matrix 10 becomes Matrix 11, skipping numbers already used; a name without a number gets 2 (Wave → Wave 2). The same goes for pasted fixtures and duplicated groups, zones and scenes. When the originals are on one output, the copies go on that output after the fixtures already there, while they fit; a copy that doesn't fit stays unpatched. When the originals are spread over several outputs (for example a group across two outputs), the copies stay unpatched: right-click → **Patch to**.
+
+The stage bar shows the stage's options as icons: content (with its opacity), guide image, grid, snap, labels, wiring and zones; rest the mouse on one to see what it does. The guide image's opacity is in **Settings → Stage**, next to **Load guide image…**. The status bar keeps to the frame rate, the pixels and universes, what isn't patched yet, and the pixel under the mouse.
 
 The Inspector / Content / Settings panel on the right can be hidden for a bigger stage: **»** in its tabs, the panel button at the right of the stage bar, or `H`. Double-clicking a fixture to rename it brings it back.
 
@@ -203,7 +205,7 @@ A playlist plays some of a zone's scenes one after another, by itself: Evening, 
 
 - The nouPix window keeps rendering when minimised or covered (see Start). While Art-Net is on, the page also holds a browser lock that stops Chrome from freezing it, and videos the browser pauses in the background are restarted.
 - If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal (or the app's log file) shows when that starts and when frames come back.
-- Only one nouPix window sends at a time. Switching Art-Net on in a second window switches it off in the first.
+- Only one nouPix window sends at a time. A second nouPix window opened on this computer starts sending and the first one stops.
 - If the graphics driver resets (after a driver update, or when a laptop switches graphics chips), the output holds its last colours until the browser restores the GPU, then nouPix carries on by itself.
 - On very large projects, or with a slow GPU, the stage preview is redrawn less often than the output is sent, so the Art-Net frame rate holds. The status bar shows the output frame rate.
 
@@ -355,7 +357,7 @@ A control can drive several things: to learn the same control onto a second thin
 ## Files
 
 - The current project is kept in the browser automatically.
-- **Project → Save project file** writes a `.noupix.json` you can open again later or on another computer. Files from older versions (`.openledmapper.json` files from openLedMapper and `.weft.json` files from Weft too), or edited by hand, open with defaults for anything missing or unreadable.
+- **Project → Save** (`Ctrl S`, `⌘S` on a Mac) writes the project to a `.noupix` file you can open again later or on another computer. The first time it asks where; after that it writes over the same file without asking. **Save as…** (`Ctrl Shift S`) always asks, for a copy under another name. **Project → Autosave** (on or off, kept on this computer) writes every change to that file a moment later. Saving over the same file, and autosave, work in the app and in Chrome or Edge; other browsers download a copy each time. A `.noupix` file is JSON inside: older `.json` and `.noupix.json` files open too. Files from older versions (`.openledmapper.json` files from openLedMapper and `.weft.json` files from Weft too), or edited by hand, open with defaults for anything missing or unreadable.
 - **Project → Export patch list** writes a CSV with every fixture's controller, output and start/end universe and channel, for the install crew.
 - Image and video files are not stored in projects. Browsers don't keep file access between sessions, so re-link them from the Content tab.
 

@@ -33,8 +33,7 @@
       <button class="btn" id="btnHlMode" type="button" title="Highlight mode" aria-label="Highlight mode" aria-haspopup="menu">▾</button>
     </div>
     <div class="master"><label for="master">Master</label><span class="mslot" data-midi="master"><input id="master" type="range" min="0" max="1" step="0.01"><i class="fline" hidden></i><span class="ftag" hidden></span></span><span class="mono" id="masterVal">100%</span></div>
-    <button class="btn btn-bo" id="btnBlackout" type="button" title="Blackout (B)" data-midi="blackout"><span class="ftag" hidden></span>Blackout</button>
-    <button class="btn btn-out" id="btnOutput" type="button" title="Send Art-Net">Art-Net OFF</button>
+    <button class="btn btn-bo icon" id="btnBlackout" type="button" data-tip="Blackout · B|Every light off at once, whatever plays. Again to bring them back." aria-label="Blackout" aria-pressed="false" data-midi="blackout"><span class="ftag" hidden></span><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2"/><path d="M2.5 2.5l13 13" stroke-width="1.7"/></svg></button>
   </header>
 
   <div class="workspace">
@@ -58,18 +57,18 @@
     <main class="center">
       <div class="stagewrap">
         <div class="stagebar">
-          <label><input type="checkbox" id="vContent"> Content</label>
-          <input type="range" id="vContentOp" min="0" max="1" step="0.05" aria-label="Content opacity">
-          <label><input type="checkbox" id="vGuide"> Guide</label>
-          <input type="range" id="vGuideOp" min="0" max="1" step="0.05" aria-label="Guide opacity">
-          <label><input type="checkbox" id="vGrid"> Grid</label>
-          <label><input type="checkbox" id="vSnap"> Snap</label>
-          <label><input type="checkbox" id="vLabels"> Labels</label>
-          <label><input type="checkbox" id="vWiring"> Wiring</label>
-          <label><input type="checkbox" id="vZones"> Zones</label>
+          <label class="vt" data-tip="Content|What plays, shown behind the fixtures. Off: only the LEDs’ light. The slider mixes between the two."><input type="checkbox" id="vContent" aria-label="Content"><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="13" height="13"/><path d="M9 2.5v13"/><path d="M2.5 12.5l2.5-3 2 2 2-2.5"/><circle cx="5.6" cy="5.8" r="1" fill="currentColor" stroke="none"/><g fill="currentColor" stroke="none"><circle cx="12.25" cy="5.5" r="1.25"/><circle cx="12.25" cy="9" r="1.25"/><circle cx="12.25" cy="12.5" r="1.25"/></g></svg></label>
+          <input type="range" id="vContentOp" min="0" max="1" step="0.05" aria-label="Content opacity" data-tip="Content opacity|How strongly the content shows behind the fixtures.">
+          <span class="vsep"></span>
+          <label class="vt" data-tip="Guide|Your layout image over the canvas, to trace fixtures on. Load it and set its opacity in Settings → Stage."><input type="checkbox" id="vGuide" aria-label="Guide image"><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="13" height="13" stroke-dasharray="2 1.6"/><path d="M5.5 12.5l7-7M10 5.5h2.5V8"/></svg></label>
+          <label class="vt" data-tip="Grid|Lines over the canvas. Their spacing is in Settings → Stage."><input type="checkbox" id="vGrid" aria-label="Grid"><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 6.5h13M2.5 11.5h13M6.5 2.5v13M11.5 2.5v13"/></svg></label>
+          <label class="vt" data-tip="Snap · G|Fixtures and points jump to the grid as you move them. Hold Alt to place them freely."><input type="checkbox" id="vSnap" aria-label="Snap to grid"><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4.5 4.5v5a4.5 4.5 0 009 0v-5"/><path d="M3.5 2.5h3v2.5h-3zM11.5 2.5h3v2.5h-3z" fill="currentColor" stroke="none"/></svg></label>
+          <label class="vt" data-tip="Labels|Each fixture’s name on the stage."><input type="checkbox" id="vLabels" aria-label="Labels"><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 4.5h8.5l4.5 4.5-4.5 4.5H2.5z"/><circle cx="6" cy="9" r="1.2" fill="currentColor" stroke="none"/></svg></label>
+          <label class="vt" data-tip="Wiring|Where each fixture’s data starts, which way it runs, and the cable between fixtures on one output."><input type="checkbox" id="vWiring" aria-label="Wiring"><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.5 14.5L8 10h3l3.5-5.5"/><path d="M11.5 4.5h3v3"/><circle cx="3.5" cy="14.5" r="1.6" fill="currentColor" stroke="none"/></svg></label>
+          <label class="vt" data-tip="Zones|The zones’ outlines and names. The Zone tool (Z) shows them anyway."><input type="checkbox" id="vZones" aria-label="Zones"><svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="9" height="8" stroke-dasharray="2 1.6"/><rect x="6.5" y="7.5" width="9" height="8"/></svg></label>
           <span class="zoom" id="zoomLbl">100%</span>
-          <button class="btn sm" id="btnFit" type="button" title="Fit (F)">Fit</button>
-          <button class="btn sm icon" id="btnRight" type="button" title="Show or hide the Inspector / Content / Settings panel (H)" aria-label="Show or hide the right panel"></button>
+          <button class="btn sm" id="btnFit" type="button" data-tip="Fit · F|Shows the whole canvas.">Fit</button>
+          <button class="btn sm icon" id="btnRight" type="button" data-tip="Side panel · H|Shows or hides the Inspector, Content and Settings." aria-label="Show or hide the right panel"></button>
         </div>
         <div class="stage" id="stage">
           <canvas id="view"></canvas>
@@ -117,7 +116,7 @@
   <footer class="statusbar"><span id="status"></span><span class="pill" id="bridgePill" title="" hidden><span class="dot"></span><span id="bridgeText"></span></span></footer>
 </div>
 <div class="toasts" id="toasts"></div>
-<input type="file" id="fileOpen" class="hide-file" accept=".json,application/json" tabindex="-1" aria-hidden="true">
+<input type="file" id="fileOpen" class="hide-file" accept=".noupix,.json,application/json" tabindex="-1" aria-hidden="true">
 <input type="file" id="fileIsf" class="hide-file" accept=".fs,.glsl,.txt" tabindex="-1" aria-hidden="true">
 <input type="file" id="fileMedia" class="hide-file" accept=".mp4,.m4v,.mov,.webm,.mkv,.ogv,.png,.jpg,.jpeg,.gif,.webp,.avif,.bmp,image/*,video/*" tabindex="-1" aria-hidden="true">
 <input type="file" id="fileSvg" class="hide-file" accept=".svg,image/svg+xml" tabindex="-1" aria-hidden="true">

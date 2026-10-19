@@ -170,7 +170,7 @@ function startClock() {
 }
 
 /* ---------- bridge (WebSocket to noupix.py) ---------- */
-const bridge = { ws: null, connected: false, state: 'idle', hello: null, stats: null, nodes: new Map(), retry: null, lastError: '' };
+const bridge = { ws: null, connected: false, started: false, state: 'idle', hello: null, stats: null, nodes: new Map(), retry: null, lastError: '' };
 function bridgeUrl() {
   if (project.settings.bridgeUrl) return project.settings.bridgeUrl.trim();
   if (/^https?:$/.test(location.protocol) && /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(location.hostname)) return `ws://${location.host}/ws`;
@@ -191,7 +191,11 @@ function connectBridge() {
   try { ws = new WebSocket(url); } catch (e) { bridge.state = 'none'; updateBridgeUI(); return; }
   ws.binaryType = 'arraybuffer';
   bridge.ws = ws;
-  ws.onopen = () => { bridge.connected = true; bridge.state = 'ok'; bridgeSend({ t: 'output', on: ui.outputOn }); updateBridgeUI(); };
+  ws.onopen = () => {
+    bridge.connected = true; bridge.state = 'ok'; bridgeSend({ t: 'output', on: ui.outputOn }); updateBridgeUI();
+    // Art-Net is on from the start: the first time this page reaches its bridge, it starts sending
+    if (!bridge.started && !REMOTE_CLIENT) { bridge.started = true; setOutput(true); }
+  };
   ws.onmessage = ev => {
     if (typeof ev.data !== 'string') return;
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }

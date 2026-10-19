@@ -1,4 +1,4 @@
-# nouPix 1.0.0
+# nouPix 1.0.1
 
 <img src="icons/noupix-256.png" alt="" width="96" align="right">
 
@@ -13,6 +13,7 @@ Get the app from the [Releases](https://github.com/nouled-studio/openLEDmapper/r
 | Windows | `…-windows-setup.exe` (installs it and adds it to the Start menu) | Windows 10 or newer |
 | Mac with Apple silicon (M1 or newer) | `…-macos-apple-silicon.dmg` | macOS 12 or newer |
 | Mac with an Intel processor | `…-macos-intel.dmg` | macOS 12 or newer |
+| Linux (or any computer) | no app: run it from the source, `python3 noupix.py` ([below](#run-from-the-source-linux-raspberry-pi-any-computer)) | Python 3.8 or newer, and Chrome, Edge or Chromium |
 
 On a Mac, open the `.dmg` and drag nouPix onto Applications.
 
@@ -39,7 +40,7 @@ On Windows or macOS you can also double-click `start-noupix.bat` or `start-noupi
 2. **Patch:** add your controller in the Patch panel (IP, outputs, universes per output), or find it with **Nodes → Discover**. Drag fixtures onto its outputs; ↑ ↓ (or Alt ↑ ↓) change their order, which sets their addresses.
 3. **Content:** click a source to play it. Use zones and layers (Content tab) to play different things on different parts.
 4. **Scenes:** press **+ Store** to save a look, and click it to fade back to it. Drag its fade time to change it. The playlist button next to **+ Store** makes a playlist of scenes that plays by itself.
-5. Press **Art-Net ON**.
+5. Art-Net goes out from the start; the status bar shows it. **Settings → Art-Net connection** switches it off.
 
 Right-click anything for its options.
 

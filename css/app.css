@@ -135,7 +135,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .spacer { flex: 1; }
 .pill { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 0; background: var(--bg2); border: 1px solid var(--line2); color: var(--text2); white-space: nowrap; font-size: 12px; min-width: 0; flex-shrink: 0; }
 .pill > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-#btnBlackout, #btnOutput { flex: none; }  /* the output controls always stay on screen; the rest gives way */
+#btnBlackout { flex: none; }  /* Blackout always stays on screen; the rest gives way */
 @media (max-width: 1180px) { .brand-name { display: none; } .topbar .pill { flex-shrink: 1; } }
 .pill[hidden] { display: none; }
 .pill .dot { width: 6px; height: 6px; background: var(--muted); flex: none; }
@@ -168,11 +168,11 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .btn.grpbtn.locked { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
 .btn.rev.on { background: var(--sel-soft); border-color: var(--accent); color: var(--accent); }
 .btn svg { width: 15px; height: 15px; flex: none; }
-.btn-out { min-width: 118px; letter-spacing: .14em; }
-/* Art-Net on: lit, the one glow in the app */
-.btn-out.on { background: var(--live-soft); border-color: var(--live); color: var(--live); box-shadow: 0 0 14px color-mix(in srgb, var(--live) 16%, transparent); }
 .btn-bo { color: var(--danger); }
-.btn-bo.on { background: var(--danger); border-color: var(--danger); color: var(--accent-ink); }
+.btn-bo.on { border-color: var(--danger); color: var(--accent-ink); animation: bobreathe 1.8s ease-in-out infinite; }
+/* while blacked out, the button breathes red so nobody forgets it */
+@keyframes bobreathe { 0%, 100% { background: var(--danger); } 50% { background: color-mix(in srgb, var(--danger) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .btn-bo.on { animation: none; background: var(--danger); } }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- panels ---------- */
@@ -240,11 +240,24 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 
 /* ---------- stage ---------- */
 .stagewrap { position: relative; display: grid; grid-template-rows: 32px minmax(0, 1fr); min-height: 0; background: var(--bg0); }
-.stagebar { display: flex; align-items: center; gap: 12px; padding: 0 10px 0 52px; border-bottom: 1px solid var(--line); background: var(--bg1); font-size: 12px; color: var(--text2); overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: none; }
+.stagebar { display: flex; align-items: center; gap: 4px; padding: 0 10px 0 52px; border-bottom: 1px solid var(--line); background: var(--bg1); font-size: 12px; color: var(--text2); overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: none; }
 /* on a narrow window it scrolls sideways (trackpad, Shift + wheel) without a scroll bar in the way */
 .stagebar::-webkit-scrollbar { display: none; }
 .stagebar label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-.stagebar input[type=range] { width: 70px; }
+/* the view's toggles: icons, grey while off, white on a grey square while on; the checkbox stays, hidden, for keys
+   and screen readers */
+.stagebar .vt { position: relative; justify-content: center; width: 28px; height: 26px; color: var(--muted); border: 1px solid transparent; }
+.stagebar .vt input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.stagebar .vt svg { width: 16px; height: 16px; }
+.stagebar .vt:hover { color: var(--text2); background: var(--bg3); }
+.stagebar .vt:has(input:checked) { color: var(--text); background: var(--bg3); border-color: var(--line2); }
+.stagebar .vt:has(input:focus-visible) { outline: 1px solid var(--accent); outline-offset: 1px; }
+.stagebar .vsep { width: 1px; height: 16px; background: var(--line2); }
+/* a short explanation under what the mouse rests on (initTips in ui-forms.js) */
+.tip { position: fixed; z-index: 1000; max-width: 240px; padding: 6px 9px 7px; background: var(--bg3); border: 1px solid var(--line2); color: var(--text2); font: 300 12px/1.35 var(--ui); pointer-events: none; }
+.tip b { display: block; margin-bottom: 2px; font: 600 10px var(--label); letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.tip[hidden] { display: none; }
+.stagebar input[type=range] { width: 70px; margin: 0 8px 0 4px; }
 .stagebar .zoom { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .stage { position: relative; min-height: 0; overflow: hidden; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

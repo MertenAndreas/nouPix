@@ -249,6 +249,7 @@ const saveSoon = debounce(() => {
     } else if (!g) store.remove('noupix.guide');
   }
   store.set('noupix.project', serialize(false));
+  autosaveFile();
 }, 400);
 function commit() {
   pushHistory();
@@ -272,18 +273,54 @@ function loadProject(p, { resetView = true } = {}) {
 }
 
 /* ---------- files ---------- */
-function saveProjectFile() {
-  const name = (project.name || 'noupix-project').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'noupix-project';
-  download(name + '.noupix.json', JSON.stringify(JSON.parse(serialize(true)), null, 1));
-  toast('Project saved as ' + name + '.noupix.json');
+// A project file is name.noupix (JSON inside; .json files open too). Where the browser lets the page write files
+// (Chrome, Edge, the desktop app), the file opened or saved is remembered: Save writes over it without asking, Save
+// as asks, and with autosave on every change goes to it a moment later. Elsewhere each save downloads a copy.
+let projectFile = null;
+const PROJECT_TYPES = [{ description: 'nouPix project', accept: { 'application/json': ['.noupix', '.json'] } }];
+const projectText = () => JSON.stringify(JSON.parse(serialize(true)), null, 1);
+const fileName = () => ((project.name || 'noupix-project').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'noupix-project') + '.noupix';
+async function writeProjectFile(handle, ask) {
+  if (handle.queryPermission && (await handle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+    if (!ask || (await handle.requestPermission({ mode: 'readwrite' })) !== 'granted') return false;
+  }
+  const w = await handle.createWritable();
+  await w.write(projectText()); await w.close();
+  return true;
+}
+async function saveProjectFile(as = false) {
+  if (!window.showSaveFilePicker) { download(fileName(), projectText()); toast('Project saved as ' + fileName()); return; }
+  try {
+    if (as || !projectFile) projectFile = await showSaveFilePicker({ suggestedName: projectFile ? projectFile.name : fileName(), types: PROJECT_TYPES });
+    if (await writeProjectFile(projectFile, true)) toast('Saved ' + projectFile.name);
+  } catch (e) { if (e.name !== 'AbortError') toast('Could not save: ' + e.message, 'err'); }
+}
+// With autosave on, a change reaches the file a moment after the last one; quietly, and only once it may be written
+const autosaveFile = debounce(() => {
+  if (ui.autosave && projectFile && !REMOTE_CLIENT) writeProjectFile(projectFile, false).catch(() => {});
+}, 1500);
+function setAutosave(on) {
+  ui.autosave = on; savePrefs();
+  toast(on ? (projectFile ? 'Autosave on: changes go to ' + projectFile.name : 'Autosave on: save the project once to choose its file') : 'Autosave off');
+  if (on && !projectFile) saveProjectFile();
+  else autosaveFile();
+}
+async function openProjectDialog() {
+  if (!window.showOpenFilePicker) { $('#fileOpen').click(); return; }
+  try {
+    const [handle] = await showOpenFilePicker({ types: PROJECT_TYPES });
+    if (await openProjectFile(await handle.getFile())) projectFile = handle;
+  } catch (e) { if (e.name !== 'AbortError') toast('Could not open: ' + e.message, 'err'); }
 }
 async function openProjectFile(file) {
   try {
     const p = JSON.parse(await file.text());
     if (!p || !Array.isArray(p.fixtures)) throw new Error('not a nouPix project');
     loadProject(p);
+    projectFile = null;   // opened without a handle (dropped, or picked the old way): the next Save asks where
     toast(`Opened ${project.name}: ${project.fixtures.length} fixtures`);
-  } catch (e) { toast('Could not open that file: ' + e.message, 'err'); }
+    return true;
+  } catch (e) { toast('Could not open that file: ' + e.message, 'err'); return false; }
 }
 function exportCSV() {
   ensurePatch();

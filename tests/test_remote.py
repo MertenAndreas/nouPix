@@ -221,8 +221,9 @@ try:
     check("a change on the main computer reaches the programmer", until(pr, "olm.project.fixtures[1].name === 'Renamed here'"))
     pr.click("#btnAddSrc"); items = pr.locator(".menu button").evaluate_all("l => l.map(b => [b.textContent, b.disabled])"); pr.keyboard.press("Escape")
     check("videos and screen capture are added on the main computer only", any("ISF" in t and not d for t, d in items) and all(d for t, d in items if "video" in t or "Screen" in t), items)
-    P_("setOutput(true)"); time.sleep(0.6)
+    H("setOutput(false)"); P_("setOutput(true)"); time.sleep(0.6)   # the main window sends from the start: off first
     check("a device can't switch Art-Net on", not H("ui.outputOn"))
+    H("setOutput(true)")
 
     # ---------- everyone at once
     pr2 = pctx.new_page(); watch(pr2, "programmer2")

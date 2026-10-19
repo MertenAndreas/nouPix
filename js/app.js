@@ -35,8 +35,7 @@ function setTheme(t) {
   if (ui.rightTab === 'settings') renderRight();
 }
 function updateUndoButtons() { $('#btnUndo').disabled = hist.idx <= 0; $('#btnRedo').disabled = hist.idx >= hist.stack.length - 1; }
-// The status pill, at the right end of the status bar, only shows what matters: Art-Net going out, or something
-// wrong. With everything fine and Art-Net off it is hidden.
+// The status pill, at the right end of the status bar: Art-Net going out, switched off, or something wrong.
 function updateBridgeUI() {
   const pill = $('#bridgePill'), txt = $('#bridgeText');
   pill.className = 'pill';
@@ -50,12 +49,10 @@ function updateBridgeUI() {
   }
   else if (st && st.errors && st.lastError) { pill.classList.add('err'); txt.textContent = ui.outputOn ? `Send error · ${fmtN(st.pps)} pkt/s` : 'Send error'; pill.title = 'Last send error: ' + st.lastError + (from ? '\n' + from : ''); }
   else if (ui.outputOn) { pill.classList.add('ok'); txt.textContent = `Sending · ${fmtN(st ? st.pps : 0)} pkt/s`; pill.title = 'Art-Net packets sent per second. ' + from; }
-  else show = false;
+  else { txt.textContent = 'Art-Net off'; pill.title = 'Switched off in Settings → Art-Net connection.'; }
   pill.hidden = !show;
-  const ob = $('#btnOutput');
-  ob.classList.toggle('on', ui.outputOn);
-  ob.textContent = ui.outputOn ? 'Art-Net ON' : 'Art-Net OFF';
-  ob.setAttribute('aria-pressed', ui.outputOn);
+  const tick = $('#outputOn');   // Settings → Art-Net connection, when it is open
+  if (tick) tick.checked = ui.outputOn;
 }
 function setOutput(on) {
   if (REMOTE_CLIENT) return;   // only the main computer sends Art-Net
@@ -79,14 +76,10 @@ function keepAwake(on) {
 function updateStatus() {
   const px = project.fixtures.reduce((a, f) => a + (f._n || 0), 0);
   const unp = project.fixtures.filter(f => !f._patch).length;
+  // Only what matters while working: the frame rate, how much there is, and what isn't patched yet
   const parts = [];
-  parts.push(ui.cursor ? `x ${fmtV(Math.round(ui.cursor[0] * 10) / 10)}  y ${fmtV(Math.round(ui.cursor[1] * 10) / 10)}` : 'x –  y –');
-  parts.push(`zoom ${Math.round(ui.view.zoom * 100)}%`);
-  parts.push(`<b>${project.fixtures.length}</b> fixtures · <b>${fmtN(px)}</b> px` + (unp ? ` · <span style="color:var(--warn)">${unp} unpatched</span>` : ''));
-  parts.push(`<b>${universes.length}</b> universes`);
-  const z = selZone(), sc = z && z.scenes.find(x => x.id === z.scene);
-  if (z) parts.push(`${esc(z.name)}` + (sc ? ` · <b>${esc(sc.name)}</b>` + (z._fade && z._fade.scene === sc.id ? ' (fading)' : '') : ''));
-  parts.push(ui.outputOn && bridge.connected ? `out <b>${outStats.fps.toFixed(1)}</b> fps · ${outStats.universes} U/frame` : `render ${project.settings.fps} fps`);
+  parts.push(ui.outputOn && bridge.connected ? `<b>${outStats.fps.toFixed(1)}</b> fps out` : `<b>${project.settings.fps}</b> fps`);
+  parts.push(`<b>${fmtN(px)}</b> px · <b>${universes.length}</b> universes` + (unp ? ` · <span style="color:var(--warn)">${unp} unpatched</span>` : ''));
   let hov = '';
   const hp = ui.hoverPx;
   if (hp && hp.f && fxById(hp.f.id)) {
@@ -127,7 +120,6 @@ function initUI() {
   $('#btnAddSrc').addEventListener('click', e => addSourceMenu(e.currentTarget));
   $('#srcFind').addEventListener('input', e => { ui.srcFilter = e.target.value; renderSrcList(); });
   $('#srcFind').addEventListener('keydown', e => { if (e.key === 'Escape') { e.target.value = ui.srcFilter = ''; renderSrcList(); } });
-  $('#btnOutput').addEventListener('click', () => setOutput(!ui.outputOn));
   $('#btnBlackout').addEventListener('click', toggleBlackout);
   $('#btnHl').addEventListener('click', toggleHighlight);
   $('#btnHlMode').addEventListener('click', e => highlightMenu(e.currentTarget.parentElement));
@@ -140,9 +132,10 @@ function initUI() {
     el.addEventListener('input', () => { ui[key] = isRange ? parseFloat(el.value) : el.checked; savePrefs(); });
   };
   bindView('#vContent', 'showContent'); bindView('#vContentOp', 'contentOp', true);
-  bindView('#vGuide', 'showGuide'); bindView('#vGuideOp', 'guideOp', true);
+  bindView('#vGuide', 'showGuide');   // its opacity is in Settings → Stage
   bindView('#vGrid', 'showGrid'); bindView('#vSnap', 'snap'); bindView('#vLabels', 'showLabels'); bindView('#vWiring', 'showWiring'); bindView('#vZones', 'showZones');
   $('#btnFit').addEventListener('click', fitView);
+  initTips();
   $$('#rail button').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
   $$('#rightTabs button').forEach(b => b.addEventListener('click', () => { ui.rightTab = b.dataset.tab; savePrefs(); renderRight(); }));
   $$('#dockTabs button[data-tab]').forEach(b => b.addEventListener('click', () => { ui.dockTab = b.dataset.tab; ui.dockCollapsed = false; savePrefs(); renderDock(); }));
@@ -176,9 +169,9 @@ function initUI() {
     const n = f.name.toLowerCase();
     if (n.endsWith('.svg')) importSvgDialog(f);
     else if (n.endsWith('.fs') || n.endsWith('.glsl')) addIsfFile(f);
-    else if (n.endsWith('.json')) openProjectFile(f);
+    else if (n.endsWith('.noupix') || n.endsWith('.json')) openProjectFile(f);
     else if (mediaKindOf(f)) { mediaTarget = null; addMediaFile(f); }
-    else toast(`${f.name}: nouPix opens projects (.json), shaders (.fs), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
+    else toast(`${f.name}: nouPix opens projects (.noupix), shaders (.fs), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
   });
   window.addEventListener('keydown', onKey);
   window.addEventListener('keyup', e => { if (e.code === 'Space') { spaceHeld = false; cv.style.cursor = ''; } });
@@ -196,7 +189,7 @@ function onKey(e) {
   const t = e.target;
   const typing = t && (t.tagName === 'INPUT' && !['checkbox', 'range', 'color'].includes(t.type) || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT');
   const mod = e.ctrlKey || e.metaKey;
-  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveProjectFile(); return; }
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveProjectFile(e.shiftKey); return; }
   if (typing) return;
   if ($('.modal-bg')) { if (e.key === 'Escape') $('.modal-bg').remove(); return; }
   const k = e.key.toLowerCase();

@@ -39,7 +39,7 @@ On Windows or macOS you can also double-click `start-noupix.bat` or `start-noupi
 2. **Patch:** add your controller in the Patch panel (IP, outputs, universes per output), or find it with **Nodes → Discover**. Drag fixtures onto its outputs; ↑ ↓ (or Alt ↑ ↓) change their order, which sets their addresses.
 3. **Content:** click a source to play it. Use zones and layers (Content tab) to play different things on different parts.
 4. **Scenes:** press **+ Store** to save a look, and click it to fade back to it. Drag its fade time to change it. The playlist button next to **+ Store** makes a playlist of scenes that plays by itself.
-5. Press **Art-Net ON**.
+5. Art-Net goes out from the start; the status bar shows it. **Settings → Art-Net connection** switches it off.
 
 Right-click anything for its options.
 

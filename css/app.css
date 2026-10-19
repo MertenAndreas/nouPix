@@ -135,7 +135,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .spacer { flex: 1; }
 .pill { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 0; background: var(--bg2); border: 1px solid var(--line2); color: var(--text2); white-space: nowrap; font-size: 12px; min-width: 0; flex-shrink: 0; }
 .pill > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-#btnBlackout, #btnOutput { flex: none; }  /* the output controls always stay on screen; the rest gives way */
+#btnBlackout { flex: none; }  /* Blackout always stays on screen; the rest gives way */
 @media (max-width: 1180px) { .brand-name { display: none; } .topbar .pill { flex-shrink: 1; } }
 .pill[hidden] { display: none; }
 .pill .dot { width: 6px; height: 6px; background: var(--muted); flex: none; }
@@ -168,11 +168,11 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .btn.grpbtn.locked { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
 .btn.rev.on { background: var(--sel-soft); border-color: var(--accent); color: var(--accent); }
 .btn svg { width: 15px; height: 15px; flex: none; }
-.btn-out { min-width: 118px; letter-spacing: .14em; }
-/* Art-Net on: lit, the one glow in the app */
-.btn-out.on { background: var(--live-soft); border-color: var(--live); color: var(--live); box-shadow: 0 0 14px color-mix(in srgb, var(--live) 16%, transparent); }
 .btn-bo { color: var(--danger); }
-.btn-bo.on { background: var(--danger); border-color: var(--danger); color: var(--accent-ink); }
+.btn-bo.on { border-color: var(--danger); color: var(--accent-ink); animation: bobreathe 1.8s ease-in-out infinite; }
+/* while blacked out, the button breathes red so nobody forgets it */
+@keyframes bobreathe { 0%, 100% { background: var(--danger); } 50% { background: color-mix(in srgb, var(--danger) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .btn-bo.on { animation: none; background: var(--danger); } }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- panels ---------- */

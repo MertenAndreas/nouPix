@@ -52,7 +52,7 @@ The interface is black, so the light on the stage is the brightest thing on scre
 3. **Patch.** In the Patch panel, add a controller: IP address, number of outputs, universes per output and first universe. Then drag fixtures from the list onto an output. Fixtures chained on one output are addressed in order, automatically.
 4. **Content.** Click a generator in Sources to play it in the selected layer of the selected zone. Add zones, layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
 5. **Scenes.** When a zone's look is right, press **+ Store** on its row in the Scenes panel. Put scenes in a **playlist** to have the zone play them one after another by itself.
-6. **Art-Net ON.** The status bar's right end then shows how many packets go out each second, or what is wrong.
+6. **Art-Net** goes out from the start, every time nouPix opens. The status bar's right end shows how many packets go out each second, or what is wrong. **Settings → Art-Net connection → Send Art-Net** switches it off (for example while another console drives the lights) and on again. **Blackout** (the slashed sun at the right of the top bar, or `B`) turns every light off at once; it breathes red until you press it again.
 
 **Ovals.** A circle stretches into an oval: drag the side handles of its frame on the stage, or set **Radius X** and **Y** in the Inspector (**Make it round** brings it back). Its pixels are spaced evenly along the curve, as on a real strip. Ellipses in an imported SVG become ovals.
 
@@ -205,7 +205,7 @@ A playlist plays some of a zone's scenes one after another, by itself: Evening, 
 
 - The nouPix window keeps rendering when minimised or covered (see Start). While Art-Net is on, the page also holds a browser lock that stops Chrome from freezing it, and videos the browser pauses in the background are restarted.
 - If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal (or the app's log file) shows when that starts and when frames come back.
-- Only one nouPix window sends at a time. Switching Art-Net on in a second window switches it off in the first.
+- Only one nouPix window sends at a time. A second nouPix window opened on this computer starts sending and the first one stops.
 - If the graphics driver resets (after a driver update, or when a laptop switches graphics chips), the output holds its last colours until the browser restores the GPU, then nouPix carries on by itself.
 - On very large projects, or with a slow GPU, the stage preview is redrawn less often than the output is sent, so the Art-Net frame rate holds. The status bar shows the output frame rate.
 

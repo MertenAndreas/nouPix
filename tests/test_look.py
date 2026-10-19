@@ -44,8 +44,16 @@ try:
     check("square corners", css(".btn", "borderRadius") == "0px" and css(".pill", "borderRadius") == "0px")
     check("Art-Net's rate shows in the status bar, not the top bar, so the top bar doesn't move",
           ev("(() => { setOutput(true); updateBridgeUI(); const p = document.querySelector('#bridgePill'), r = !!p.closest('.statusbar') && !p.closest('.topbar') && !p.hidden && /pkt\\/s/.test(p.textContent); setOutput(false); updateBridgeUI(); return r; })()"))
-    check("Art-Net on is white, Blackout red", (setattr_ := ev("(() => { setOutput(true); const o = getComputedStyle(document.querySelector('#btnOutput')).borderTopColor; setOutput(false); return o; })()")) == "rgb(255, 255, 255)"
-          and css("#btnBlackout", "color") == "rgb(255, 59, 59)", setattr_)
+    check("Art-Net is on from the start, with no button in the top bar; Blackout is a red icon", ev("ui.outputOn") and pg.locator("#btnOutput").count() == 0
+          and css("#btnBlackout", "color") == "rgb(255, 59, 59)" and pg.locator("#btnBlackout svg").count() == 1)
+    ev("(() => { ui.rightTab = 'settings'; renderRight(); })()"); settle(0.3)
+    pg.click("label[for=outputOn]"); settle(0.3)
+    check("Settings → Art-Net connection switches it off, and the status bar says so", not ev("ui.outputOn") and "Art-Net off" in pg.text_content("#bridgePill") and pg.is_visible("#bridgePill"))
+    pg.click("label[for=outputOn]"); settle(0.3)
+    check("and on again", ev("ui.outputOn") and "Sending" in pg.text_content("#bridgePill"))
+    ev("toggleBlackout()"); settle(0.3)
+    check("Blackout on breathes red", "bobreathe" in css("#btnBlackout", "animationName"))
+    ev("toggleBlackout()")
 
     # ---------- white one click away, kept on this computer
     pg.click("#btnTheme"); settle(0.4)

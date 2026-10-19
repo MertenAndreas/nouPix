@@ -614,13 +614,18 @@ function renderSettings(body) {
     project.guide ? sliderRow('Guide opacity', ui, 'guideOp', { fmt: pct, onInput: savePrefs }) : null,
     h('p', { class: 'note' }, 'A guide image (for example your layout SVG) is drawn over the stage, fitted to the composition, so you can trace fixtures over it.')));
   if (!REMOTE_CLIENT) body.append(remoteSection());
-  // Where the page finds noupix.py. The desktop app always uses its own, so there is nothing to set there.
-  if (!/Electron/.test(navigator.userAgent) && !REMOTE_CLIENT) {
-    const auto = bridgeUrl();
+  // Art-Net goes out from the start; it can be switched off here. Where the page finds noupix.py is only asked in a
+  // browser: the desktop app always uses its own.
+  if (!REMOTE_CLIENT) {
+    const app = /Electron/.test(navigator.userAgent), auto = bridgeUrl();
+    const sw = h('input', { type: 'checkbox', id: 'outputOn', checked: ui.outputOn });
+    sw.addEventListener('change', () => { setOutput(sw.checked); sw.checked = ui.outputOn; });
     body.append(sec('Art-Net connection',
-      row('Address', textInput(s, 'bridgeUrl', { placeholder: auto || 'ws://127.0.0.1:8080/ws', aria: 'Art-Net connection address', onCommit: () => { commit(); connectBridge(); } })),
-      h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: connectBridge }, 'Reconnect')),
-      h('p', { class: 'note', html: 'Art-Net is sent by <code>noupix.py</code> running on this computer. Leave the address empty to use the one this page was opened from.' })));
+      h('label', { class: 'checkrow', for: 'outputOn' }, sw, 'Send Art-Net'),
+      h('p', { class: 'note' }, 'On from the start, every time nouPix opens. Switch it off to stop sending, for example while another console drives the lights. The status bar shows what goes out.'),
+      app ? null : row('Address', textInput(s, 'bridgeUrl', { placeholder: auto || 'ws://127.0.0.1:8080/ws', aria: 'Art-Net connection address', onCommit: () => { commit(); connectBridge(); } })),
+      app ? null : h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: connectBridge }, 'Reconnect')),
+      app ? null : h('p', { class: 'note', html: 'Art-Net is sent by <code>noupix.py</code> running on this computer. Leave the address empty to use the one this page was opened from.' })));
   }
 }
 

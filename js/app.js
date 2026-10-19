@@ -35,8 +35,7 @@ function setTheme(t) {
   if (ui.rightTab === 'settings') renderRight();
 }
 function updateUndoButtons() { $('#btnUndo').disabled = hist.idx <= 0; $('#btnRedo').disabled = hist.idx >= hist.stack.length - 1; }
-// The status pill, at the right end of the status bar, only shows what matters: Art-Net going out, or something
-// wrong. With everything fine and Art-Net off it is hidden.
+// The status pill, at the right end of the status bar: Art-Net going out, switched off, or something wrong.
 function updateBridgeUI() {
   const pill = $('#bridgePill'), txt = $('#bridgeText');
   pill.className = 'pill';
@@ -50,12 +49,10 @@ function updateBridgeUI() {
   }
   else if (st && st.errors && st.lastError) { pill.classList.add('err'); txt.textContent = ui.outputOn ? `Send error · ${fmtN(st.pps)} pkt/s` : 'Send error'; pill.title = 'Last send error: ' + st.lastError + (from ? '\n' + from : ''); }
   else if (ui.outputOn) { pill.classList.add('ok'); txt.textContent = `Sending · ${fmtN(st ? st.pps : 0)} pkt/s`; pill.title = 'Art-Net packets sent per second. ' + from; }
-  else show = false;
+  else { txt.textContent = 'Art-Net off'; pill.title = 'Switched off in Settings → Art-Net connection.'; }
   pill.hidden = !show;
-  const ob = $('#btnOutput');
-  ob.classList.toggle('on', ui.outputOn);
-  ob.textContent = ui.outputOn ? 'Art-Net ON' : 'Art-Net OFF';
-  ob.setAttribute('aria-pressed', ui.outputOn);
+  const tick = $('#outputOn');   // Settings → Art-Net connection, when it is open
+  if (tick) tick.checked = ui.outputOn;
 }
 function setOutput(on) {
   if (REMOTE_CLIENT) return;   // only the main computer sends Art-Net
@@ -123,7 +120,6 @@ function initUI() {
   $('#btnAddSrc').addEventListener('click', e => addSourceMenu(e.currentTarget));
   $('#srcFind').addEventListener('input', e => { ui.srcFilter = e.target.value; renderSrcList(); });
   $('#srcFind').addEventListener('keydown', e => { if (e.key === 'Escape') { e.target.value = ui.srcFilter = ''; renderSrcList(); } });
-  $('#btnOutput').addEventListener('click', () => setOutput(!ui.outputOn));
   $('#btnBlackout').addEventListener('click', toggleBlackout);
   $('#btnHl').addEventListener('click', toggleHighlight);
   $('#btnHlMode').addEventListener('click', e => highlightMenu(e.currentTarget.parentElement));

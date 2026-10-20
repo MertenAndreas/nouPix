@@ -129,12 +129,13 @@ function sendFrame(black = false) {
 /* ---------- clock ---------- */
 let lastTick = performance.now();
 let ticker = null;
-let tickPeriod = 25, tickCost = 0, lastTickEnd = 0, mediaChecked = 0;
+let tickPeriod = 25, tickCost = 0, lastTickEnd = 0, lastTickTook = 0, mediaChecked = 0;
 function tick() {
   const now = performance.now();
-  // Worker ticks queue up if a frame takes longer than the period (slow GPU, huge composition).
-  // Drop the backlog so the interface stays responsive; the frame rate then degrades gracefully.
-  if (now - lastTickEnd < tickPeriod * 0.5) return;
+  // A frame that took longer than its period (a slow GPU, a huge project) would leave the page no time before the
+  // next: then the next waits half a period, so the interface has time to answer. Frames that fit their period
+  // follow each other on time, up to 100 a second.
+  if (lastTickTook > tickPeriod && now - lastTickEnd < tickPeriod * 0.5) return;
   clockDT = Math.min(0.25, (now - lastTick) / 1000);
   lastTick = now; clockT += clockDT; frameIndex++;
   if (!project) return;
@@ -149,21 +150,38 @@ function tick() {
   try { videoTick(); } catch (e) { report('video', e); }
   buildOutput();
   if (ui.outputOn) sendFrame();
-  lastTickEnd = performance.now();
-  tickCost = tickCost * 0.9 + (lastTickEnd - now) * 0.1;
+  lastTickEnd = performance.now(); lastTickTook = lastTickEnd - now;
+  tickCost = tickCost * 0.9 + lastTickTook * 0.1;
   const el = now - outStats.lastT;
   if (el > 1000) { outStats.fps = (outStats.frames - outStats.lastFrames) * 1000 / el; outStats.lastFrames = outStats.frames; outStats.lastT = now; }
 }
+// The frames are timed in a worker, whose timers keep going while the window is in the background. It sends one
+// frame at a time: the next waits until this page has taken the last one, so frames can't pile up behind a slow
+// one, and the page takes each as it starts it, so a frame that needs most of its period still leaves the next on
+// time. Deadlines keep the rate even; after a long stall the clock goes on a period from now instead of catching up.
+const CLOCK_WORKER = `let timer = null, period = 25, next = 0, waiting = false;
+const arm = () => { clearTimeout(timer); timer = setTimeout(() => { waiting = true; postMessage(0); }, Math.max(0, next - performance.now())); };
+onmessage = e => {
+  const now = performance.now();
+  if (e.data === 'took') { waiting = false; next += period; if (next < now - 2 * period) next = now + period; arm(); }
+  else { period = e.data; next = now + period; if (!waiting) arm(); }
+};`;
 function startClock() {
   const period = 1000 / clamp(project.settings.fps, 1, 100);
   tickPeriod = period;
   if (!ticker) {
     try {
-      const url = URL.createObjectURL(new Blob(['let iv=null;onmessage=e=>{clearInterval(iv);iv=setInterval(()=>postMessage(0),e.data)}'], { type: 'text/javascript' }));
+      const url = URL.createObjectURL(new Blob([CLOCK_WORKER], { type: 'text/javascript' }));
       ticker = new Worker(url);
-      ticker.onmessage = tick;
+      URL.revokeObjectURL(url);
+      ticker.onmessage = () => { ticker.postMessage('took'); tick(); };
     } catch (e) {
-      ticker = { postMessage(p) { clearInterval(this.iv); this.iv = setInterval(tick, p); } };
+      // no worker: the same deadlines on this page's own timer
+      ticker = { postMessage(p) {
+        clearTimeout(this.t); let next = performance.now() + p;
+        const run = () => { try { tick(); } finally { next += p; const now = performance.now(); if (next < now - 2 * p) next = now + p; this.t = setTimeout(run, Math.max(0, next - now)); } };
+        this.t = setTimeout(run, p);
+      } };
     }
   }
   ticker.postMessage(period);

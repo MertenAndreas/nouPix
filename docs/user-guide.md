@@ -1,6 +1,6 @@
 # nouPix: detailed reference
 
-Everything nouPix 1.0.1 does, in detail (the version shows next to the app name, top left). Up to 0.9 it was called openLedMapper. This is the source text for the PDF guide; the [README](../README.md) has the essentials.
+Everything nouPix 1.0.2 does, in detail (the version shows next to the app name, top left). Up to 0.9 it was called openLedMapper. This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
 A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
@@ -207,7 +207,7 @@ A playlist plays some of a zone's scenes one after another, by itself: Evening, 
 - If the page still stops sending, the bridge repeats the last frame every half second so the LEDs hold their look. The terminal (or the app's log file) shows when that starts and when frames come back.
 - Only one nouPix window sends at a time. A second nouPix window opened on this computer starts sending and the first one stops.
 - If the graphics driver resets (after a driver update, or when a laptop switches graphics chips), the output holds its last colours until the browser restores the GPU, then nouPix carries on by itself.
-- On very large projects, or with a slow GPU, the stage preview is redrawn less often than the output is sent, so the Art-Net frame rate holds. The status bar shows the output frame rate.
+- The stage preview is redrawn at most 30 times a second for moving content (60 while you drag or zoom), and less often on very large projects or with a slow GPU, so the Art-Net frame rate holds, up to 100 a second. Moving the mouse redraws it only when what is under the mouse changes. The status bar shows the output frame rate.
 
 ## How addressing works
 

@@ -111,6 +111,7 @@ SUITES = [   # name, function, part of --quick
     ("bay", simple("test_bay.py", 8188, 400), True),
     ("sceneswin", simple("test_scenes_window.py", 8190, 400), True),
     ("look", simple("test_look.py", 8192, 400), True),
+    ("frames", simple("test_frames.py", 8201, 300), True),
     ("profile", last_line("test_profile_move.py", [], 60, lambda l: "ALL PASS" in l), True),
 ]
 

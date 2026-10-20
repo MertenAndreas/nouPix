@@ -503,9 +503,17 @@ function hitHandle(sx, sy) {
 }
 function hoverPixel(x, y) {
   const tol = 8 / ui.view.zoom;
-  let best = null, bd = tol * tol; // squared distances: this runs over every pixel on each pointer move
+  let best = null, bd = tol * tol; // squared distances: this runs on each pointer move
   for (const f of project.fixtures) {
     const P = f._pts; if (!P) continue;
+    // only fixtures whose pixels come near the pointer are looked through (their frame, kept with their points)
+    if (f._pbOf !== P) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i < f._n; i++) { const px = P[2 * i], py = P[2 * i + 1]; if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py; }
+      f._pb = [x0, y0, x1, y1]; f._pbOf = P;
+    }
+    const b = f._pb;
+    if (x < b[0] - tol || x > b[2] + tol || y < b[1] - tol || y > b[3] + tol) continue;
     for (let i = 0; i < f._n; i++) { const dx = P[2 * i] - x, dy = P[2 * i + 1] - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = { f, i }; } }
   }
   return best;
@@ -643,7 +651,8 @@ cv.addEventListener('pointermove', e => {
   const [sx, sy] = evPos(e), [x, y] = toC(sx, sy);
   ui.cursor = [x, y];
   if (!drag) {
-    if (pathDraft) pathDraft.cursor = [snapV(x, e), snapV(y, e)];
+    const was = [ui.hoverFx, ui.hoverPx && ui.hoverPx.f, ui.hoverPx && ui.hoverPx.i];
+    if (pathDraft) { pathDraft.cursor = [snapV(x, e), snapV(y, e)]; redrawStage(); }
     if (ui.tool === 'zone' && !spaceHeld) {
       const hd = hitZoneHandle(sx, sy);
       cv.style.cursor = hd ? ZONE_CURSORS[hd] : hitZoneLabel(sx, sy) ? 'move' : 'crosshair';
@@ -654,6 +663,7 @@ cv.addEventListener('pointermove', e => {
       cv.style.cursor = hd ? (hd.rot ? 'grab' : hd.selscale ? selCursor(hd) : 'crosshair') : f ? 'move' : 'default';
     } else cv.style.cursor = spaceHeld ? 'grab' : 'crosshair';
     ui.hoverPx = hoverPixel(x, y);
+    if (was[0] !== ui.hoverFx || was[1] !== (ui.hoverPx && ui.hoverPx.f) || was[2] !== (ui.hoverPx && ui.hoverPx.i)) redrawStage();
     return;
   }
   if (drag.kind === 'pen') {   // a point just added with the pen: dragging pulls out its two handles, in line
@@ -755,7 +765,7 @@ function stageMenu(e, sx, sy) {
 }
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
-cv.addEventListener('pointerleave', () => { if (!drag) { ui.hoverFx = null; ui.hoverPx = null; ui.cursor = null; } });
+cv.addEventListener('pointerleave', () => { if (!drag) { ui.hoverFx = null; ui.hoverPx = null; ui.cursor = null; redrawStage(); } });
 cv.addEventListener('dblclick', e => {
   if (ui.tool === 'zone') {
     const [sx, sy] = evPos(e), [x, y] = toC(sx, sy), z = hitZoneLabel(sx, sy) || hitZone(x, y);

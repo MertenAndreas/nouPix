@@ -80,7 +80,13 @@ order by `<script src>` tags at the end of `index.html`:
 `rebuildGeometry` if `geomDirty` → `ensurePatch` if `patchDirty` → `playlistTick` (main window only: steps whose play
 time is up move on, through `recallScene`) → `renderContent` (or `testPattern` while
 highlighting) → `updateThumbs`, `syncMedia`, `videoTick` → `buildOutput` → `sendFrame` when Art-Net is on.
-Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimationFrame` when something changed.
+The clock is a worker that sends one frame at a time: the page takes it as the frame starts (`'took'`), so a frame
+that needs most of its period still leaves the next on time, and frames never pile up; after a long stall it goes on
+from now. A frame that took longer than its period makes the next wait half a period, so a slow machine
+keeps an interface that answers. Drawing the stage is separate: `frameLoop` in app.js redraws on `requestAnimationFrame` when something
+changed, and only as often as leaves the output its time (at most 30 a second for moving content, 60 while working on
+it, at least 10 or once every 4 frames; fewer when drawing is slow; in the gap after an output frame). Moving the mouse redraws the stage only
+while dragging, or when the fixture or pixel under it changes (`hoverPixel` looks only through fixtures near it).
 
 ### Changing the project
 
@@ -210,7 +216,9 @@ ticks, events, the MIDI window's list) and Follow for a fader learnt onto someth
 white from the top bar and Settings (kept, from the start, the windows and the stage following), colours only on
 groups and zones (none at first, shown by their fixtures and scenes, undo), files (old colours dropped, the old
 format opened, `.noupix`, Save, Save as and autosave), the sliders' fill, the scene tiles' cuts, openLedMapper's stored data carried over.
-`test_profile_move.py` checks the window profile moving from `~/.openledmapper` or `~/.weft` to `~/.noupix`.
+`test_frames.py` checks that the frame rate holds while the interface works: the clock with frames that take most of
+their period, the stage's redraws (content, the mouse over panels and stage, hover, dragging) and the pixel under the
+mouse. `test_profile_move.py` checks the window profile moving from `~/.openledmapper` or `~/.weft` to `~/.noupix`.
 `test_scenes_window.py` checks the Scenes window (opening, playing, levels both ways, menus,
 dialogs and messages there, keys, MIDI learn and tags, closing every way). `test_bay.py` checks the patch bay
 (the switch, columns, wires, folding, a wire's settings, Remove and Delete, undo, learn, the rows, forgetting and ordering

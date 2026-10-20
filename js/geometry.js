@@ -82,6 +82,13 @@ const ovalRot = f => isOval(f) ? numOr(f.rot, 0) : 0;
 // Fine points along an oval's arc with their running length, to space pixels evenly along it as on a real strip
 // (equal angles would bunch them up at the narrow ends)
 function ovalSamples(f) {
+  // kept with the fixture until its shape changes: selection frames, hit tests and redraws ask for it many times
+  const key = `${f.cx},${f.cy},${f.r},${f.ry},${f.rot},${f.start},${f.sweep},${f.ccw}`;
+  if (f._oval && f._ovalKey === key) return f._oval;
+  f._ovalKey = key;
+  return (f._oval = sampleOval(f));
+}
+function sampleOval(f) {
   const sweep = clamp(f.sweep, 1, 360), dir = f.ccw ? -1 : 1, rx = f.r, ry = ryOf(f);
   const M = Math.max(64, Math.ceil(sweep * 4));
   const xs = new Float64Array(M + 1), ys = new Float64Array(M + 1), L = new Float64Array(M + 1);

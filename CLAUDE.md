@@ -92,7 +92,8 @@ while dragging, or when the fixture or pixel under it changes (`hoverPixel` look
 
 - Edit `project`, then call `markGeom()` if any pixel moved and `markPatch()` if addressing may have changed;
   the next tick recomputes.
-- Then `commit()` (a step of undo, autosave, redraw the lists and dock) for discrete edits, or `commitSoft()`
+- Then `commit()` (a step of undo, autosave, redraw the lists and dock; `commit({ lists: false })` when they show nothing
+  of the change, as for fixtures moved, turned or resized) for discrete edits, or `commitSoft()`
   (debounced) while dragging or typing. Redraw the panel you changed (`renderRight()`, …) yourself.
 - Keys starting with `_` (`f._pts`, `f._patch`, `f._out`, `f._col`…) are worked out at run time and never saved
   (`replacer` leaves them out of every file and copy).
@@ -218,7 +219,9 @@ groups and zones (none at first, shown by their fixtures and scenes, undo), file
 format opened, `.noupix`, Save, Save as and autosave), the sliders' fill, the scene tiles' cuts, openLedMapper's stored data carried over.
 `test_frames.py` checks that the frame rate holds while the interface works: the clock with frames that take most of
 their period, the stage's redraws (content, the mouse over panels and stage, hover, dragging) and the pixel under the
-mouse. `test_profile_move.py` checks the window profile moving from `~/.openledmapper` or `~/.weft` to `~/.noupix`.
+mouse. `test_drag.py` checks dragging 270 fixtures (mostly turned ovals): an oval's arc kept per shape and exact,
+no list redraws for a press on the selection or a finished move, one step of undo, no long output gap, undo giving back
+the upright frame of a turned selection. `test_profile_move.py` checks the window profile moving from `~/.openledmapper` or `~/.weft` to `~/.noupix`.
 `test_scenes_window.py` checks the Scenes window (opening, playing, levels both ways, menus,
 dialogs and messages there, keys, MIDI learn and tags, closing every way). `test_bay.py` checks the patch bay
 (the switch, columns, wires, folding, a wire's settings, Remove and Delete, undo, learn, the rows, forgetting and ordering

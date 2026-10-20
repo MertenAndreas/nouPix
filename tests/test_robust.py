@@ -189,7 +189,9 @@ with sync_playwright() as p:
           t0 = time.time()
           while time.time() - t0 < 2: pg.mouse.move(box["x"] + 200 + (time.time() - t0) * 100, box["y"] + 200)
           moving = pg.evaluate("({ draws: window.__draws, raf: window.__raf, ticks: (olm.frameIndex ?? 0) - window.__f0 })")
-          check("moving the pointer redraws the stage", moving["draws"] >= min(moving["raf"], moving["ticks"]) - 2 and moving["draws"] > 0, moving)
+          # since 1.0.2 the pointer doesn't force a redraw on every move (that dropped output frames): the stage keeps
+          # being drawn, within its budget of about 30 a second for moving content
+          check("moving the pointer: the stage keeps being drawn, within its budget", 0 < moving["draws"] <= 2 * 31, moving)
 
       except Exception as e: check("group ran to the end", False, str(e)[:200])
     # ---------------------------------------------------------------- 8. WebSocket.send copies the frame, so the frame can be reused

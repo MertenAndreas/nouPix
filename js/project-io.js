@@ -228,6 +228,7 @@ function restore(s) {
   // the macros are live controls, like the master on a desk: an undo, or a device's copy, leaves them where they are
   p.macros = project.macros;
   project = p;
+  ui.selRot = null;   // a selection's turned frame belonged to the geometry being replaced
   ui.sel = new Set([...ui.sel].filter(id => fxById(id)));
   markGeom(); markPatch(); rebuildGeometry();
   renderAll(); saveSoon();
@@ -251,15 +252,17 @@ const saveSoon = debounce(() => {
   store.set('noupix.project', serialize(false));
   autosaveFile();
 }, 400);
-function commit() {
+// commit({ lists: false }): a change the fixture list and the dock don't show (fixtures moved). Anything else passed
+// (it is also an event handler and a form's onCommit) redraws them.
+function commit(o) {
   pushHistory();
-  renderFxList();
-  renderDock();
+  if (!(o && o.lists === false)) { renderFxList(); renderDock(); }
   saveSoon();
 }
 const commitSoft = debounce(() => { pushHistory(); saveSoon(); renderFxList(); }, 350);
 function loadProject(p, { resetView = true } = {}) {
   project = hydrate(p);
+  ui.selRot = null;
   pruneRuntimes();
   ui.sel.clear(); ui.selCtrl = null; ui.zone = null; ui.layer = null;
   if (mixer.ok) mixer.prune(new Set(project.zones.map(z => z.id)));

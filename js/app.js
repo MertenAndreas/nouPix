@@ -231,19 +231,24 @@ function onKey(e) {
 }
 
 /* ---------- boot ---------- */
-// The stage is drawn when something may have changed: after each new frame of content, and on any input.
-// When drawing it after every frame would leave too little time to render the output (very large projects
-// or a slow GPU), it is drawn after every few frames instead, so the Art-Net frame rate holds.
-let stageDirty = true, drawnFrame = -1, drawCost = 0;
+// The stage is drawn when something on it may have changed (a new frame of content, a drag, a click, the mouse
+// over another fixture), and only as often as leaves the output its time, so the Art-Net frame rate holds:
+// - at most 30 times a second for moving content, 60 while you work on it, and at least 10 if it is waiting
+//   (but frames that don't fit their period get the stage drawn once every 4 of them: the output comes first);
+// - fewer when drawing it is slow: it may take about half the time the output leaves free;
+// - in the gap after an output frame, not just before the next one is due.
+let stageDirty = true, drawnFrame = -1, drawCost = 0, drawnAt = 0;
 function frameLoop(now) {
   requestAnimationFrame(frameLoop);
   if (!project) return;
   try {
     if (geomDirty) rebuildGeometry();
-    const spare = tickPeriod * 0.85 - tickCost;
-    const every = spare <= 0 ? 4 : clamp(Math.ceil(drawCost / spare), 1, 4);
-    if (stageDirty || frameIndex - drawnFrame >= every) {
-      stageDirty = false; drawnFrame = frameIndex;
+    const want = stageDirty || frameIndex !== drawnFrame, since = now - drawnAt;
+    const free = Math.max(0.1, 1 - tickCost / tickPeriod), longest = Math.max(100, 4 * Math.max(tickPeriod, tickCost));
+    const gap = Math.min(longest, Math.max(stageDirty ? 1000 / 60 : 1000 / 30, drawCost / (free * 0.5), tickCost > tickPeriod ? 4 * tickCost : 0));
+    const fits = performance.now() + drawCost < lastTick + tickPeriod || drawCost > tickPeriod - tickCost;
+    if (want && since >= gap && (fits || since >= longest)) {
+      stageDirty = false; drawnFrame = frameIndex; drawnAt = now;
       const t0 = performance.now();
       drawView();
       drawCost = drawCost * 0.8 + (performance.now() - t0) * 0.2;
@@ -278,7 +283,10 @@ function boot() {
   remoteOverlay(); updateRemoteUI();
   if (ui.midiOn && !REMOTE_CLIENT) startMidi();
   new ResizeObserver(() => { resizeView(); redrawStage(); }).observe(stageEl);
-  for (const t of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click', 'drop']) window.addEventListener(t, redrawStage, { capture: true, passive: true });
+  for (const t of ['pointerdown', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click', 'drop']) window.addEventListener(t, redrawStage, { capture: true, passive: true });
+  // Moving the mouse redraws the stage only while dragging; over the stage, also when it reaches another
+  // fixture or pixel (ui-stage.js). Moving over the panels draws nothing.
+  window.addEventListener('pointermove', e => { if (e.buttons) redrawStage(); }, { capture: true, passive: true });
   requestAnimationFrame(frameLoop);
   // a handle for the browser console and for tests (olm: the app's first initials, kept so scripts keep working)
   window.olm = { get project() { return project; }, get tickCost() { return tickCost; }, get drawCost() { return drawCost; }, get frameIndex() { return frameIndex; }, get clockT() { return clockT; }, glCanvas, samplePick, loadProject, ui, universes: () => universes, computePatch, setOutput, bridge, tick, mixer, goScene, storeScene, loadSource, selectZone, addZone, setTool, mediaEl: id => mediaEls.get(id) };

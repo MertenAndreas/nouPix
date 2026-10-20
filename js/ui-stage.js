@@ -634,11 +634,15 @@ cv.addEventListener('pointerdown', e => {
   const f = hitFixture(x, y);
   if (f) {
     const pick = stagePick(f);   // the whole group, or inside a group just this fixture
+    const had = ui.sel.size;
     if (e.shiftKey || e.metaKey || e.ctrlKey) {
       if (ui.sel.has(f.id)) { pick.forEach(id => ui.sel.delete(id)); onSelection(); return; }
       pick.forEach(id => ui.sel.add(id));
     } else if (!ui.sel.has(f.id)) ui.sel = new Set(pick);
-    onSelection();
+    // a press on what is already selected starts a drag: the lists and the Inspector stay as they are (a few hundred
+    // fixtures take long to draw), the Inspector only comes forward from another tab
+    if (ui.sel.size !== had || !ui.sel.has(f.id) || pick.some(id => !ui.sel.has(id)) || e.shiftKey || e.metaKey || e.ctrlKey) onSelection();
+    else if (ui.rightTab !== 'inspector') onSelection();
     const origs = new Map(selected().filter(g => !g.locked).map(g => [g.id, snapshotGeom(g)]));
     drag = { kind: 'move', x0: x, y0: y, origs, changed: false };
     return;
@@ -742,7 +746,8 @@ function endDrag(e) {
     setTool('select');
     toast(`${f.name} added: ${pixelCount(f)} pixels`);
   } else if (d.kind === 'handle' || d.kind === 'move' || d.kind === 'rotsel' || d.kind === 'scalesel' || d.kind === 'zoneMove' || d.kind === 'zoneSize') {
-    if (d.changed) { commit(); renderRight(); }
+    // fixtures moved, turned or resized: the fixture list and the dock show nothing of that (zones: the dock does)
+    if (d.changed) { commit({ lists: d.kind === 'zoneMove' || d.kind === 'zoneSize' ? true : false }); renderRight(); }
   } else if (d.kind === 'zoneNew') {
     const r = zoneDraft; zoneDraft = null;
     if (r && r.w * ui.view.zoom >= 8 && r.h * ui.view.zoom >= 8) addZone(r);

@@ -36,6 +36,8 @@ On Windows or macOS you can also double-click `start-noupix.bat` or `start-noupi
 
 ## Quick start
 
+New to nouPix? The **[Getting started guide (PDF)](docs/nouPix-getting-started.pdf)** walks you from an empty project to a running show, step by step, with pictures.
+
 1. **Fixtures:** draw them on the stage with `L` line, `M` matrix, `C` circle/oval, `P` path or `N` pen, or import an SVG. Set pixel count, colour order and direction in the Inspector.
 2. **Patch:** add your controller in the Patch panel (IP, outputs, universes per output), or find it with **Nodes → Discover**. Drag fixtures onto its outputs; ↑ ↓ (or Alt ↑ ↓) change their order, which sets their addresses.
 3. **Content:** click a source to play it. Use zones and layers (Content tab) to play different things on different parts.

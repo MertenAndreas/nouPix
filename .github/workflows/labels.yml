@@ -1,0 +1,35 @@
+# The issue labels: what a report is (request: …, bug) and where it stands (status: …), so people who suggest
+# something can follow it. Runs when this file changes on main, or by hand from the Actions tab. Creates the labels,
+# or updates their colour and description; issues keep their labels.
+name: Labels
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/labels.yml]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Create or update the labels
+        run: |
+          label() { gh label create "$1" --color "$2" --description "$3" --force; }
+          # what it is
+          label "request: feature"      7057ff "Something new nouPix could do"
+          label "request: improvement"  a28bff "Making something nouPix does better"
+          label "bug"                   d73a4a "Something isn't working"
+          # where it stands (one at a time)
+          label "status: new"           d4d4d4 "Received, not looked at yet"
+          label "status: need info"     f9d0c4 "Waiting for details from whoever reported it"
+          label "status: planned"       1d76db "Accepted: it will be done (see its milestone for the version)"
+          label "status: in progress"   fbca04 "Being worked on now"
+          label "status: released"      0e8a16 "Done, in a release (the closing comment says which)"
+          label "status: not planned"   6a737d "Thanks, but not for nouPix (the comment says why)"

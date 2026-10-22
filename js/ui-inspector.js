@@ -770,10 +770,10 @@ function renderContentTab(body) {
 
     // Performance: Quality / Resolution mode
     const qualOptions = [
-      ['zone', '🎯 Nativ (1:1 Exakte Zonengröße)'],
-      ['eco', '🚀 Eco (max. 360p / 480p)'],
-      ['balanced', '⚖️ Balanced (max. 640p)'],
-      ['high', '💎 High-Res (max. 720p)']
+      ['zone', '🎯 Native (1:1 Exact Zone Size)'],
+      ['eco', '🚀 Eco (max 360p / 480p)'],
+      ['balanced', '⚖️ Balanced (max 640p)'],
+      ['high', '💎 High-Res (max 720p)']
     ];
     mtx.push(row('Render quality', selectEl(qualOptions, getP('quality', 'zone'), v => {
       setP('quality', v);

@@ -768,11 +768,12 @@ function renderContentTab(body) {
 
     // Performance: Quality / Resolution mode
     const qualOptions = [
-      ['eco', '🚀 Performance (480p, LED-optimiert)'],
-      ['balanced', '⚖️ Balanced (640p Standard)'],
-      ['high', '💎 High-Res (720p)']
+      ['zone', '🎯 Nativ (1:1 Exakte Zonengröße)'],
+      ['eco', '🚀 Eco (max. 360p / 480p)'],
+      ['balanced', '⚖️ Balanced (max. 640p)'],
+      ['high', '💎 High-Res (max. 720p)']
     ];
-    mtx.push(row('Render quality', selectEl(qualOptions, getP('quality', 'balanced'), v => {
+    mtx.push(row('Render quality', selectEl(qualOptions, getP('quality', 'zone'), v => {
       setP('quality', v);
       commit();
     }, { aria: 'Visualizer Render Quality' })));

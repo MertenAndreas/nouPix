@@ -600,9 +600,9 @@ let milkActivePreset = '';
 let milkLastW = 0, milkLastH = 0;
 let milkConnectedAudio = false;
 
-let milkLastQuality = 'balanced';
+let milkLastQuality = 'zone';
 
-function ensureMilkVisualizer(w, h, quality = 'balanced') {
+function ensureMilkVisualizer(w, h, quality = 'zone') {
   const bc = getButterchurn();
   if (!bc || typeof bc.createVisualizer !== 'function') return null;
   const ctx = ensureMilkAudio();
@@ -619,16 +619,31 @@ function ensureMilkVisualizer(w, h, quality = 'balanced') {
     milkCanvas.height = compH;
   }
 
-  const qual = quality || 'balanced';
-  let maxW = 640, maxH = 480, meshW = 32, meshH = 24;
+  // Exact zone dimensions: w and h passed from renderLook(layers, slot, z) are z.w and z.h
+  const zoneW = Math.max(16, Math.round(w) || (project ? project.settings.compW : 320));
+  const zoneH = Math.max(16, Math.round(h) || (project ? project.settings.compH : 240));
+
+  const qual = quality || 'zone';
+  let maxW = zoneW, maxH = zoneH;
   if (qual === 'eco' || qual === 'fast') {
-    maxW = 480; maxH = 360; meshW = 24; meshH = 18;
+    maxW = 360; maxH = 270;
+  } else if (qual === 'balanced') {
+    maxW = 640; maxH = 480;
   } else if (qual === 'high') {
-    maxW = 1280; maxH = 720; meshW = 32; meshH = 24;
+    maxW = 1280; maxH = 720;
+  }
+  // 'zone' or native: takes exact zone dimensions 1:1 without downsampling
+
+  const rw = Math.max(16, Math.min(maxW, zoneW));
+  const rh = Math.max(16, Math.min(maxH, zoneH));
+
+  // Adaptive mesh resolution matching the zone dimensions
+  let meshW = 32, meshH = 24;
+  if (qual === 'eco' || rw < 160 || rh < 120) {
+    meshW = Math.min(24, Math.max(8, Math.floor(rw / 4)));
+    meshH = Math.min(18, Math.max(6, Math.floor(rh / 4)));
   }
 
-  const rw = Math.max(64, Math.min(maxW, Math.round(w) || 400));
-  const rh = Math.max(64, Math.min(maxH, Math.round(h) || 300));
   if (!milkVisualizer) {
     milkOffscreen.width = rw;
     milkOffscreen.height = rh;
@@ -656,7 +671,7 @@ function ensureMilkVisualizer(w, h, quality = 'balanced') {
       milkVisualizer = null;
       return null;
     }
-  } else if (Math.abs(rw - milkLastW) > 16 || Math.abs(rh - milkLastH) > 16 || qual !== milkLastQuality) {
+  } else if (Math.abs(rw - milkLastW) > 8 || Math.abs(rh - milkLastH) > 8 || qual !== milkLastQuality) {
     milkOffscreen.width = rw;
     milkOffscreen.height = rh;
     try {
@@ -809,7 +824,7 @@ function renderMilkdrop(src, L, w, h) {
     }
   }
 
-  const qual = (p && p.quality) || src.quality || 'balanced';
+  const qual = (p && p.quality) || src.quality || 'zone';
   const viz = ensureMilkVisualizer(w, h, qual);
   if (!viz) return null;
 

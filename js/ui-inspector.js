@@ -417,34 +417,89 @@ function renderContentTab(body) {
 
   if (src.kind === 'butterchurn' || src.kind === 'milkdrop') {
     const k = [];
-    const allPresets = typeof getAllMilkPresetNames === 'function' ? getAllMilkPresetNames() : [];
-    const churnBuiltins = typeof BUTTERCHURN_BUILTINS !== 'undefined' ? BUTTERCHURN_BUILTINS : (typeof MILKDROP_BUILTINS !== 'undefined' ? MILKDROP_BUILTINS : []);
-    const curPreset = src.preset || (src.builtin && (churnBuiltins.find(b => b.id === src.builtin) || {}).preset) || '_Geiss - Desert Rose 2';
+    const pParams = (L.params[src.id] = L.params[src.id] || {});
+    const getP = (name, def) => (name in pParams ? pParams[name] : (name in src ? src[name] : (src.params && name in src.params ? src.params[name] : def)));
+    const setP = (name, val) => {
+      pParams[name] = val;
+      src[name] = val;
+      if (!src.params) src.params = {};
+      src.params[name] = val;
+    };
 
-    // Preset dropdown
+    const isFavOnly = !!getP('favOnly', false);
+    const allPresets = typeof getAllMilkPresetNames === 'function' ? getAllMilkPresetNames(isFavOnly) : [];
+    const churnBuiltins = typeof BUTTERCHURN_BUILTINS !== 'undefined' ? BUTTERCHURN_BUILTINS : (typeof MILKDROP_BUILTINS !== 'undefined' ? MILKDROP_BUILTINS : []);
+    const curPreset = getP('preset', (src.builtin && (churnBuiltins.find(b => b.id === src.builtin) || {}).preset) || '_Geiss - Desert Rose 2');
+    const isFav = typeof isMilkFavorite === 'function' ? isMilkFavorite(curPreset) : false;
+
+    // Preset dropdown + Favorite Star + Favs filter toggle
     const sel = selectEl(allPresets.map(p => [p, p]), curPreset, v => {
-      src.preset = v;
-      if (typeof loadMilkPreset === 'function') loadMilkPreset(src, v, src.transition ?? 2.5);
+      setP('preset', v);
+      if (typeof loadMilkPreset === 'function') loadMilkPreset(src, v, numOr(getP('transition', 2.5), 2.5));
       commit();
       renderRight();
     }, { aria: 'ButterChurn Preset' });
-    k.push(row('Preset', sel));
 
-    // Preset navigation buttons (Prev, Random, Next)
-    const prevBtn = h('button', { class: 'btn sm', type: 'button', title: 'Previous preset', onclick: () => cycleMilkPreset(src, -1) }, '‹ Prev');
-    const rndBtn = h('button', { class: 'btn sm', type: 'button', title: 'Random preset', onclick: () => randomMilkPreset(src) }, 'Random');
-    const nextBtn = h('button', { class: 'btn sm', type: 'button', title: 'Next preset', onclick: () => cycleMilkPreset(src, 1) }, 'Next ›');
+    const starBtn = h('button', {
+      class: 'btn sm icon',
+      type: 'button',
+      title: isFav ? 'Remove from Favorites (⭐)' : 'Add to Favorites (⭐)',
+      style: { color: isFav ? '#ffd600' : 'var(--text2)', flexShrink: '0', fontSize: '15px', padding: '0 4px' },
+      onclick: () => {
+        if (typeof toggleMilkFavorite === 'function') {
+          const added = toggleMilkFavorite(curPreset);
+          toast(added ? `⭐ Added "${curPreset}" to favorites` : `Removed "${curPreset}" from favorites`);
+          renderRight();
+        }
+      }
+    }, isFav ? '★' : '☆');
+
+    const favFilterBtn = h('button', {
+      class: 'btn sm',
+      type: 'button',
+      title: isFavOnly ? 'Showing Favorites only. Click to show All presets.' : 'Filter by Favorites',
+      style: {
+        flexShrink: '0',
+        padding: '0 6px',
+        fontSize: '11px',
+        background: isFavOnly ? 'var(--accent)' : 'var(--bg3)',
+        color: isFavOnly ? '#fff' : 'var(--text)'
+      },
+      onclick: () => {
+        setP('favOnly', !isFavOnly);
+        commitSoft();
+        renderRight();
+      }
+    }, isFavOnly ? '⭐ Favs' : 'All');
+
+    const presetRowWrap = h('div', {
+      style: { display: 'flex', alignItems: 'center', gap: '6px', width: '100%', minWidth: '0' }
+    },
+      h('div', { style: { flex: '1', minWidth: '0', overflow: 'hidden' } }, sel),
+      starBtn,
+      favFilterBtn
+    );
+    sel.style.width = '100%';
+    k.push(row('Preset', presetRowWrap));
+
+    // Preset navigation buttons (Prev, Random, Next - respects favorites filter and scene layers)
+    const prevBtn = h('button', { class: 'btn sm', type: 'button', title: 'Previous preset', onclick: () => cycleMilkPreset(src, -1, isFavOnly, L) }, '‹ Prev');
+    const rndBtn = h('button', { class: 'btn sm', type: 'button', title: 'Random preset', onclick: () => randomMilkPreset(src, isFavOnly, L) }, 'Random');
+    const nextBtn = h('button', { class: 'btn sm', type: 'button', title: 'Next preset', onclick: () => cycleMilkPreset(src, 1, isFavOnly, L) }, 'Next ›');
     k.push(h('div', { class: 'actions' }, prevBtn, rndBtn, nextBtn));
 
-    // Morph transition duration
-    k.push(sliderRow('Morph time', src, 'transition', {
+    // Morph transition duration (saved per scene)
+    k.push(sliderRow('Morph time', {
+      get v() { return numOr(getP('transition', 2.5), 2.5); },
+      set v(x) { setP('transition', x); }
+    }, 'v', {
       min: 0, max: 5, step: 0.1, fmt: v => (v ?? 2.5).toFixed(1) + ' s', onCommit: commit
     }));
 
-    // Auto-cycle presets
+    // Auto-cycle presets (saved per scene)
     const cycleOptions = [[0, 'Off'], [15, '15 s'], [30, '30 s'], [60, '60 s'], [120, '2 min'], [300, '5 min']];
-    k.push(row('Auto-cycle', selectEl(cycleOptions, src.cycle || 0, v => {
-      src.cycle = parseInt(v, 10);
+    k.push(row('Auto-cycle', selectEl(cycleOptions, getP('cycle', 0), v => {
+      setP('cycle', parseInt(v, 10));
       commit();
     }, { aria: 'Auto-cycle presets' })));
 
@@ -634,22 +689,87 @@ function renderContentTab(body) {
       h('div', { style: { flex: '1', display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0' } }, meterRow, statusNote)
     ));
 
-    // Audio sensitivity / gain slider
-    k.push(sliderRow('Sensitivity', src, 'gain', {
+    // Audio sensitivity / gain slider (saved per scene)
+    k.push(sliderRow('Sensitivity', {
+      get v() { return numOr(getP('gain', 1), 1); },
+      set v(x) { setP('gain', x); }
+    }, 'v', {
       min: 0.2, max: 4, step: 0.05, fmt: v => ((v ?? 1) * 100).toFixed(0) + '%', onCommit: commit
     }));
 
+    // Audio Band Focus (Full Range, Bass & Kick Focus, Vocal / Mids Focus, Treble Focus)
+    const focusOptions = [
+      ['all', 'Full Range (Flat)'],
+      ['bass', 'Bass & Kick Focus (+9dB)'],
+      ['mids', 'Vocal / Mids Focus'],
+      ['highs', 'Treble / Snare Focus']
+    ];
+    k.push(row('Audio focus', selectEl(focusOptions, getP('bandFocus', 'all'), v => {
+      setP('bandFocus', v);
+      if (typeof setMilkBandFocus === 'function') setMilkBandFocus(v);
+      commit();
+    }, { aria: 'Audio Band Focus' })));
+
+    // Low-cut / Rumble Filter & Auto-Gain Control (AGC) toggles
+    const lowCutOn = !!getP('lowCut', true);
+    const lowCutBtn = h('button', {
+      class: 'btn sm' + (lowCutOn ? ' active' : ''),
+      type: 'button',
+      title: 'Highpass filter at 65Hz to remove microphone handling noise, desk thumps and sub rumble',
+      style: { flex: '1', fontSize: '11px', background: lowCutOn ? 'var(--bg4)' : 'var(--bg2)', borderColor: lowCutOn ? 'var(--accent)' : 'var(--line2)' },
+      onclick: () => {
+        setP('lowCut', !lowCutOn);
+        if (typeof setMilkLowCut === 'function') setMilkLowCut(!lowCutOn);
+        commit(); renderRight();
+      }
+    }, (lowCutOn ? '✓ ' : '') + '65Hz Low-Cut');
+
+    const agcOn = !!getP('agc', false);
+    const agcBtn = h('button', {
+      class: 'btn sm' + (agcOn ? ' active' : ''),
+      type: 'button',
+      title: 'Auto-Gain Control & Limiter: automatically adjusts sensitivity during quiet intros and loud drops',
+      style: { flex: '1', fontSize: '11px', background: agcOn ? 'var(--bg4)' : 'var(--bg2)', borderColor: agcOn ? 'var(--accent)' : 'var(--line2)' },
+      onclick: () => {
+        setP('agc', !agcOn);
+        if (typeof setMilkAgc === 'function') setMilkAgc(!agcOn);
+        commit(); renderRight();
+      }
+    }, (agcOn ? '✓ ' : '') + 'Auto-Gain (AGC)');
+
+    k.push(row('Audio filters', h('div', { style: { display: 'flex', gap: '6px', width: '100%' } }, lowCutBtn, agcBtn)));
+
     body.append(sec('ButterChurn visualizer', k));
+
+    // LED Matrix & DMX Output Controls section
+    const mtx = [];
+
+    // LED Matrix Boost (Contrast & Saturation)
+    mtx.push(sliderRow('Matrix Boost', {
+      get v() { return numOr(getP('matrixBoost', 0), 0); },
+      set v(x) { setP('matrixBoost', x); }
+    }, 'v', {
+      min: 0, max: 150, step: 5, notch: 0,
+      fmt: v => v ? `+${Math.round(v)}%` : 'Off (Flat)',
+      onCommit: commit,
+      title: 'Boost contrast and saturation so MilkDrop visuals look sharp and punchy on coarse LED pixel grids'
+    }));
+
+    // True-Black LED Floor (DMX Cutoff)
+    mtx.push(sliderRow('True-Black floor', {
+      get v() { return numOr(getP('trueBlack', 0), 0); },
+      set v(x) { setP('trueBlack', x); }
+    }, 'v', {
+      min: 0, max: 15, step: 0.5, notch: 0,
+      fmt: v => v > 0 ? `${v.toFixed(1)}% (Cutoff)` : 'Off',
+      onCommit: commit,
+      title: 'Shuts off LED glow for near-black backgrounds below threshold for ink-black contrast'
+    }));
+
+    body.append(sec('LED matrix & contrast', mtx));
 
     // Preset parameter & color controls (dynamically displayed when preset offers & uses them)
     const pInfo = typeof getMilkPresetParams === 'function' ? getMilkPresetParams(curPreset) : null;
-    const pParams = (L.params[src.id] = L.params[src.id] || {});
-    const getP = (name, def) => (name in pParams ? pParams[name] : (src.params && name in src.params ? src.params[name] : def));
-    const setP = (name, val) => {
-      pParams[name] = val;
-      if (!src.params) src.params = {};
-      src.params[name] = val;
-    };
 
     const cp = [];
 

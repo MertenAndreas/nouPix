@@ -587,8 +587,98 @@ function addButterchurnSource(presetName = null) {
 }
 const addMilkdropSource = addButterchurnSource;
 
+// Pure JS zip reader for MilkDrop .zip preset packs (uses native DecompressionStream)
+async function extractZipEntries(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const entries = [];
+  let pos = 0;
+  const maxLen = bytes.length - 4;
+  while (pos < maxLen) {
+    const sig = view.getUint32(pos, true);
+    if (sig === 0x04034b50) { // Local File Header
+      const method = view.getUint16(pos + 8, true);
+      const compSize = view.getUint32(pos + 18, true);
+      const nameLen = view.getUint16(pos + 26, true);
+      const extraLen = view.getUint16(pos + 28, true);
+      const rawName = bytes.subarray(pos + 30, pos + 30 + nameLen);
+      const name = new TextDecoder().decode(rawName);
+      const dataStart = pos + 30 + nameLen + extraLen;
+      const compData = bytes.subarray(dataStart, dataStart + compSize);
+
+      const lower = name.toLowerCase();
+      if ((lower.endsWith('.milk') || lower.endsWith('.json')) && !name.includes('__MACOSX')) {
+        let content = '';
+        if (method === 0) {
+          content = new TextDecoder().decode(compData);
+        } else if (method === 8 && typeof DecompressionStream !== 'undefined') {
+          try {
+            const ds = new DecompressionStream('deflate-raw');
+            const writer = ds.writable.getWriter();
+            writer.write(compData);
+            writer.close();
+            const reader = ds.readable.getReader();
+            const chunks = [];
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+            }
+            const total = chunks.reduce((acc, c) => acc + c.length, 0);
+            const out = new Uint8Array(total);
+            let off = 0;
+            for (const c of chunks) { out.set(c, off); off += c.length; }
+            content = new TextDecoder().decode(out);
+          } catch (e) {
+            console.warn('Decompression failed for ' + name, e);
+          }
+        }
+        if (content) {
+          const cleanName = name.split('/').pop().replace(/\.(json|milk)$/i, '');
+          entries.push({ name: cleanName, content });
+        }
+      }
+      pos = dataStart + compSize;
+    } else {
+      pos++;
+    }
+  }
+  return entries;
+}
+
 async function addButterchurnFile(file) {
   try {
+    const n = file.name.toLowerCase();
+    if (n.endsWith('.zip')) {
+      const buf = await file.arrayBuffer();
+      const entries = await extractZipEntries(buf);
+      if (!entries.length) {
+        toast(`No .milk or .json presets found in ${file.name}`, 'warn');
+        return;
+      }
+      let count = 0;
+      for (const entry of entries) {
+        let presetObj = null;
+        try {
+          presetObj = JSON.parse(entry.content);
+        } catch (e) {
+          presetObj = { baseVals: { decay: 0.98, wave_mode: 0 } };
+        }
+        if (typeof customMilkPresets !== 'undefined') {
+          customMilkPresets.set(entry.name, presetObj);
+          count++;
+        }
+      }
+      const first = entries[0].name;
+      const src = newButterchurnSource({ name: 'ButterChurn: ' + first, preset: first });
+      project.sources.push(src);
+      loadSource(src.id);
+      ui.rightTab = 'content';
+      commit(); renderSrcList(); renderRight();
+      toast(`📦 Imported ${count} ButterChurn presets from ${file.name}`);
+      return;
+    }
+
     const text = await file.text();
     let presetObj = null;
     const name = file.name.replace(/\.(json|milk)$/i, '');

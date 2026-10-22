@@ -249,15 +249,26 @@ Circles, arcs, lines and paths become fixtures, fitted into the composition. Cir
 
 nouPix includes a full real-time audio-reactive visualizer engine powered by ButterChurn (WebGL/Wasm Milkdrop 2 preset renderer).
 
-- **Adding a visualizer.** In Sources, pick one of the curated built-in presets (Desert Rose, Liquid Fire, Cubetrace, Skylight, Artifact, Hurricane, Mother of Pearl, Potion Spirits...), click **+ Add → ButterChurn visualizer…** for a randomly chosen preset, or click **+ Add → ButterChurn preset file (.json / .milk)…** (or drag and drop a `.milk` or `.json` preset file onto the window) to add custom presets.
-- **Preset navigation & morphing.** The Inspector offers a Preset dropdown with the entire preset library, along with **‹ Prev**, **Random**, and **Next ›** buttons. **Morph time** sets the crossfade duration when switching presets (0 cuts instantly, up to 5 seconds for smooth geometric morphing).
-- **Auto-cycle presets.** Set **Auto-cycle** to automatically advance to a new preset after a set interval (10 s, 30 s, 1 min, 2 min, etc.), or 0 to stay on the chosen preset.
-- **Audio input & live monitor.** Select your audio source from the **Audio Input** dropdown:
-  - **Synthesized Beat (fallback)**: Generates a pulsating ~125 BPM rhythmic bass pulse, great for standalone testing or club visuals without an active microphone.
-  - **Microphone / Line In**: Real-time reactive audio from your audio interface, DJ mixer line-in, or USB microphone. Click **🎤 Connect Line-In / Mic** to grant browser microphone permissions and populate the list of hardware inputs.
-  - **🖥️ System / Tab Audio (Browser Loopback)**: Capture sound directly from another application (Spotify, YouTube, media player, DAW, or DJ software) without extra cables. Click **🖥️ System / Tab Audio**, choose a tab or screen, and check **"Share audio"** in the browser popup.
-  - **Signal Level**: Displays real-time audio reactivity with an animated mini-waveform and peak-hold VU meter (green, yellow, red), showing dB signal level and input status.
-  - **Sensitivity**: Scales audio reactivity from 20 % to 400 %.
+- **Adding visualizers & preset packs (.zip, .milk, .json).** In Sources, pick one of the curated built-in presets (Desert Rose, Liquid Fire, Cubetrace, Skylight, Artifact, Hurricane, Mother of Pearl, Potion Spirits...), click **+ Add → ButterChurn visualizer…** for a randomly chosen preset, or click **+ Add → ButterChurn preset file or pack (.milk / .zip)…**. You can also drag and drop single `.milk` / `.json` files or entire Winamp Milkdrop `.zip` preset packs directly onto the browser window; nouPix decompresses the archive on the fly and imports all presets into your library immediately.
+- **Preset navigation, morphing & ⭐ Favorites system.**
+  - **Favorites (★):** With hundreds of presets available, mark your favorites by clicking the star icon (`★` / `☆`) next to the Preset dropdown.
+  - **Favorites filter:** Click the **⭐ Favs / All** toggle button to restrict the preset selector, Next/Prev buttons, and auto-cycling exclusively to your curated favorites list. Favorites are automatically saved in local browser storage.
+  - **Navigation & Morphing:** The Inspector offers a Preset dropdown with the preset library, along with **‹ Prev**, **Random**, and **Next ›** buttons. **Morph time** sets the crossfade duration when switching presets (0 cuts instantly, up to 5 seconds for smooth geometric morphing).
+  - **Auto-cycle presets:** Set **Auto-cycle** to automatically advance to a new preset after a set interval (10 s, 30 s, 1 min, 2 min, etc.), or 0 to stay on the chosen preset. If the favorites filter is active, auto-cycling only cycles through your starred favorites.
+- **Full scene & playlist integration.** Every ButterChurn configuration — including the active preset name, morph transition time, auto-cycle interval, matrix boost, true-black cutoff, audio sensitivity, EQ filters, and custom preset colors / decay / zoom tweaks — is stored directly in nouPix scenes (`L.params[src.id]`). Recalling a scene or progressing through a playlist automatically morphs the visualizer to the scene's preset and visual settings without interrupting playback.
+- **LED matrix tuning & contrast booster.**
+  - **Matrix Boost (Contrast & Saturation):** MilkDrop was originally designed for high-resolution monitors with soft gradients. On low-resolution LED fixtures and matrices (such as 32×32, 64×64, or 128×128), fine lines and gradients can appear washed out. The **Matrix Boost** slider (0 % to 150 %, default 25 %) sharpens edges, boosts contrast, and intensifies color saturation to make visualizers pop vividly on LED rasters.
+  - **True-Black Floor (DMX Cutoff):** LEDs often show a faint residual glow on dark backgrounds due to minimum gray levels. The **True-Black floor** slider (0 % to 15 %, default 3 %) applies a soft-knee cutoff threshold that drives near-black background pixels cleanly down to pure `RGB(0, 0, 0)` for deep, true LED black levels.
+- **Audio input, 3-band EQ & Auto-Gain Control (AGC).**
+  - **Audio Input & live monitor:** Select your audio source from the **Audio Input** dropdown (Synthesized Beat fallback, Microphone/Line-in, or System/Tab loopback audio) with an animated mini-waveform and peak-hold VU meter.
+  - **Sensitivity:** Scales audio reactivity from 20 % to 400 %.
+  - **65 Hz Low-Cut (Rumble Filter):** Toggle the 65 Hz high-pass filter on to suppress mechanical desk vibrations, stage rumble, and microphone handling noise from triggering the visualizer.
+  - **Audio Band Focus:** Steer the visualizer's reactivity to specific musical elements:
+    - *Full Range*: Natural, balanced response across all frequencies.
+    - *Bass & Kick Focus*: Boosts low-end punch and attenuates highs for bass-driven club visuals.
+    - *Vocal / Mids*: Highlights mid frequencies (synthesizers, vocals, guitars).
+    - *Treble / Snare*: Focuses on hi-hats, percussive transients, and high frequencies.
+  - **Auto-Gain Control (AGC) & Limiter:** Toggle **AGC** to automatically adjust gain based on rolling RMS audio levels. AGC smoothly lifts input gain during quiet song intros or breakdowns and attenuates volume during loud drops to prevent visual blowout. An integrated audio limiter prevents clipping.
 - **Loopback audio & capturing sound from other apps (Windows, macOS, Linux):**
   - **Why desktop sound / Stereo Mix is not visible by default**: Operating systems and browsers treat speakers and headphones as *audio outputs*, whereas ButterChurn listens to *audio inputs* (`audioinput`). The internal loopback device is often disabled or hidden by default in Windows.
   - **Enabling Stereo Mix on Windows (Deaktivierte Geräte aktivieren)**:

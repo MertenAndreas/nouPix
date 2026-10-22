@@ -170,11 +170,11 @@ function initUI() {
     e.preventDefault();
     const n = f.name.toLowerCase();
     if (n.endsWith('.svg')) importSvgDialog(f);
-    else if (n.endsWith('.milk')) addButterchurnFile(f);
+    else if (n.endsWith('.milk') || n.endsWith('.zip')) addButterchurnFile(f);
     else if (n.endsWith('.fs') || n.endsWith('.glsl')) addIsfFile(f);
     else if (n.endsWith('.noupix') || n.endsWith('.json')) openProjectFile(f);
     else if (mediaKindOf(f)) { mediaTarget = null; addMediaFile(f); }
-    else toast(`${f.name}: nouPix opens projects (.noupix), shaders (.fs), presets (.milk), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
+    else toast(`${f.name}: nouPix opens projects (.noupix), shaders (.fs), presets (.milk / .zip), SVG layouts, videos and images. ${MEDIA_FORMATS}`, 'warn');
   });
   window.addEventListener('keydown', onKey);
   window.addEventListener('keyup', e => { if (e.code === 'Space') { spaceHeld = false; cv.style.cursor = ''; } });

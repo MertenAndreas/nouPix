@@ -19,9 +19,16 @@ function getButterchurnPresetsLib() {
 }
 
 /* ---------- audio manager: line-in, microphone and synthetic beat fallback ---------- */
+/* ---------- audio manager: line-in, microphone and synthetic beat fallback ---------- */
 let milkAudioCtx = null;
 let milkMicStream = null;
 let milkMicSource = null;
+let milkInputNode = null;
+let milkLowCutFilter = null;
+let milkEqLow = null;
+let milkEqMid = null;
+let milkEqHigh = null;
+let milkCompressor = null;
 let milkGainNode = null;
 let milkAnalyser = null;
 let milkBeatOsc = null;
@@ -30,6 +37,13 @@ let milkBeatTimer = null;
 let milkAudioMode = 'beat'; // 'live' or 'beat'
 let milkActiveDeviceId = 'beat';
 let milkAudioDevices = [];
+
+// Audio filtering, EQ and AGC states
+let milkBandFocus = 'all'; // 'all', 'bass', 'mids', 'highs'
+let milkLowCutEnabled = true; // 60Hz rumble highpass
+let milkAgcEnabled = false; // Auto Gain Control
+let milkAgcGain = 1.0;
+let milkRollingRms = 0.2;
 
 function ensureMilkAudio() {
   if (milkAudioCtx && milkAudioCtx.state !== 'closed') {
@@ -40,14 +54,61 @@ function ensureMilkAudio() {
   if (!AudioContextClass) return null;
   try {
     milkAudioCtx = new AudioContextClass();
+
+    // 1. Input summing node
+    milkInputNode = milkAudioCtx.createGain();
+    milkInputNode.gain.setValueAtTime(1.0, milkAudioCtx.currentTime);
+
+    // 2. Low-cut / Rumble Highpass filter (cuts out mic handling noise, table thuds, sub rumble)
+    milkLowCutFilter = milkAudioCtx.createBiquadFilter();
+    milkLowCutFilter.type = 'highpass';
+    milkLowCutFilter.frequency.setValueAtTime(milkLowCutEnabled ? 65 : 10, milkAudioCtx.currentTime);
+
+    // 3. 3-Band Equalizer (Low-Shelf, Mid-Peak, High-Shelf)
+    milkEqLow = milkAudioCtx.createBiquadFilter();
+    milkEqLow.type = 'lowshelf';
+    milkEqLow.frequency.setValueAtTime(130, milkAudioCtx.currentTime);
+    milkEqLow.gain.setValueAtTime(0, milkAudioCtx.currentTime);
+
+    milkEqMid = milkAudioCtx.createBiquadFilter();
+    milkEqMid.type = 'peaking';
+    milkEqMid.frequency.setValueAtTime(1200, milkAudioCtx.currentTime);
+    milkEqMid.Q.setValueAtTime(1.0, milkAudioCtx.currentTime);
+    milkEqMid.gain.setValueAtTime(0, milkAudioCtx.currentTime);
+
+    milkEqHigh = milkAudioCtx.createBiquadFilter();
+    milkEqHigh.type = 'highshelf';
+    milkEqHigh.frequency.setValueAtTime(6000, milkAudioCtx.currentTime);
+    milkEqHigh.gain.setValueAtTime(0, milkAudioCtx.currentTime);
+
+    // 4. Dynamics Compressor / Musical Limiter (prevents harsh clipping on loud drops)
+    milkCompressor = milkAudioCtx.createDynamicsCompressor();
+    milkCompressor.threshold.setValueAtTime(-18, milkAudioCtx.currentTime);
+    milkCompressor.knee.setValueAtTime(12, milkAudioCtx.currentTime);
+    milkCompressor.ratio.setValueAtTime(10, milkAudioCtx.currentTime);
+    milkCompressor.attack.setValueAtTime(0.005, milkAudioCtx.currentTime);
+    milkCompressor.release.setValueAtTime(0.18, milkAudioCtx.currentTime);
+
+    // 5. Output sensitivity gain node
     milkGainNode = milkAudioCtx.createGain();
     milkGainNode.gain.setValueAtTime(1.0, milkAudioCtx.currentTime);
 
-    // Analyser node for live VU meter and audio reactivity
+    // Chain: input -> lowCut -> eqLow -> eqMid -> eqHigh -> compressor -> gainNode
+    milkInputNode.connect(milkLowCutFilter);
+    milkLowCutFilter.connect(milkEqLow);
+    milkEqLow.connect(milkEqMid);
+    milkEqMid.connect(milkEqHigh);
+    milkEqHigh.connect(milkCompressor);
+    milkCompressor.connect(milkGainNode);
+
+    // 6. Analyser node for live VU meter and audio reactivity
     milkAnalyser = milkAudioCtx.createAnalyser();
     milkAnalyser.fftSize = 64;
     milkAnalyser.smoothingTimeConstant = 0.5;
     milkGainNode.connect(milkAnalyser);
+
+    // Apply initial band focus
+    setMilkBandFocus(milkBandFocus);
 
     // Setup synthetic rhythmic beat generator (simulates kick and bass pulsations at ~125 BPM)
     milkBeatGain = milkAudioCtx.createGain();
@@ -76,7 +137,7 @@ function ensureMilkAudio() {
       milkBeatGain.gain.exponentialRampToValueAtTime(0.001, t + (isKick ? 0.18 : 0.08));
     }, intervalMs);
 
-    milkBeatGain.connect(milkGainNode);
+    milkBeatGain.connect(milkInputNode);
 
     // Enumerate devices initially
     updateMilkAudioDevices();
@@ -85,6 +146,48 @@ function ensureMilkAudio() {
   } catch (e) {
     return null;
   }
+}
+
+// 3-Band Audio Focus Modes: 'all', 'bass', 'mids', 'highs'
+function setMilkBandFocus(mode) {
+  milkBandFocus = mode || 'all';
+  if (!milkEqLow || !milkEqMid || !milkEqHigh || !milkAudioCtx) return;
+  const t = milkAudioCtx.currentTime;
+  if (milkBandFocus === 'bass') {
+    // Focus on kick drum and bassline (+9dB Lows, cut highs)
+    milkEqLow.gain.setTargetAtTime(9.0, t, 0.05);
+    milkEqMid.gain.setTargetAtTime(-5.0, t, 0.05);
+    milkEqHigh.gain.setTargetAtTime(-14.0, t, 0.05);
+  } else if (milkBandFocus === 'mids') {
+    // Focus on vocals, leads and melody
+    milkEqLow.gain.setTargetAtTime(-9.0, t, 0.05);
+    milkEqMid.gain.setTargetAtTime(7.0, t, 0.05);
+    milkEqHigh.gain.setTargetAtTime(-4.0, t, 0.05);
+  } else if (milkBandFocus === 'highs') {
+    // Focus on claps, snares, hats
+    milkEqLow.gain.setTargetAtTime(-14.0, t, 0.05);
+    milkEqMid.gain.setTargetAtTime(0.0, t, 0.05);
+    milkEqHigh.gain.setTargetAtTime(9.0, t, 0.05);
+  } else {
+    // 'all' - Full Range Flat
+    milkEqLow.gain.setTargetAtTime(0.0, t, 0.05);
+    milkEqMid.gain.setTargetAtTime(0.0, t, 0.05);
+    milkEqHigh.gain.setTargetAtTime(0.0, t, 0.05);
+  }
+}
+
+// Rumble filter (Low-cut / Highpass @ 65Hz)
+function setMilkLowCut(enabled) {
+  milkLowCutEnabled = !!enabled;
+  if (milkLowCutFilter && milkAudioCtx) {
+    milkLowCutFilter.frequency.setTargetAtTime(milkLowCutEnabled ? 65 : 10, milkAudioCtx.currentTime, 0.05);
+  }
+}
+
+// Auto-Gain Control (AGC) Toggle
+function setMilkAgc(enabled) {
+  milkAgcEnabled = !!enabled;
+  if (!milkAgcEnabled) milkAgcGain = 1.0;
 }
 
 // Read current audio volume level (0.0 to 1.0) for the VU meter (Peak + RMS + FFT)
@@ -107,6 +210,22 @@ function getMilkAudioLevel() {
   let freqSum = 0;
   for (let i = 0; i < freqData.length; i++) freqSum += freqData[i];
   const freqAvg = freqSum / (freqData.length * 255);
+
+  // Auto-Gain Control (AGC) tracking: smoothly adapt gain during quiet intros / loud drops
+  if (milkAgcEnabled) {
+    milkRollingRms = milkRollingRms * 0.95 + rms * 0.05;
+    let targetMult = 1.0;
+    if (milkRollingRms > 0.015) {
+      if (milkRollingRms < 0.16) {
+        targetMult = Math.min(3.5, 0.22 / Math.max(0.04, milkRollingRms));
+      } else if (milkRollingRms > 0.38) {
+        targetMult = Math.max(0.35, 0.22 / milkRollingRms);
+      }
+    }
+    milkAgcGain = milkAgcGain * 0.94 + targetMult * 0.06;
+  } else {
+    milkAgcGain = 1.0;
+  }
 
   // Responsive combined level (0.0 to 1.0), boosted for vivid visual readout
   const lvl = Math.max(max * 1.3, rms * 2.8, freqAvg * 2.2);
@@ -173,7 +292,7 @@ async function startMilkAudio(deviceId = null) {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     milkMicStream = stream;
     milkMicSource = ctx.createMediaStreamSource(stream);
-    milkMicSource.connect(milkGainNode);
+    milkMicSource.connect(milkInputNode || milkGainNode);
     milkAudioMode = 'live';
     milkActiveDeviceId = deviceId || 'default';
 
@@ -248,7 +367,7 @@ async function startMilkSystemAudio() {
 
     milkMicStream = stream;
     milkMicSource = ctx.createMediaStreamSource(stream);
-    milkMicSource.connect(milkGainNode);
+    milkMicSource.connect(milkInputNode || milkGainNode);
     milkAudioMode = 'live';
     milkActiveDeviceId = 'system';
 
@@ -296,16 +415,79 @@ function setMilkAudioMode(mode, deviceId = null) {
   }
 }
 
-/* ---------- preset catalog and management ---------- */
+/* ---------- preset catalog, favorites and management ---------- */
 const customMilkPresets = new Map(); // preset name -> preset object
 
-function getAllMilkPresetNames() {
+const DEFAULT_MILK_FAVORITES = [
+  '_Geiss - Desert Rose 2',
+  'Cope - The Neverending Explosion of Red Liquid Fire',
+  'Eo.S. + Phat - cubetrace - v2',
+  'Eo.S. + Zylot - skylight (Stained Glass Majesty mix)',
+  '_Geiss - Artifact 01',
+  '_Rovastar + Geiss - Hurricane Nightmare (Posterize Mix)',
+  'cope + martin - mother-of-pearl',
+  'Aderrasi - Potion of Spirits',
+  'Martin - acid cavern',
+  'Flexi - mindblob',
+  'Unchained - Painful Memories (Agnostis remix)',
+  'Geiss - Constant Scream',
+  'Rovastar - Tripmaker (Mashup)',
+  'Stahlregens & Bdrv - The Gates Of Valhalla'
+];
+
+let milkFavorites = null;
+function getMilkFavorites() {
+  if (!milkFavorites) {
+    try {
+      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('noupix_butterchurn_favorites') : null;
+      milkFavorites = stored ? new Set(JSON.parse(stored)) : new Set(DEFAULT_MILK_FAVORITES);
+    } catch (e) {
+      milkFavorites = new Set(DEFAULT_MILK_FAVORITES);
+    }
+  }
+  return milkFavorites;
+}
+
+function saveMilkFavorites() {
+  try {
+    if (milkFavorites && typeof localStorage !== 'undefined') {
+      localStorage.setItem('noupix_butterchurn_favorites', JSON.stringify([...milkFavorites]));
+    }
+  } catch (e) {}
+}
+
+function isMilkFavorite(name) {
+  if (!name) return false;
+  return getMilkFavorites().has(name);
+}
+
+function toggleMilkFavorite(name) {
+  if (!name) return false;
+  const favs = getMilkFavorites();
+  let added = false;
+  if (favs.has(name)) {
+    favs.delete(name);
+  } else {
+    favs.add(name);
+    added = true;
+  }
+  saveMilkFavorites();
+  return added;
+}
+
+function getAllMilkPresetNames(onlyFavorites = false) {
   const lib = getButterchurnPresetsLib();
   const names = Object.keys(lib);
   for (const k of customMilkPresets.keys()) {
     if (!names.includes(k)) names.push(k);
   }
-  return names.sort();
+  names.sort();
+  if (onlyFavorites) {
+    const favs = getMilkFavorites();
+    const filtered = names.filter(n => favs.has(n));
+    return filtered.length ? filtered : names;
+  }
+  return names;
 }
 
 function getMilkPresetObject(name) {
@@ -481,40 +663,57 @@ function ensureMilkVisualizer(w, h) {
 }
 
 // Preset cycling and transition
-function checkMilkCycle(src) {
-  if (!src.cycle || src.cycle <= 0) return;
+function checkMilkCycle(src, L = null) {
+  const p = (L && L.params && L.params[src.id]) || src.params || {};
+  const cycleSec = (p && p.cycle != null) ? p.cycle : (src.cycle || 0);
+  if (!cycleSec || cycleSec <= 0) return;
   const now = clockT;
   if (!src._lastCycle) src._lastCycle = now;
-  if (now - src._lastCycle >= src.cycle) {
+  if (now - src._lastCycle >= cycleSec) {
     src._lastCycle = now;
-    cycleMilkPreset(src);
+    const favOnly = (p && p.favOnly != null) ? p.favOnly : (src.favOnly || false);
+    cycleMilkPreset(src, 1, favOnly, L);
   }
 }
 
-function cycleMilkPreset(src, dir = 1) {
-  const all = getAllMilkPresetNames();
+function cycleMilkPreset(src, dir = 1, favoritesOnly = false, L = null) {
+  const all = getAllMilkPresetNames(favoritesOnly);
   if (!all.length) return;
-  let idx = all.indexOf(src.preset);
+  const p = (L && L.params && L.params[src.id]) || src.params || {};
+  const cur = p.preset || src.preset;
+  let idx = all.indexOf(cur);
   if (idx < 0) idx = 0;
   else idx = (idx + dir + all.length) % all.length;
-  src.preset = all[idx];
-  loadMilkPreset(src, src.preset, src.transition ?? 2.5);
+  const next = all[idx];
+  src.preset = next;
+  if (L && L.params) {
+    L.params[src.id] = L.params[src.id] || {};
+    L.params[src.id].preset = next;
+  }
+  const morphDur = (p && p.transition != null) ? p.transition : (src.transition ?? 2.5);
+  loadMilkPreset(src, next, morphDur);
   commitSoft();
   if (typeof ui !== 'undefined' && ui.rightTab === 'content' && typeof renderRight === 'function') {
     renderRight();
   }
 }
 
-function randomMilkPreset(src) {
-  const all = getAllMilkPresetNames();
+function randomMilkPreset(src, favoritesOnly = false, L = null) {
+  const all = getAllMilkPresetNames(favoritesOnly);
   if (!all.length) return;
-  const current = src.preset;
-  let next = current;
-  for (let i = 0; i < 5 && next === current; i++) {
+  const p = (L && L.params && L.params[src.id]) || src.params || {};
+  const cur = p.preset || src.preset;
+  let next = cur;
+  for (let i = 0; i < 8 && next === cur; i++) {
     next = all[Math.floor(Math.random() * all.length)];
   }
   src.preset = next;
-  loadMilkPreset(src, next, src.transition ?? 2.5);
+  if (L && L.params) {
+    L.params[src.id] = L.params[src.id] || {};
+    L.params[src.id].preset = next;
+  }
+  const morphDur = (p && p.transition != null) ? p.transition : (src.transition ?? 2.5);
+  loadMilkPreset(src, next, morphDur);
   commitSoft();
   if (typeof ui !== 'undefined' && ui.rightTab === 'content' && typeof renderRight === 'function') {
     renderRight();
@@ -583,21 +782,36 @@ function renderMilkdrop(src, L, w, h) {
   if (milkAudioCtx && milkAudioCtx.state === 'suspended') {
     milkAudioCtx.resume().catch(() => {});
   }
-  // Audio sensitivity / gain from source or Speed/Intensity macros
-  if (milkGainNode) {
-    const userGain = src.gain ?? 1.0;
-    const speedMult = project && project.macros && project.macros.speed ? project.macros.speed.v : 1;
-    milkGainNode.gain.setValueAtTime(userGain * speedMult, milkAudioCtx ? milkAudioCtx.currentTime : 0);
-  }
-  // Check preset update
-  const presetName = src.preset || (src.builtin && (MILKDROP_BUILTINS.find(b => b.id === src.builtin) || {}).preset) || '_Geiss - Desert Rose 2';
-  if (milkActivePreset !== presetName) {
-    loadMilkPreset(src, presetName, 0.0);
-  }
-  checkMilkCycle(src);
 
-  // Read layer and source parameter overrides
+  // Read layer and source parameter overrides (Scenes & Layer snapshots)
   const p = (L && L.params && L.params[src.id]) || src.params || {};
+
+  // Apply audio filtering, EQ and AGC settings
+  const band = p.bandFocus || src.bandFocus || 'all';
+  if (band !== milkBandFocus) setMilkBandFocus(band);
+
+  const lowCut = p.lowCut != null ? !!p.lowCut : (src.lowCut != null ? !!src.lowCut : true);
+  if (lowCut !== milkLowCutEnabled) setMilkLowCut(lowCut);
+
+  const agc = p.agc != null ? !!p.agc : (src.agc != null ? !!src.agc : false);
+  if (agc !== milkAgcEnabled) setMilkAgc(agc);
+
+  // Audio sensitivity / gain from source, layer params, and Speed/Intensity macros
+  if (milkGainNode && milkAudioCtx) {
+    const userGain = numOr((p && p.gain) ?? src.gain, 1.0);
+    const speedMult = project && project.macros && project.macros.speed ? project.macros.speed.v : 1;
+    const finalGain = userGain * (milkAgcEnabled ? milkAgcGain : 1.0) * speedMult;
+    milkGainNode.gain.setValueAtTime(finalGain, milkAudioCtx.currentTime);
+  }
+
+  // Check preset update (smooth morphing when scene changes or preset is updated)
+  const targetPreset = p.preset || src.preset || (src.builtin && (MILKDROP_BUILTINS.find(b => b.id === src.builtin) || {}).preset) || '_Geiss - Desert Rose 2';
+  if (milkActivePreset !== targetPreset) {
+    const morphDur = numOr((p && p.transition) ?? src.transition, 2.5);
+    loadMilkPreset(src, targetPreset, morphDur);
+  }
+  checkMilkCycle(src, L);
+
   const ov = {};
   if (p.decay != null) ov.decay = Number(p.decay);
   if (p.gammaadj != null) ov.gammaadj = Number(p.gammaadj);
@@ -644,13 +858,15 @@ function renderMilkdrop(src, L, w, h) {
   const top = milkCanvas.height - h;
   milkCtx.clearRect(0, top, w, h);
 
-  // Apply color grading filters (Hue Shift, Saturation, Brightness)
+  // Apply color grading filters + LED Matrix Boost (Contrast & Saturation for punchy pixels)
+  const matrixBoost = numOr(p.matrixBoost, 0); // 0% to 150%
   const hue = numOr(p.hue, 0);
-  const sat = numOr(p.sat, 100);
+  const sat = numOr(p.sat, 100) * (1 + matrixBoost * 0.005);
+  const contrast = 100 + (matrixBoost * 0.85);
   const bright = numOr(p.bright, 100);
 
-  if (hue !== 0 || sat !== 100 || bright !== 100) {
-    milkCtx.filter = `hue-rotate(${hue}deg) saturate(${sat}%) brightness(${bright}%)`;
+  if (hue !== 0 || sat !== 100 || bright !== 100 || matrixBoost > 0) {
+    milkCtx.filter = `hue-rotate(${hue}deg) saturate(${Math.round(sat)}%) brightness(${bright}%) contrast(${Math.round(contrast)}%)`;
   } else {
     milkCtx.filter = 'none';
   }
@@ -661,6 +877,29 @@ function renderMilkdrop(src, L, w, h) {
     return null;
   }
   milkCtx.filter = 'none';
+
+  // Apply True-Black LED Floor (DMX Cutoff) to prevent background LED glowing
+  const trueBlack = numOr(p.trueBlack, 0); // 0% to 15%
+  if (trueBlack > 0 && w > 0 && h > 0) {
+    try {
+      const imgData = milkCtx.getImageData(0, top, w, h);
+      const d = imgData.data;
+      const cutoff = Math.round((trueBlack / 100) * 255);
+      const knee = Math.max(2, Math.round(cutoff * 0.35));
+      for (let i = 0; i < d.length; i += 4) {
+        const maxC = Math.max(d[i], d[i + 1], d[i + 2]);
+        if (maxC < cutoff - knee) {
+          d[i] = 0; d[i + 1] = 0; d[i + 2] = 0;
+        } else if (maxC < cutoff + knee) {
+          const factor = (maxC - (cutoff - knee)) / (knee * 2);
+          d[i] = Math.round(d[i] * factor);
+          d[i + 1] = Math.round(d[i + 1] * factor);
+          d[i + 2] = Math.round(d[i + 2] * factor);
+        }
+      }
+      milkCtx.putImageData(imgData, 0, top);
+    } catch (e) {}
+  }
 
   // Apply stage color macro tinting if enabled
   let tintRgb = null;
@@ -759,3 +998,9 @@ const loadButterchurnPreset = loadMilkPreset;
 const cycleButterchurnPreset = cycleMilkPreset;
 const randomButterchurnPreset = randomMilkPreset;
 const getAllButterchurnPresetNames = getAllMilkPresetNames;
+const isButterchurnFavorite = isMilkFavorite;
+const toggleButterchurnFavorite = toggleMilkFavorite;
+const getButterchurnFavorites = getMilkFavorites;
+const setButterchurnBandFocus = setMilkBandFocus;
+const setButterchurnLowCut = setMilkLowCut;
+const setButterchurnAgc = setMilkAgc;

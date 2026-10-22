@@ -339,7 +339,7 @@ function addSourceMenu(anchor) {
   const here = REMOTE_CLIENT ? { disabled: true, title: 'Add videos, images and screen capture on the main computer.' } : null;
   menu(anchor, [
     ['ButterChurn visualizer…', () => addButterchurnSource()],
-    ['ButterChurn preset file (.json / .milk)…', () => ($('#fileButterchurn') || $('#fileMilk')).click(), here],
+    ['ButterChurn preset file or pack (.milk / .zip)…', () => ($('#fileButterchurn') || $('#fileMilk')).click(), here],
     '-',
     ['ISF shader file (.fs)…', () => $('#fileIsf').click()],
     ['Image or video file…', () => pickMedia(null), here || { title: MEDIA_FORMATS }],

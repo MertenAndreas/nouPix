@@ -2,7 +2,7 @@
 
 Everything nouPix 1.0.3 does, in detail (the version shows next to the app name, top left). Up to 0.9 it was called openLedMapper. This is the source text for the PDF guide; the [README](../README.md) has the essentials.
 
-A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
+A basic pixel-mapping tool: draw or import LED fixtures (lines, matrices, circles, free paths), split the canvas into zones, layer generators, ISF shaders, ButterChurn visualizers, images, video or a screen capture in each zone, store looks as scenes to play live or in playlists, patch the fixtures to Art-Net controller outputs, and send it out.
 
 The interface runs in your browser. `noupix.py` is a small local server that sends the Art-Net packets, because browsers cannot send UDP.
 
@@ -50,7 +50,7 @@ The interface is black, so the light on the stage is the brightest thing on scre
 1. **Settings → Composition.** Set the size of the canvas the content is rendered at. Fixture coordinates use these units.
 2. **Fixtures.** Pick a tool on the stage: `L` line, `M` matrix, `C` circle/ring, `P` path (straight segments), `N` pen (curves). Drag to draw, or click for a default size. You can also bring fixtures in with **SVG…** (see below). Edit exact values in the Inspector, including pixel count, color order, wiring start and direction.
 3. **Patch.** In the Patch panel, add a controller: IP address, number of outputs, universes per output and first universe. Then drag fixtures from the list onto an output. Fixtures chained on one output are addressed in order, automatically.
-4. **Content.** Click a generator in Sources to play it in the selected layer of the selected zone. Add zones, layers, blend modes and parameters in the Content tab (see below). You can also add your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
+4. **Content.** Click a generator in Sources to play it in the selected layer of the selected zone. Add zones, layers, blend modes and parameters in the Content tab (see below). You can also add a ButterChurn visualizer, your own ISF shader, an image, a video, or a window capture (for example Resolume's output).
 5. **Scenes.** When a zone's look is right, press **+ Store** on its row in the Scenes panel. Put scenes in a **playlist** to have the zone play them one after another by itself.
 6. **Art-Net** goes out from the start, every time nouPix opens. The status bar's right end shows how many packets go out each second, or what is wrong. **Settings → Art-Net connection → Send Art-Net** switches it off (for example while another console drives the lights) and on again. **Blackout** (the slashed sun at the right of the top bar, or `B`) turns every light off at once; it breathes red until you press it again.
 
@@ -245,6 +245,38 @@ The **graph** under the curve shows it: level in (left to right), output (bottom
 
 Circles, arcs, lines and paths become fixtures, fitted into the composition. Circles keep the start point and drawing direction from the SVG. Shapes drawn exactly on top of each other are imported once. The SVG can also be kept as a guide image for tracing. Set the real pixel count per fixture afterwards; select several fixtures to set them all at once.
 
+## ButterChurn visualizers
+
+nouPix includes a full real-time audio-reactive visualizer engine powered by ButterChurn (WebGL/Wasm Milkdrop 2 preset renderer).
+
+- **Adding a visualizer.** In Sources, pick one of the curated built-in presets (Desert Rose, Liquid Fire, Cubetrace, Skylight, Artifact, Hurricane, Mother of Pearl, Potion Spirits...), click **+ Add → ButterChurn visualizer…** for a randomly chosen preset, or click **+ Add → ButterChurn preset file (.json / .milk)…** (or drag and drop a `.milk` or `.json` preset file onto the window) to add custom presets.
+- **Preset navigation & morphing.** The Inspector offers a Preset dropdown with the entire preset library, along with **‹ Prev**, **Random**, and **Next ›** buttons. **Morph time** sets the crossfade duration when switching presets (0 cuts instantly, up to 5 seconds for smooth geometric morphing).
+- **Auto-cycle presets.** Set **Auto-cycle** to automatically advance to a new preset after a set interval (10 s, 30 s, 1 min, 2 min, etc.), or 0 to stay on the chosen preset.
+- **Audio input & live monitor.** Select your audio source from the **Audio Input** dropdown:
+  - **Synthesized Beat (fallback)**: Generates a pulsating ~125 BPM rhythmic bass pulse, great for standalone testing or club visuals without an active microphone.
+  - **Microphone / Line In**: Real-time reactive audio from your audio interface, DJ mixer line-in, or USB microphone. Click **🎤 Connect Line-In / Mic** to grant browser microphone permissions and populate the list of hardware inputs.
+  - **🖥️ System / Tab Audio (Browser Loopback)**: Capture sound directly from another application (Spotify, YouTube, media player, DAW, or DJ software) without extra cables. Click **🖥️ System / Tab Audio**, choose a tab or screen, and check **"Share audio"** in the browser popup.
+  - **Signal Level**: Displays real-time audio reactivity with an animated mini-waveform and peak-hold VU meter (green, yellow, red), showing dB signal level and input status.
+  - **Sensitivity**: Scales audio reactivity from 20 % to 400 %.
+- **Loopback audio & capturing sound from other apps (Windows, macOS, Linux):**
+  - **Why desktop sound / Stereo Mix is not visible by default**: Operating systems and browsers treat speakers and headphones as *audio outputs*, whereas ButterChurn listens to *audio inputs* (`audioinput`). The internal loopback device is often disabled or hidden by default in Windows.
+  - **Enabling Stereo Mix on Windows (Deaktivierte Geräte aktivieren)**:
+    1. Press `Win + R`, type `mmsys.cpl` and press Enter to open the Windows Sound Control Panel.
+    2. Switch to the **Recording** tab (*Aufnahme*).
+    3. Right-click in the empty space of the device list and check **"Show Disabled Devices"** (*Deaktivierte Geräte anzeigen*) and **"Show Disconnected Devices"** (*Getrennte Geräte anzeigen*).
+    4. If **Stereo Mix** (*Stereomix* / *Was Sie hören*) appears: right-click it, select **Enable** (*Aktivieren*), and set it as Default Device.
+    5. In nouPix, click the **🔄 Rescan** button next to the Audio input dropdown to make it appear immediately.
+  - **Virtual Audio Cable alternative**: If your soundcard or USB headset driver does not support hardware Stereo Mix, install a free virtual audio loopback driver such as *VB-Audio Virtual Cable* or *Voicemeeter*. It creates a virtual playback device whose output is mirrored directly as an audio input in nouPix.
+  - **Browser protocol & permissions**: Browsers strictly forbid microphone/hardware audio access on `file://` URLs. Always launch nouPix using `python noupix.py` (`http://127.0.0.1:8080`) and confirm the browser's permission prompt (lock icon in the URL bar).
+  - **Linux & macOS**: On Linux (PulseAudio/PipeWire), `Monitor of [Sound Card]` is automatically available as an input device, and tools like `pavucontrol` or `qpwgraph` let you patch any app's sound into nouPix. On macOS, use browser System/Tab audio sharing or the free open-source *BlackHole* driver. On Raspberry Pi, plug in any standard USB audio input dongle.
+- **Preset parameters & colors.** When a preset exposes configurable parameters, the Inspector dynamically reveals a dedicated section with live controls:
+  - **Palette & stage tinting**: Hue shift (0°–360°), Saturation, and Color 1 / Color 2 stage macro tinting.
+  - **Waveform**: Waveform display mode, waveform scale, and waveform custom RGB colour.
+  - **Borders & grid**: Outer and inner border size/color, and motion vectors / grid colour.
+  - **Motion & feedback**: Decay / Trails (from sharp to lingering light trails), Gamma, and Warp zoom intensity.
+  - **Artistic effects**: Solarize and Invert toggles.
+  - **Reset to preset defaults**: Restores all parameters and colors back to the preset's original values in one click.
+
 ## Videos and images
 
 Add one with **+ Add → Image or video file…** in Sources, or drop the file on the window.
@@ -393,4 +425,4 @@ The logo is `icons/noupix.svg` (with its smaller cuts `noupix-small.svg`, `noupi
 
 nouPix is © 2026 nouled studio, under the GNU Affero General Public License 3.0 (`LICENSE`): you may use it, change it, share it and sell it; whoever passes it on, or lets others use a changed copy over the network, gives them its full source under the same licence.
 
-The fonts are Saira (Omnibus-Type), Chakra Petch (Cadson Demak) and JetBrains Mono (JetBrains), under the SIL Open Font License (`css/OFL.txt`). The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence), bundled as `js/vendor/isf.js`.
+The fonts are Saira (Omnibus-Type), Chakra Petch (Cadson Demak) and JetBrains Mono (JetBrains), under the SIL Open Font License (`css/OFL.txt`). The ISF renderer is [interactive-shader-format](https://github.com/Vidvox/interactive-shader-format-js) by VIDVOX (ISC licence), bundled as `js/vendor/isf.js`. The ButterChurn visualizer engine is [Butterchurn](https://github.com/jberg/butterchurn) by Jordan Berg (MIT licence, see [LICENSE](../LICENSE) and [js/vendor/LICENSE-BUTTERCHURN.txt](../js/vendor/LICENSE-BUTTERCHURN.txt)), bundled with curated presets; ButterChurn implementation contributed by GitHub user MertenAndreas.

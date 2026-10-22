@@ -233,13 +233,14 @@ const SRC_ALIASES = {
 const SRC_SEARCH = { smooth: 'calm', soft: 'calm', slow: 'calm', relaxing: 'calm', disco: 'party', club: 'party', atmospheric: 'ambient', atmosphere: 'ambient', architecture: 'architectural', facade: 'architectural', bpm: 'beat' };
 const SRC_FACET_OF = new Map(SRC_FACETS.flatMap(f => f.values.map(([v]) => [v, f.key])));
 function srcTags(s) {
+  if (s.kind === 'butterchurn' || s.kind === 'milkdrop') return ['butterchurn', 'milkdrop', 'visualizer', 'show', 'audio', 'beat', 'music'];
   if (s.kind !== 'isf') return [s.kind === 'screen' ? 'capture' : s.kind];
   const hdr = headerOf(s), c = hdr && hdr.CATEGORIES;
   return Array.isArray(c) ? c.map(t => String(t).toLowerCase()) : [];
 }
 // The source's value in each facet; tags listed first win
 function srcFacets(s) {
-  const out = { type: s.builtin ? 'generator' : s.kind === 'isf' ? 'shader' : 'media' };
+  const out = { type: s.builtin ? 'generator' : s.kind === 'isf' ? 'shader' : (s.kind === 'butterchurn' || s.kind === 'milkdrop') ? 'visualizer' : 'media' };
   for (const t of srcTags(s)) for (const v of [t, ...[].concat(SRC_ALIASES[t] || [])]) {
     const k = SRC_FACET_OF.get(v);
     if (k && !out[k]) out[k] = v;
@@ -280,7 +281,7 @@ function renderSrcList() {
   const shown = project.sources.filter(s => srcMatches(s, q));
   if (!shown.length) { grid.replaceChildren(h('div', { class: 'none' }, q ? `Nothing matches “${q}” with these filters.` : 'No source matches these filters.')); return; }
   grid.replaceChildren(...shown.map(s => {
-    const kind = s.kind === 'isf' ? 'ISF' : s.kind === 'screen' ? 'CAP' : s.kind === 'video' ? 'VID' : 'IMG';
+    const kind = s.kind === 'isf' ? 'ISF' : (s.kind === 'butterchurn' || s.kind === 'milkdrop') ? 'CHURN' : s.kind === 'screen' ? 'CAP' : s.kind === 'video' ? 'VID' : 'IMG';
     const missing = (s.kind === 'image' || s.kind === 'video' || s.kind === 'screen') && !mediaEls.get(s.id);
     const rt = s.kind === 'isf' && runtimes.get(s.id);
     const live = L && L.src === s.id, used = usedBy.get(s.id);

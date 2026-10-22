@@ -337,5 +337,12 @@ function addFixtureMenu(anchor) {
 function addSourceMenu(anchor) {
   // files and screens play on the main computer: a device can't hand it a file of its own
   const here = REMOTE_CLIENT ? { disabled: true, title: 'Add videos, images and screen capture on the main computer.' } : null;
-  menu(anchor, [['ISF shader file (.fs)…', () => $('#fileIsf').click()], ['Image or video file…', () => pickMedia(null), here || { title: MEDIA_FORMATS }], ['Screen / window capture', addScreenSource, here]]);
+  menu(anchor, [
+    ['ButterChurn visualizer…', () => addButterchurnSource()],
+    ['ButterChurn preset file (.json / .milk)…', () => ($('#fileButterchurn') || $('#fileMilk')).click(), here],
+    '-',
+    ['ISF shader file (.fs)…', () => $('#fileIsf').click()],
+    ['Image or video file…', () => pickMedia(null), here || { title: MEDIA_FORMATS }],
+    ['Screen / window capture', addScreenSource, here]
+  ]);
 }

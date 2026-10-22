@@ -91,6 +91,8 @@ const ICONS = {
   circle: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="2.5" r="1.6" fill="currentColor"/></svg>',
   path: '<svg viewBox="0 0 16 16"><path d="M2 12c3-7 4 1 7-3s4-5 5-5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
   isf: '<svg viewBox="0 0 16 16"><path d="M5 4L2 8l3 4M11 4l3 4-3 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  butterchurn: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 13h12M4 9.5c1.5-3 2.5-5.5 4-5.5s2.5 2.5 4 5.5" stroke-linecap="round"/><circle cx="8" cy="9.5" r="1.8" fill="currentColor"/></svg>',
+  milkdrop: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 13h12M4 9.5c1.5-3 2.5-5.5 4-5.5s2.5 2.5 4 5.5" stroke-linecap="round"/><circle cx="8" cy="9.5" r="1.8" fill="currentColor"/></svg>',
   image: '<svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3 12l3.5-4 2.5 3 1.5-1.5L13 12" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>',
   video: '<svg viewBox="0 0 16 16"><rect x="2" y="3.5" width="12" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M7 6v4l3.5-2z" fill="currentColor"/></svg>',
   screen: '<svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 14h4M8 11v3" stroke="currentColor" stroke-width="1.4"/></svg>',

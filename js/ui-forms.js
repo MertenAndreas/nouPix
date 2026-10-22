@@ -5,8 +5,45 @@
 /* ---------- form helpers ---------- */
 let binders = [];
 function syncInspector() { for (const b of binders) b(); }
+// Smoothly scrolls long text horizontally on hover so the user can read the full text without wrapping
+function makeTextScrollable(el) {
+  if (!el) return el;
+  el.classList.add('scroll-on-hover');
+  let timer = null, animTimer = null;
+  el.addEventListener('pointerenter', () => {
+    const diff = el.scrollWidth - el.clientWidth;
+    if (diff <= 2) return;
+    el.style.textOverflow = 'clip';
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      let start = null;
+      const duration = Math.max(1600, diff * 22);
+      const step = ts => {
+        if (!start) start = ts;
+        const progress = Math.min(1, (ts - start) / duration);
+        el.scrollLeft = progress * diff;
+        if (progress < 1) {
+          animTimer = requestAnimationFrame(step);
+        } else {
+          timer = setTimeout(() => {
+            el.scrollTo({ left: 0, behavior: 'smooth' });
+          }, 1000);
+        }
+      };
+      animTimer = requestAnimationFrame(step);
+    }, 350);
+  });
+  el.addEventListener('pointerleave', () => {
+    clearTimeout(timer);
+    if (animTimer) cancelAnimationFrame(animTimer);
+    el.scrollTo({ left: 0, behavior: 'smooth' });
+    el.style.textOverflow = 'ellipsis';
+  });
+  return el;
+}
+
 const row = (label, ...ctl) => h('div', { class: 'row' }, typeof label === 'string' ? h('span', { class: 'lbl' }, label) : label, ctl.length > 1 ? h('div', { class: 'pair' }, ctl) : ctl[0]);
-const sec = (title, ...kids) => h('div', { class: 'sec' }, title ? h('h3', null, title) : null, kids);
+const sec = (title, ...kids) => h('div', { class: 'sec' }, title ? (typeof title === 'string' ? makeTextScrollable(h('h3', { title }, title)) : isEl(title) ? title : h('h3', null, title)) : null, kids);
 function numInput(obj, key, o = {}) {
   const inp = h('input', { type: 'number', step: o.step ?? 1, value: fmtV(obj[key]), id: o.id, 'aria-label': o.aria || o.prefix || key });
   const set = v => { if (!isFinite(v)) return; if (o.int) v = Math.round(v); obj[key] = clamp(v, o.min ?? -1e9, o.max ?? 1e9); if (o.onInput) o.onInput(obj[key]); };
@@ -83,10 +120,19 @@ function textInput(obj, key, o = {}) {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
   return inp;
 }
+
 function selectEl(options, value, onChange, o = {}) {
-  const s = h('select', { id: o.id, 'aria-label': o.aria || '' }, options.map(([v, l]) => h('option', { value: String(v) }, l)));
+  const s = h('select', { id: o.id, 'aria-label': o.aria || '' }, options.map(([v, l]) => h('option', { value: String(v), title: String(l) }, l)));
   s.value = String(value);
-  s.addEventListener('change', () => onChange(s.value));
+  const syncTitle = () => {
+    const opt = s.options[s.selectedIndex];
+    s.title = opt ? opt.text : '';
+  };
+  syncTitle();
+  s.addEventListener('change', () => {
+    syncTitle();
+    onChange(s.value);
+  });
   return s;
 }
 function checkRow(text, obj, key, onChange) {

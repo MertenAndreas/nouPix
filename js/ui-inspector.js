@@ -412,8 +412,447 @@ function renderContentTab(body) {
   if (!L.on) head.push(h('p', { class: 'note' }, 'The layer is hidden, so the preview is paused.'));
   if (!src.builtin) head.push(row('Name', textInput(src, 'name', { aria: 'Source name', onInput: renderSrcList, onCommit: commit })));
   const desc = rt && rt.hdr && rt.hdr.DESCRIPTION;
-  head.push(h('p', { class: 'note' }, (src.kind === 'isf' ? (src.builtin ? 'Built-in generator. ' : 'ISF shader. ') : '') + (desc ? desc.replace(/\.?$/, '.') : '')));
+  head.push(h('p', { class: 'note' }, (src.kind === 'isf' ? (src.builtin ? 'Built-in generator. ' : 'ISF shader. ') : (src.kind === 'butterchurn' || src.kind === 'milkdrop') ? 'ButterChurn audio visualizer. ' : '') + (desc ? desc.replace(/\.?$/, '.') : '')));
   body.append(sec(src.name, head));
+
+  if (src.kind === 'butterchurn' || src.kind === 'milkdrop') {
+    const k = [];
+    const allPresets = typeof getAllMilkPresetNames === 'function' ? getAllMilkPresetNames() : [];
+    const churnBuiltins = typeof BUTTERCHURN_BUILTINS !== 'undefined' ? BUTTERCHURN_BUILTINS : (typeof MILKDROP_BUILTINS !== 'undefined' ? MILKDROP_BUILTINS : []);
+    const curPreset = src.preset || (src.builtin && (churnBuiltins.find(b => b.id === src.builtin) || {}).preset) || '_Geiss - Desert Rose 2';
+
+    // Preset dropdown
+    const sel = selectEl(allPresets.map(p => [p, p]), curPreset, v => {
+      src.preset = v;
+      if (typeof loadMilkPreset === 'function') loadMilkPreset(src, v, src.transition ?? 2.5);
+      commit();
+      renderRight();
+    }, { aria: 'ButterChurn Preset' });
+    k.push(row('Preset', sel));
+
+    // Preset navigation buttons (Prev, Random, Next)
+    const prevBtn = h('button', { class: 'btn sm', type: 'button', title: 'Previous preset', onclick: () => cycleMilkPreset(src, -1) }, '‹ Prev');
+    const rndBtn = h('button', { class: 'btn sm', type: 'button', title: 'Random preset', onclick: () => randomMilkPreset(src) }, 'Random');
+    const nextBtn = h('button', { class: 'btn sm', type: 'button', title: 'Next preset', onclick: () => cycleMilkPreset(src, 1) }, 'Next ›');
+    k.push(h('div', { class: 'actions' }, prevBtn, rndBtn, nextBtn));
+
+    // Morph transition duration
+    k.push(sliderRow('Morph time', src, 'transition', {
+      min: 0, max: 5, step: 0.1, fmt: v => (v ?? 2.5).toFixed(1) + ' s', onCommit: commit
+    }));
+
+    // Auto-cycle presets
+    const cycleOptions = [[0, 'Off'], [15, '15 s'], [30, '30 s'], [60, '60 s'], [120, '2 min'], [300, '5 min']];
+    k.push(row('Auto-cycle', selectEl(cycleOptions, src.cycle || 0, v => {
+      src.cycle = parseInt(v, 10);
+      commit();
+    }, { aria: 'Auto-cycle presets' })));
+
+    // Check file:// environment warning for hardware audio access
+    const isFileProto = typeof window !== 'undefined' && window.location && window.location.protocol === 'file:';
+    if (isFileProto) {
+      k.push(h('div', { class: 'note', style: { padding: '6px 8px', borderRadius: '4px', background: 'var(--bg4)', border: '1px solid var(--accent)', margin: '4px 0' } },
+        '⚠️ Hardware Line-In access is blocked by browsers on file:// URLs. Start nouPix with "python noupix.py" at http://127.0.0.1:8080. Simulated beat generator is active.'
+      ));
+    }
+
+    // Audio input device selection
+    const audioOptions = [
+      ['beat', 'Simulated Beat Generator (125 BPM)'],
+      ['system', '🖥️ System / Tab Audio (Browser Loopback)']
+    ];
+    if (typeof milkAudioDevices !== 'undefined' && milkAudioDevices.length) {
+      for (const dev of milkAudioDevices) {
+        audioOptions.push([dev.id, dev.label || 'Audio Input']);
+      }
+    } else {
+      audioOptions.push(['default', 'Default Line-In / Microphone']);
+    }
+
+    const currentAudio = (typeof milkAudioMode !== 'undefined' && milkAudioMode === 'beat') ? 'beat' : ((typeof milkActiveDeviceId !== 'undefined' && milkActiveDeviceId) || 'default');
+    const audioSelect = selectEl(audioOptions, currentAudio, async val => {
+      if (typeof setMilkAudioMode === 'function') {
+        setMilkAudioMode(val === 'beat' ? 'beat' : val);
+      }
+      src.audioDevice = val;
+      commit();
+    }, { aria: 'Audio Input Device' });
+
+    const scanBtn = h('button', {
+      class: 'btn sm icon', type: 'button', title: 'Rescan audio inputs (Line-In, mixer, mic)',
+      onclick: async () => {
+        if (typeof startMilkAudio === 'function') {
+          if (typeof milkAudioMode !== 'undefined' && milkAudioMode === 'live') {
+            await updateMilkAudioDevices();
+          } else {
+            await startMilkAudio();
+          }
+          renderRight();
+          toast('Found ' + (milkAudioDevices.length || 0) + ' audio input device(s)');
+        }
+      }
+    }, icon('restart'));
+
+    const audioWrap = h('div', {
+      style: { display: 'flex', alignItems: 'center', gap: '6px', width: '100%', minWidth: '0' }
+    },
+      h('div', { style: { flex: '1', minWidth: '0', overflow: 'hidden' } }, audioSelect),
+      scanBtn
+    );
+    audioSelect.style.width = '100%';
+    scanBtn.style.flexShrink = '0';
+    k.push(row('Audio input', audioWrap));
+
+    // Connect / Disconnect live Line-In or System audio action buttons
+    const isLive = typeof milkAudioMode !== 'undefined' && milkAudioMode === 'live';
+    const isSystem = isLive && typeof milkActiveDeviceId !== 'undefined' && milkActiveDeviceId === 'system';
+    const actionBtns = [];
+    if (!isLive) {
+      actionBtns.push(h('button', {
+        class: 'btn primary sm', type: 'button', title: 'Request browser audio permission and detect Line-In / Microphones',
+        onclick: async () => {
+          if (typeof startMilkAudio === 'function') {
+            await startMilkAudio();
+            renderRight();
+          }
+        }
+      }, '🎤 Connect Line-In / Mic'));
+
+      actionBtns.push(h('button', {
+        class: 'btn sm', type: 'button', title: 'Capture audio from another app, browser tab, or system output via browser loopback',
+        onclick: async () => {
+          if (typeof startMilkSystemAudio === 'function') {
+            await startMilkSystemAudio();
+            renderRight();
+          }
+        }
+      }, '🖥️ System / Tab Audio'));
+    } else {
+      actionBtns.push(h('button', {
+        class: 'btn sm', type: 'button', title: 'Switch back to the built-in simulated beat generator',
+        onclick: () => {
+          if (typeof setMilkAudioMode === 'function') {
+            setMilkAudioMode('beat');
+            renderRight();
+          }
+        }
+      }, '⏹ Switch to Beat Generator'));
+
+      if (!isSystem) {
+        actionBtns.push(h('button', {
+          class: 'btn sm', type: 'button', title: 'Switch to System / Tab audio loopback (screen/tab sharing audio)',
+          onclick: async () => {
+            if (typeof startMilkSystemAudio === 'function') {
+              await startMilkSystemAudio();
+              renderRight();
+            }
+          }
+        }, '🖥️ System Audio'));
+      } else {
+        actionBtns.push(h('button', {
+          class: 'btn sm', type: 'button', title: 'Switch to Line-In / Microphone input',
+          onclick: async () => {
+            if (typeof startMilkAudio === 'function') {
+              await startMilkAudio();
+              renderRight();
+            }
+          }
+        }, '🎤 Line-In / Mic'));
+      }
+    }
+    k.push(h('div', { class: 'actions', style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } }, ...actionBtns));
+
+    // Audio input status and responsive 60fps live VU meter
+    const meterWrap = h('div', {
+      style: {
+        position: 'relative', height: '10px', flex: '1', minWidth: '0',
+        background: 'var(--bg3)', border: '1px solid var(--line2)',
+        borderRadius: '3px', overflow: 'hidden'
+      }
+    });
+    const meterFill = h('div', {
+      style: {
+        height: '100%', width: '0%',
+        background: 'linear-gradient(to right, #00e676 0%, #76ff03 60%, #ffd600 85%, #ff1744 100%)',
+        boxShadow: '0 0 6px rgba(0, 230, 118, 0.4)',
+        transition: 'width 0.04s ease-out'
+      }
+    });
+    meterWrap.appendChild(meterFill);
+
+    const levelBadge = h('span', {
+      style: {
+        fontFamily: 'var(--mono)', fontSize: '10.5px', minWidth: '32px',
+        textAlign: 'right', color: 'var(--text2)', transition: 'color 0.1s'
+      }
+    }, '0%');
+
+    const meterRow = h('div', {
+      style: { display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }
+    }, meterWrap, levelBadge);
+
+    // Continuous 60fps animation loop for the VU meter while the element is in DOM
+    let animId = null;
+    const updateVU = () => {
+      if (!meterWrap.isConnected) {
+        if (animId) cancelAnimationFrame(animId);
+        return;
+      }
+      const lvl = typeof getMilkAudioLevel === 'function' ? getMilkAudioLevel() : 0;
+      const pct = Math.min(100, Math.round(lvl * 100));
+      meterFill.style.width = pct + '%';
+      levelBadge.textContent = pct + '%';
+      if (pct > 85) levelBadge.style.color = '#ff1744';
+      else if (pct > 60) levelBadge.style.color = '#ffd600';
+      else if (pct > 0) levelBadge.style.color = '#00e676';
+      else levelBadge.style.color = 'var(--text2)';
+      animId = requestAnimationFrame(updateVU);
+    };
+    animId = requestAnimationFrame(updateVU);
+
+    const activeDevObj = typeof milkAudioDevices !== 'undefined' ? milkAudioDevices.find(d => d.id === milkActiveDeviceId) : null;
+    let devLabel = 'Simulated Beat Generator (125 BPM)';
+    if (isLive) {
+      if (milkActiveDeviceId === 'system') {
+        devLabel = '🖥️ System / Tab Audio Loopback';
+      } else {
+        devLabel = activeDevObj ? activeDevObj.label : 'Line-In / Mic Connected';
+      }
+    }
+    const statusNote = h('div', {
+      class: 'meta scroll-on-hover',
+      title: devLabel,
+      style: { fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', cursor: 'default' }
+    },
+      h('span', { style: { color: isLive ? '#00e676' : 'var(--accent)', fontWeight: 'bold', marginRight: '4px' } }, isLive ? '● Live:' : '● Beat:'),
+      h('span', { style: { color: isLive ? 'var(--text)' : 'var(--text2)' } }, devLabel)
+    );
+    if (typeof makeTextScrollable === 'function') makeTextScrollable(statusNote);
+
+    k.push(h('div', { class: 'row' },
+      h('span', { class: 'lbl' }, 'Signal Level'),
+      h('div', { style: { flex: '1', display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0' } }, meterRow, statusNote)
+    ));
+
+    // Audio sensitivity / gain slider
+    k.push(sliderRow('Sensitivity', src, 'gain', {
+      min: 0.2, max: 4, step: 0.05, fmt: v => ((v ?? 1) * 100).toFixed(0) + '%', onCommit: commit
+    }));
+
+    body.append(sec('ButterChurn visualizer', k));
+
+    // Preset parameter & color controls (dynamically displayed when preset offers & uses them)
+    const pInfo = typeof getMilkPresetParams === 'function' ? getMilkPresetParams(curPreset) : null;
+    const pParams = (L.params[src.id] = L.params[src.id] || {});
+    const getP = (name, def) => (name in pParams ? pParams[name] : (src.params && name in src.params ? src.params[name] : def));
+    const setP = (name, val) => {
+      pParams[name] = val;
+      if (!src.params) src.params = {};
+      src.params[name] = val;
+    };
+
+    const cp = [];
+
+    // 1. Color Palette & Stage Macro Tinting
+    // Hue shift slider (0° to 360°)
+    cp.push(sliderRow('Hue shift', {
+      get v() { return numOr(getP('hue', 0), 0); },
+      set v(x) { setP('hue', x); }
+    }, 'v', {
+      min: 0, max: 360, step: 1, wrap: true, notch: 30,
+      fmt: v => Math.round(v) + '°',
+      onCommit: commit,
+      midi: `p:${src.id}:hue`
+    }));
+
+    // Saturation slider (0% to 200%)
+    cp.push(sliderRow('Saturation', {
+      get v() { return numOr(getP('sat', 100), 100); },
+      set v(x) { setP('sat', x); }
+    }, 'v', {
+      min: 0, max: 200, step: 1, notch: 100,
+      fmt: v => Math.round(v) + '%',
+      onCommit: commit,
+      midi: `p:${src.id}:sat`
+    }));
+
+    // Stage Color Macro Tint
+    const tintOptions = [
+      ['none', 'Preset colors (no tint)'],
+      ['color1', 'Follow Color 1 Macro'],
+      ['color2', 'Follow Color 2 Macro'],
+      ['custom', 'Custom Color Tint']
+    ];
+    cp.push(row('Stage tint', selectEl(tintOptions, getP('tintMode', 'none'), v => {
+      setP('tintMode', v);
+      commit();
+      renderRight();
+    }, { aria: 'Stage Color Tint' })));
+
+    if (getP('tintMode', 'none') === 'custom') {
+      const getTint = () => (typeof milkColorToRgb === 'function' ? milkColorToRgb(getP('tintColor', [1, 0, 0.5, 1])) : [1, 0, 0.5, 1]);
+      const setTint = c => { setP('tintColor', c); };
+      const customTint = colorRow('Tint color', getTint, setTint, commit, `${L.id}:${src.id}:tintColor`);
+      const sw = customTint.querySelector('.cswatch');
+      if (sw) binders.push(() => sw._show(getTint()));
+      cp.push(customTint);
+    }
+
+    // 2. Preset-Specific Parameters (only when preset offers & uses them!)
+
+    // Waveform Parameters
+    if (pInfo && pInfo.hasWave) {
+      // Waveform Color
+      const getWaveC = () => (typeof milkColorToRgb === 'function' ? milkColorToRgb(getP('wave_color', pInfo.wave_rgb)) : [1, 1, 1, 1]);
+      const setWaveC = c => { setP('wave_color', c); };
+      const waveCr = colorRow('Wave color', getWaveC, setWaveC, commit, `${L.id}:${src.id}:wave_color`);
+      const sw = waveCr.querySelector('.cswatch');
+      if (sw) binders.push(() => sw._show(getWaveC()));
+      cp.push(waveCr);
+
+      // Waveform Style / Mode
+      const waveModes = [
+        ['', 'Preset default'],
+        ['0', '0 - Off / None'],
+        ['1', '1 - Variable Circle'],
+        ['2', '2 - Radial Dots'],
+        ['3', '3 - Oscilloscope Line'],
+        ['4', '4 - Double Line'],
+        ['5', '5 - Derivative Line'],
+        ['6', '6 - Filled Circle'],
+        ['7', '7 - Waveform Dots']
+      ];
+      cp.push(row('Wave style', selectEl(waveModes, getP('wave_mode', '') !== '' && getP('wave_mode', '') != null ? String(getP('wave_mode', '')) : '', v => {
+        setP('wave_mode', v === '' ? null : Number(v));
+        commit();
+      }, { aria: 'Waveform Style' })));
+
+      // Waveform Scale
+      cp.push(sliderRow('Wave scale', {
+        get v() { return numOr(getP('wave_scale', pInfo.wave_scale), 1); },
+        set v(x) { setP('wave_scale', x); }
+      }, 'v', {
+        min: 0.1, max: 3.0, step: 0.05,
+        fmt: v => v.toFixed(2),
+        onCommit: commit,
+        midi: `p:${src.id}:wave_scale`
+      }));
+    }
+
+    // Outer Border Parameters
+    if (pInfo && pInfo.hasOB) {
+      const getObC = () => (typeof milkColorToRgb === 'function' ? milkColorToRgb(getP('ob_color', pInfo.ob_rgb)) : [0, 0, 0, 1]);
+      const setObC = c => { setP('ob_color', c); };
+      const obCr = colorRow('Outer border', getObC, setObC, commit, `${L.id}:${src.id}:ob_color`);
+      const sw = obCr.querySelector('.cswatch');
+      if (sw) binders.push(() => sw._show(getObC()));
+      cp.push(obCr);
+
+      cp.push(sliderRow('Border size', {
+        get v() { return numOr(getP('ob_size', pInfo.ob_size), 0.01); },
+        set v(x) { setP('ob_size', x); }
+      }, 'v', {
+        min: 0.001, max: 0.1, step: 0.002,
+        fmt: v => (v * 100).toFixed(1) + '%',
+        onCommit: commit,
+        midi: `p:${src.id}:ob_size`
+      }));
+    }
+
+    // Inner Border Parameters
+    if (pInfo && pInfo.hasIB) {
+      const getIbC = () => (typeof milkColorToRgb === 'function' ? milkColorToRgb(getP('ib_color', pInfo.ib_rgb)) : [0, 0, 0, 1]);
+      const setIbC = c => { setP('ib_color', c); };
+      const ibCr = colorRow('Inner border', getIbC, setIbC, commit, `${L.id}:${src.id}:ib_color`);
+      const sw = ibCr.querySelector('.cswatch');
+      if (sw) binders.push(() => sw._show(getIbC()));
+      cp.push(ibCr);
+    }
+
+    // Motion Vectors / Grid Color
+    if (pInfo && pInfo.hasMV) {
+      const getMvC = () => (typeof milkColorToRgb === 'function' ? milkColorToRgb(getP('mv_color', pInfo.mv_rgb)) : [0.5, 0.5, 0.5, 1]);
+      const setMvC = c => { setP('mv_color', c); };
+      const mvCr = colorRow('Grid color', getMvC, setMvC, commit, `${L.id}:${src.id}:mv_color`);
+      const sw = mvCr.querySelector('.cswatch');
+      if (sw) binders.push(() => sw._show(getMvC()));
+      cp.push(mvCr);
+    }
+
+    // Motion Trails / Fade (Decay)
+    if (pInfo && pInfo.hasDecay) {
+      cp.push(sliderRow('Motion trails', {
+        get v() { return numOr(getP('decay', pInfo.decay), 0.98); },
+        set v(x) { setP('decay', x); }
+      }, 'v', {
+        min: 0.80, max: 1.00, step: 0.005,
+        fmt: v => Math.round(v * 100) + '%',
+        onCommit: commit,
+        midi: `p:${src.id}:decay`
+      }));
+    }
+
+    // Gamma / Brightness
+    if (pInfo && pInfo.hasGamma) {
+      cp.push(sliderRow('Gamma adj.', {
+        get v() { return numOr(getP('gammaadj', pInfo.gammaadj), 1.5); },
+        set v(x) { setP('gammaadj', x); }
+      }, 'v', {
+        min: 0.5, max: 3.0, step: 0.05,
+        fmt: v => v.toFixed(2),
+        onCommit: commit,
+        midi: `p:${src.id}:gammaadj`
+      }));
+    }
+
+    // Warp Fluid Distortion
+    if (pInfo && pInfo.hasWarp) {
+      cp.push(sliderRow('Warp distortion', {
+        get v() { return numOr(getP('warp', pInfo.warp), 0.01); },
+        set v(x) { setP('warp', x); }
+      }, 'v', {
+        min: 0.0, max: 1.5, step: 0.01,
+        fmt: v => v.toFixed(2),
+        onCommit: commit,
+        midi: `p:${src.id}:warp`
+      }));
+    }
+
+    // Invert / Solarize Checkboxes
+    if (pInfo && (pInfo.hasInvert || pInfo.hasSolarize)) {
+      const fxChecks = [];
+      if (pInfo.hasInvert) {
+        fxChecks.push(checkRow('Invert colors', {
+          get v() { return !!getP('invert', false); },
+          set v(x) { setP('invert', x); }
+        }, 'v', commit));
+      }
+      if (pInfo.hasSolarize) {
+        fxChecks.push(checkRow('Solarize', {
+          get v() { return !!getP('solarize', false); },
+          set v(x) { setP('solarize', x); }
+        }, 'v', commit));
+      }
+      cp.push(h('div', { style: { display: 'flex', gap: '16px' } }, ...fxChecks));
+    }
+
+    // Reset button to restore original preset values
+    cp.push(h('div', { class: 'actions', style: { marginTop: '8px' } },
+      h('button', {
+        class: 'btn sm', type: 'button',
+        title: 'Reset all custom parameter and color changes to preset defaults',
+        onclick: () => {
+          delete L.params[src.id];
+          if (src.params) src.params = {};
+          commit();
+          renderRight();
+          toast('Reset ButterChurn parameters to preset defaults');
+        }
+      }, 'Reset to preset defaults')
+    ));
+
+    body.append(sec('Preset parameters & colors', cp));
+  }
 
   if (rt && rt.error) body.append(sec('Shader error', h('div', { class: 'errbox' }, rt.error)));
   if (src.kind === 'isf' && rt && rt.R) {

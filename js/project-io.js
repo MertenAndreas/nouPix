@@ -127,9 +127,10 @@ function hydrate(p) {
   const builtins = builtinSources(), srcIds = new Set(builtins.map(s => s.id));
   const custom = (Array.isArray(p.sources) ? p.sources : []).filter(s => isObj(s) && !s.builtin && isId(s.id) && !srcIds.has(s.id) && srcIds.add(s.id));
   for (const s of custom) {
-    if (!['isf', 'image', 'video', 'screen'].includes(s.kind)) s.kind = 'image';
+    if (!['isf', 'butterchurn', 'milkdrop', 'image', 'video', 'screen'].includes(s.kind)) s.kind = 'image';
     if (typeof s.name !== 'string') s.name = s.name != null ? String(s.name) : 'Source';
     if (s.kind === 'isf' && typeof s.code !== 'string') s.code = '';
+    if (s.kind === 'butterchurn' || s.kind === 'milkdrop') { s.preset = typeof s.preset === 'string' ? s.preset : '_Geiss - Desert Rose 2'; s.gain = numOr(s.gain, 1); s.cycle = numOr(s.cycle, 0); s.transition = numOr(s.transition, 2.5); if (!isObj(s.params)) s.params = {}; }
     if ('rate' in s) s.rate = numOr(s.rate, 1);
     if (s.kind === 'video') fixVideoOptions(s);
   }

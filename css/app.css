@@ -619,7 +619,7 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .right .tabs { height: 32px; flex: none; }
 .right .pbody { flex: 1; padding: 0 0 16px; }
 .sec { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 7px; }
-.sec h3 { margin: 0 0 2px; font: 600 10.5px/1.2 var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+.sec h3 { margin: 0 0 2px; font: 600 10.5px/1.2 var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--text2); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .sec h3 .fill { flex: 1; }
 .sec h3 .btn { color: var(--text); }
 .row { display: grid; grid-template-columns: 78px minmax(0,1fr); align-items: center; gap: 8px; min-height: 26px; }
@@ -631,22 +631,22 @@ aside { background: var(--bg1); min-height: 0; display: flex; flex-direction: co
 .inp { position: relative; display: flex; align-items: center; min-width: 0; }
 .inp > b { position: absolute; left: 7px; font-weight: 500; font-size: 10.5px; color: var(--muted); pointer-events: none; }
 .inp > b + input { padding-left: 20px; }
-input[type=text], input[type=number], select, textarea { width: 100%; height: 26px; min-width: 0; background: var(--bg2); border: 1px solid var(--line2); border-radius: var(--r); padding: 0 7px; }
+input[type=text], input[type=number], select, textarea { width: 100%; height: 26px; min-width: 0; background: var(--bg2); border: 1px solid var(--line2); border-radius: var(--r); padding: 0 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 input[type=number] { font-family: var(--mono); font-size: 11.5px; -moz-appearance: textfield; }
 input[type=number]::-webkit-inner-spin-button { display: none; }
 input[type=text]:hover, input[type=number]:hover, select:hover { border-color: var(--line3); }
 input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; background: var(--bg3); }
 input.bad { border-color: var(--danger) !important; color: var(--danger); }
-select { padding-right: 4px; cursor: pointer; }
+select { padding-right: 4px; cursor: pointer; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 /* drop-down lists drawn in the app's look where the browser allows it (Chrome and Edge 135 and newer, the desktop app);
    elsewhere the system's own */
 @supports (appearance: base-select) {
   select, ::picker(select) { appearance: base-select; }
-  select { display: inline-flex; align-items: center; gap: 6px; }
-  select::picker-icon { content: '▾'; color: var(--muted); font-size: 10px; margin-left: auto; transition: none; }
+  select { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; min-width: 0; }
+  select::picker-icon { content: '▾'; color: var(--muted); font-size: 10px; margin-left: auto; transition: none; flex-shrink: 0; }
   select:open::picker-icon { color: var(--text); }
-  ::picker(select) { background: var(--bg2); border: 1px solid var(--line2); border-radius: 0; padding: 4px; margin: 2px 0; color: var(--text); font: 400 12.5px/1.35 var(--ui); scrollbar-width: thin; }
-  option { padding: 5px 10px 5px 12px; border: 0; color: var(--text2); }
+  ::picker(select) { background: var(--bg2); border: 1px solid var(--line2); border-radius: 0; padding: 4px; margin: 2px 0; color: var(--text); font: 400 12.5px/1.35 var(--ui); scrollbar-width: thin; max-width: 320px; }
+  option { padding: 5px 10px 5px 12px; border: 0; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   option:hover, option:focus-visible { background: var(--bg4); color: var(--text); outline: none; }
   option:checked { color: var(--text); font-weight: 500; box-shadow: inset 2px 0 0 var(--sel); }
   option::checkmark { display: none; }
@@ -654,6 +654,16 @@ select { padding-right: 4px; cursor: pointer; }
   optgroup { padding: 6px 0 2px; font: 600 10px var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   optgroup option { font: 400 12.5px/1.35 var(--ui); letter-spacing: 0; text-transform: none; }
 }
+
+/* Horizontal scroll on hover for long text */
+.scroll-on-hover {
+  overflow-x: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+.scroll-on-hover::-webkit-scrollbar { display: none; }
 input[type=checkbox] { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 /* sliders: a 2 px track, aluminium up to the value (--p, kept by rangeFill in ui-forms.js), and a narrow bar for a
    handle. accent-color stays for the browsers that draw their own. The colour picker's (.grad) keep their look. */

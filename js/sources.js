@@ -41,6 +41,7 @@ function sizeContent() {
   const W = Math.max(project.settings.compW, THUMB), H = Math.max(project.settings.compH, THUMB);
   if (glCanvas.width !== W || glCanvas.height !== H) { glCanvas.width = W; glCanvas.height = H; }
   if (mediaCanvas.width !== W || mediaCanvas.height !== H) { mediaCanvas.width = W; mediaCanvas.height = H; }
+  if (typeof milkCanvas !== 'undefined' && milkCanvas && (milkCanvas.width !== W || milkCanvas.height !== H)) { milkCanvas.width = W; milkCanvas.height = H; }
 }
 function runtimeOf(src) {
   let rt = runtimes.get(src.id);
@@ -211,6 +212,9 @@ function renderSource(src, L, w, h) {
     layerTime = null;
     return glCanvas;
   }
+  if (src.kind === 'butterchurn' || src.kind === 'milkdrop') {
+    return typeof renderButterchurn === 'function' ? renderButterchurn(src, L, w, h) : (typeof renderMilkdrop === 'function' ? renderMilkdrop(src, L, w, h) : null);
+  }
   return drawMedia(src, w, h) ? mediaCanvas : null;
 }
 // Play the videos that some layer shows (also restarts ones the browser paused in the background),
@@ -348,6 +352,8 @@ function drawThumb(src, still) {
       isfTime = null;
       img = glCanvas;
     }
+  } else if (src.kind === 'butterchurn' || src.kind === 'milkdrop') {
+    if (typeof drawMilkThumb === 'function') img = drawMilkThumb(src, still);
   } else if (drawMedia(src, THUMB, THUMB)) img = mediaCanvas;
   c._stale = !img && src.kind !== 'isf' && mediaEls.has(src.id); // media still loading: try again next frame
   if (!img) return;

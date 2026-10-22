@@ -573,6 +573,44 @@ function addScreenSource() {
   commit(); renderSrcList(); renderRight();
   startCapture(src);
 }
+function addButterchurnSource(presetName = null) {
+  const all = typeof getAllMilkPresetNames === 'function' ? getAllMilkPresetNames() : [];
+  const preset = presetName || (all.length ? all[Math.floor(Math.random() * all.length)] : '_Geiss - Desert Rose 2');
+  const cleanName = preset.split(' - ').pop().replace(/[()_]/g, ' ').trim();
+  const name = 'ButterChurn: ' + (cleanName.length > 24 ? cleanName.slice(0, 24) + '…' : cleanName);
+  const src = newButterchurnSource({ name, preset });
+  project.sources.push(src);
+  loadSource(src.id);
+  ui.rightTab = 'content';
+  commit(); renderSrcList(); renderRight();
+  toast(`Added ${name}`);
+}
+const addMilkdropSource = addButterchurnSource;
+
+async function addButterchurnFile(file) {
+  try {
+    const text = await file.text();
+    let presetObj = null;
+    const name = file.name.replace(/\.(json|milk)$/i, '');
+    try {
+      presetObj = JSON.parse(text);
+    } catch (e) {
+      presetObj = { baseVals: { decay: 0.98, wave_mode: 0 } };
+    }
+    if (typeof customMilkPresets !== 'undefined') {
+      customMilkPresets.set(name, presetObj);
+    }
+    const src = newButterchurnSource({ name: 'ButterChurn: ' + name, preset: name });
+    project.sources.push(src);
+    loadSource(src.id);
+    ui.rightTab = 'content';
+    commit(); renderSrcList(); renderRight();
+    toast(`Loaded preset ${name}`);
+  } catch (err) {
+    toast('Could not read preset file: ' + err.message, 'err');
+  }
+}
+const addMilkFile = addButterchurnFile;
 
 /* ---------- stacking order ---------- */
 // The fixtures are drawn in list order, the last on top. A whole group moves as one; fixtures picked out of a

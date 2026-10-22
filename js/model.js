@@ -131,8 +131,20 @@ function stagePick(f) {
 // The group, when the selection is exactly one whole group of two or more fixtures
 function wholeGroup(sel = selected()) { const u = selUnits(sel); return u.length === 1 && u[0].g && u[0].list.length > 1 ? u[0].g : null; }
 function builtinSources() {
-  return BUILTINS.map(b => ({ id: 'b-' + b.id, kind: 'isf', builtin: b.id, name: b.name }));
+  const isf = BUILTINS.map(b => ({ id: 'b-' + b.id, kind: 'isf', builtin: b.id, name: b.name }));
+  const churnList = (typeof BUTTERCHURN_BUILTINS !== 'undefined' ? BUTTERCHURN_BUILTINS : (typeof MILKDROP_BUILTINS !== 'undefined' ? MILKDROP_BUILTINS : []));
+  const milk = churnList.map(m => ({
+    id: m.id, kind: 'butterchurn', builtin: m.id, name: m.name, preset: m.preset, gain: 1, cycle: 0, transition: 2.5
+  }));
+  return isf.concat(milk);
 }
+function newButterchurnSource(props = {}) {
+  return Object.assign({
+    id: uid(), kind: 'butterchurn', name: 'ButterChurn', preset: '_Geiss - Desert Rose 2',
+    gain: 1, cycle: 0, transition: 2.5, params: {}
+  }, props);
+}
+const newMilkSource = newButterchurnSource;
 // A layer plays one source. Parameters are kept per source, so switching back restores them.
 function newLayer(src = null) { return { id: uid(), src, params: {}, opacity: 1, blend: 'alpha', on: true }; }
 const cloneLayers = layers => JSON.parse(JSON.stringify(layers));

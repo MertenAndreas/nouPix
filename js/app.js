@@ -257,6 +257,7 @@ function frameLoop(now) {
   try {
     if (ui.dockTab === 'monitor' && !ui.dockCollapsed) drawMonitor(now);
     if (ui.dockTab === 'scenes' && !ui.dockCollapsed) drawSceneProgress();
+    if (project.xfade.on && !document.hidden) drawXfPreviews(now);
     if (now - (frameLoop.last || 0) > 200) { frameLoop.last = now; updateStatus(); }
   } catch (e) { report('panels', e); }
 }

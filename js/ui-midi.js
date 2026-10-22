@@ -180,7 +180,7 @@ function midiPorts() {
     (midi.status === 'blocked' || midi.status === 'none') ? h('p', { class: 'note' }, 'The virtual controller, at the bottom of this window, works anyway.') : null,
     h('h3', { class: 'mmhead' }, 'Macros'), macrosPanel());
 }
-// What a mapping can drive, as a list: Master, Blackout, then each zone's level, scenes, next scene and playlists
+// What a mapping can drive, as a list: Master, Blackout, the crossfader, then each zone's level, scenes, next scene and playlists
 // What a mapping drives, as a list; pick: what choosing does (by default the mapping drives that instead)
 function midiTargetSelect(w, pick = to => midiSetMap(w.id, { to })) {
   const opt = (t, label) => h('option', { value: t, selected: w.to === t }, label);
@@ -190,7 +190,7 @@ function midiTargetSelect(w, pick = to => midiSetMap(w.id, { to })) {
   const fx = [...ids].map(srcById).filter(src => src && src.kind === 'isf');
   return h('select', { class: 'mtarget', 'aria-label': `What ${midiKeyFull(w.key)} drives`, title: 'What it drives', onchange: e => { if (e.target.value) pick(e.target.value); } },
     !w.to ? h('option', { value: '', selected: true }, 'Choose what it moves…') : midiTarget(w.to) ? null : h('option', { value: w.to, selected: true }, 'Missing: it was deleted'),
-    opt('master', 'Master'), opt('blackout', 'Blackout'),
+    opt('master', 'Master'), opt('blackout', 'Blackout'), opt('xf', 'Crossfader'),
     h('optgroup', { label: 'Macros' }, MACROS.map(d => d.kind === 'color'
       ? MACRO_PARTS[project.macros[d.id].mode].map(([, name], i) => opt(`m:${d.id}.${i}`, `${d.label} · ${name}`))
       : opt('m:' + d.id, d.label))),

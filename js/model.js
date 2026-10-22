@@ -75,10 +75,11 @@ function blankProject(name = 'Untitled') {
     format: 'noupix-project', version: 4, name, settings,
     fixtures: [], groups: [], controllers: [], sources: builtinSources(), zones: [newZone({ w: settings.compW, h: settings.compH, layers: [newLayer('b-rainbow')] })], guide: null,
     midi: { maps: [], order: [] }, macros: defaultMacros(), macroLinks: {},
+    xfade: { on: false, a: '', b: '', x: 0 },
   };
 }
 // A MIDI mapping (midi.js): a control (key: midi:<port>:<channel>:cc|note:<number>) drives a target (to: master,
-// blackout, z:<zone>, sc:<zone>:<scene>, nx:<zone>, pl:<zone>:<playlist>, m:<macro>, p:<source>:<control>).
+// blackout, xf (the crossfader), z:<zone>, sc:<zone>:<scene>, nx:<zone>, pl:<zone>:<playlist>, m:<macro>, p:<source>:<control>).
 // takeover: pickup or jump, for a fader; mode: toggle or hold, for something that is on or off.
 const MIDI_KEY = /^midi:(.*):(\d{1,2}):(cc|note):(\d{1,3})$/;
 const newMidiMap = (key, to) => ({ id: uid(), key, to, takeover: 'pickup', mode: 'toggle' });
@@ -214,6 +215,15 @@ const clampGamma = v => clamp(numOr(v, 1), 1, 3);
 
 /* ---------- look-ups ---------- */
 const zoneById = id => project.zones.find(z => z.id === id);
+// The crossfader (project.xfade): while it is on, x sets the levels of two zones, A at 1 - x and B at x, and nothing
+// else does. Its two zones, while it is on and both are there; null otherwise.
+function xfZones() {
+  const X = project.xfade;
+  if (!X || !X.on || X.a === X.b) return null;
+  const a = zoneById(X.a), b = zoneById(X.b);
+  return a && b ? [a, b] : null;
+}
+const xfDriven = z => { const p = xfZones(); return !!p && p.includes(z); };
 const selZone = () => zoneById(ui.zone) || project.zones[project.zones.length - 1] || null;
 const selLayer = () => { const z = selZone(); return z ? z.layers.find(L => L.id === ui.layer) || z.layers[z.layers.length - 1] || null : null; };
 

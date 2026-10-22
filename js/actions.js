@@ -112,13 +112,57 @@ function deleteZone(z) {
   toast(`${z.name} deleted. Ctrl Z brings it back.`);
 }
 // The opacity of a zone is its master. Every slider for it (Content tab, Scenes tab, Inspector) stays in step.
+// While the crossfader drives a zone, only the crossfader sets it: a slider, a MIDI control or a device can't.
 function setZoneOpacity(z, v, from) {
+  if (xfDriven(z)) return;
   z.opacity = v;
   if (REMOTE_CLIENT && from) remoteOp({ op: 'opacity', zone: z.id, value: v });   // live on the main computer while it moves
+  showZoneOpacity(z, from);
+}
+function showZoneOpacity(z, from) {
   for (const d of [document, scenesDoc()]) if (d) {   // here and in the Scenes window
-    for (const el of $$(`[data-zone-op="${z.id}"]`, d)) if (el !== from) el.value = v;
-    for (const el of $$(`[data-zone-pct="${z.id}"]`, d)) el.textContent = pct(v);
+    for (const el of $$(`[data-zone-op="${z.id}"]`, d)) if (el !== from) el.value = z.opacity;
+    for (const el of $$(`[data-zone-pct="${z.id}"]`, d)) el.textContent = pct(z.opacity);
   }
+}
+// The crossfader's position, from its slider, a MIDI control or a device: 0 is all A, 1 all B. It moves even while
+// the crossfader is off (a MIDI fader stays mapped), and sets the zones only while it is on.
+function setXfade(x, from) {
+  const X = project.xfade;
+  X.x = clamp(x, 0, 1);
+  if (REMOTE_CLIENT && from) remoteOp({ op: 'xfade', value: X.x });   // live on the main computer while it moves
+  xfApply();
+  for (const d of [document, scenesDoc()]) if (d) for (const el of $$('[data-xf]', d)) if (el !== from) el.value = X.x;
+}
+// The levels of A and B from the crossfader's position
+function xfApply() {
+  const p = xfZones();
+  if (!p) return;
+  const x = project.xfade.x;
+  p[0].opacity = 1 - x; p[1].opacity = x;
+  showZoneOpacity(p[0]); showZoneOpacity(p[1]);
+}
+// On or off. On needs two zones: A and B are the first two unless two others were chosen. Off leaves the zones at
+// the levels the crossfader gave them.
+function setXfadeOn(on) {
+  const X = project.xfade, zs = project.zones;
+  if (on) {
+    if (zs.length < 2) { toast('The crossfader needs two zones. Add another in the Content tab.'); return; }
+    if (!zoneById(X.a)) X.a = zs.find(z => z.id !== X.b).id;
+    if (!zoneById(X.b) || X.b === X.a) X.b = zs.find(z => z.id !== X.a).id;
+  }
+  X.on = !!on;
+  xfApply();
+  commit(); renderRight();
+}
+// Which zone is A or B (which: 'a' or 'b'); the zone already on the other side swaps over
+function setXfadeZone(which, id) {
+  const X = project.xfade, other = which === 'a' ? 'b' : 'a';
+  if (!zoneById(id) || X[which] === id) return;
+  if (X[other] === id) X[other] = X[which];
+  X[which] = id;
+  xfApply();
+  commit(); renderRight();
 }
 // A group's dimmer, from its slider or a MIDI control; every slider showing it follows
 function setGroupLevel(g, v, from) {

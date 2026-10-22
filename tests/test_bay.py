@@ -44,6 +44,16 @@ try:
     W.on("pageerror", lambda e: errs.append("MIDI window: " + str(e)))
     check("the MIDI window opens on the list, with a switch to the patch bay", W.locator(".mmaps").count() == 1 and W.locator(".mwhead .seg button.on").inner_text() == "List")
     W.locator(".mwhead .seg button", has_text="Patch bay").click(); settle(0.6)
+    # a wire is clicked at a point on it where nothing covers it (the middle of its box may be off a curved wire, or
+    # under a row)
+    def pick(wid, t=0.3):
+        x, y = W.evaluate("""id => { const p = document.querySelector(`.bwires path.hit[data-wire="${id}"]`), n = p.getTotalLength(), m = p.getScreenCTM();
+          for (let k = 1; k < 40; k++) {
+            const q = p.getPointAtLength(n * k / 40), x = m.a * q.x + m.c * q.y + m.e, y = m.b * q.x + m.d * q.y + m.f;
+            if (document.elementFromPoint(x, y) === p) return [x, y];
+          }
+          return [0, 0]; }""", wid)
+        W.mouse.click(x, y); settle(t)
     check("the patch bay: controls, what they drive, the effects", W.locator(".bay .bcol h3").all_inner_texts()[:2] == ["CONTROLS", "OUTPUT"] or [x.upper() for x in W.locator(".bay .bcol > h3").all_inner_texts()][:2] == ["CONTROLS", "OUTPUT"],
           W.locator(".bay .bcol h3").all_inner_texts())
     check("and it is remembered", ev("ui.midiView") == "bay" and "midiView" in ev("UI_PREFS"))
@@ -70,11 +80,12 @@ try:
     W.locator('.bay [data-bb="blackout"]').click(); settle()
     check("a row's button turns Blackout on, and says so", ev("ui.blackout") and W.locator('.bay [data-bb="blackout"]').text_content() == "On")
     W.locator('.bay [data-bb="blackout"]').click(); settle()
+    check("the crossfader is under Output, with its slider", W.locator('.bay .btgts .brow[data-t="xf"]').count() == 1 and W.locator('.bay .brow[data-t="xf"] input[type=range]').count() == 1)
 
     # ---------- a wire picked
     i = ev("project.midi.maps.findIndex(w => w.to === 'master')")
     mid = ev("project.midi.maps[%d].id" % i)
-    W.locator(f'.bwires path.hit[data-wire="{mid}"]').click(force=True); settle()
+    pick(mid)
     pop = W.locator("#bayPop")
     check("clicking a wire picks it and shows its settings", pop.is_visible() and "CC 1" in pop.inner_text() and "Master" in pop.inner_text() and W.locator(".bwires path.wire.sel").count() == 1, pop.inner_text())
     pop.locator("button", has_text="Jump").click(); settle()
@@ -82,14 +93,14 @@ try:
     W.locator(".bay .bcol.btgts h3").first.click(); settle()
     check("a click elsewhere lets it go", pop.is_hidden() and W.locator(".bwires path.wire.sel").count() == 0)
     bid = ev("project.midi.maps.find(w => w.to === 'blackout').id")
-    W.locator(f'.bwires path.hit[data-wire="{bid}"]').click(force=True); settle()
+    pick(bid)
     check("a pad on Blackout: Toggle or Hold", [x.strip() for x in pop.locator(".seg button").all_inner_texts()] == ["Toggle", "Hold"], pop.locator(".seg button").all_inner_texts())
     W.keyboard.press("Delete"); settle()
     check("Delete removes the wire picked, and it is a step of undo", not ev("project.midi.maps.some(w => w.to === 'blackout')") and W.locator(".bwires path.wire").count() == 6)
     W.keyboard.press("Control+z"); settle(0.5)
     check("undone, it is back", ev("project.midi.maps.some(w => w.to === 'blackout')") and W.locator(".bwires path.wire").count() == 7)
     fid = ev(f"project.midi.maps.find(w => w.to === '{FX}').id")
-    W.locator(f'.bwires path.hit[data-wire="{fid}"]').click(force=True); settle()
+    pick(fid)
     pop.locator("button", has_text="Remove").click(); settle()
     check("Remove removes it; the effect's control goes back into its folded effect", not ev(f"project.midi.maps.some(w => w.to === '{FX}')") and W.locator(f'.bay .bfx [data-in="{FX}"]').count() == 0)
 
@@ -172,7 +183,7 @@ try:
     spd = f"p:{FXS}:speed"
     check("an open effect shows which macro each control follows", W.locator(f'.bay .brow[data-t="{spd}"] .mtag').inner_text() == "Speed")
     lid = f"l:{FXS}|speed"
-    W.locator(f'.bwires path.hit[data-wire="{lid}"]').click(force=True); settle(0.4)
+    pick(lid, 0.4)
     pop = W.locator("#bayPop")
     check("clicking a blue wire: what that control follows, and Remove", pop.is_visible() and "follows" in pop.inner_text() and pop.locator("select").input_value() == "speed", pop.inner_text())
     W.keyboard.press("Delete"); settle(0.5)

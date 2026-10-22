@@ -59,7 +59,7 @@ void main() {
     g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, t.tex, 0);
   };
   // GPU resources. They are made again when the browser restores the context after losing it (a GPU reset).
-  let blendP, mixP, quad, slots, cur, area, upload, zones, TW, TH, CW, CH, smp;
+  let blendP, mixP, quad, slots, cur, area, upload, zones, TW, TH, CW, CH, smp, small, smallBuf;
   function init() {
     blendP = program(VS, BLEND); mixP = program(VS, MIX);
     quad = g.createBuffer();
@@ -74,6 +74,7 @@ void main() {
     upload = texture();
     zones = new Map();                                      // zone id -> { out: its picture, frozen: a copy to fade from }
     TW = 1; TH = 1; CW = 0; CH = 0;
+    small = null;                                           // a zone's picture made small, for a preview (thumb)
     // Exact sampling needs full float precision in fragment shaders; without it the area is read back instead.
     smp = null;
     const hp = g.getShaderPrecisionFormat(g.FRAGMENT_SHADER, g.HIGH_FLOAT);
@@ -128,12 +129,31 @@ void main() {
       g.copyTexImage2D(g.TEXTURE_2D, 0, g.RGBA, 0, 0, Z.out.w, Z.out.h, 0);
       return true;
     },
-    // Lay the zone's picture onto the output at its place, over what is there, by its opacity
-    composite(z, opacity) {
+    // Lay the zone's picture onto the output at its place, over what is there, by its opacity; only inside r
+    // (composition pixels, y down) when given
+    composite(z, opacity, r) {
       const Z = zones.get(z.id);
       g.enable(g.BLEND); g.blendColor(0, 0, 0, opacity); g.blendFunc(g.CONSTANT_ALPHA, g.ONE_MINUS_CONSTANT_ALPHA);
+      if (r) { g.enable(g.SCISSOR_TEST); g.scissor(r.x, CH - r.y - r.h, r.w, r.h); }
       pass(null, z.x, CH - z.y - z.h, z.w, z.h, mixP, u => { bindTex(0, Z.out.tex, u.a); bindTex(1, Z.out.tex, u.b); g.uniform2f(u.sa, 1, 1); g.uniform2f(u.sb, 1, 1); g.uniform1f(u.t, 1); });
-      g.disable(g.BLEND);
+      g.disable(g.BLEND); g.disable(g.SCISSOR_TEST);
+    },
+    // The zone's last picture, small, into a 2D canvas (a preview): drawn at the canvas's size and read back, which
+    // is little data. False when the zone has no picture yet.
+    thumb(z, c) {
+      const Z = zones.get(z.id), w = c.width, hh = c.height;
+      if (!Z || !Z.out.w || !w || !hh) return false;
+      if (!small) small = target();
+      size(small, w, hh);
+      pass(small.fb, 0, 0, w, hh, mixP, u => { bindTex(0, Z.out.tex, u.a); bindTex(1, Z.out.tex, u.b); g.uniform2f(u.sa, 1, 1); g.uniform2f(u.sb, 1, 1); g.uniform1f(u.t, 1); });
+      if (!smallBuf || smallBuf.length !== w * hh * 4) smallBuf = new Uint8ClampedArray(w * hh * 4);
+      const raw = new Uint8Array(smallBuf.buffer);
+      g.readPixels(0, 0, w, hh, g.RGBA, g.UNSIGNED_BYTE, raw);
+      // GL's rows go up from the bottom: the 2D canvas's go down
+      const img = c.getContext('2d').createImageData(w, hh), row = w * 4;
+      for (let y = 0; y < hh; y++) img.data.set(raw.subarray((hh - 1 - y) * row, (hh - y) * row), y * row);
+      c.getContext('2d').putImageData(img, 0, 0);
+      return true;
     },
     prune(ids) {
       for (const [id, Z] of zones) {
@@ -247,18 +267,27 @@ function renderContent() {
   const s = project.settings, sel = selZone(), pv = !!preview && preview.canvas.isConnected && !document.hidden;
   mixer.resize(glCanvas.width, glCanvas.height, s.compW, s.compH);
   mixer.clear();
-  project.zones.forEach((z, i) => {
+  // The crossfader's zones: the lower one is laid on whole where the upper one covers it, so the upper one's level
+  // (x) alone mixes the two there, and the light stays even across the fade (not darker in the middle)
+  const xf = xfZones(), zs = project.zones, lo = xf && (zs.indexOf(xf[0]) < zs.indexOf(xf[1]) ? xf[0] : xf[1]), up = xf && (lo === xf[0] ? xf[1] : xf[0]);
+  zs.forEach((z, i) => {
     let t = 1;
     if (z._fade) { t = (clockT - z._fade.start) / z._fade.dur; if (t >= 1) { z._fade = null; syncMedia(); } }
     const show = !hiddenZone(i);
     // Hidden zones are not drawn. The selected one still is while its layer preview is on screen, and while it
-    // fades, so a fade interrupted by another scene continues from its current picture.
-    if (!show && !(z === sel && (pv || z._fade))) return;
+    // fades, so a fade interrupted by another scene continues from its current picture; the crossfader's two are
+    // always, for their previews and so the one faded out is ready.
+    if (!show && !(z === sel && (pv || z._fade)) && !(xf && xf.includes(z))) return;
     const f = z._fade;
     renderLook(z.layers, 0, z);
     if (f && f.from) renderLook(f.from, 1, z);
     mixer.zone(z, f ? (f.from ? 1 : 'frozen') : null, t);
-    if (show) mixer.composite(z, z.opacity);
+    if (!show) return;
+    mixer.composite(z, z.opacity);
+    if (z === lo && up.opacity > 0) {
+      const x0 = Math.max(z.x, up.x), y0 = Math.max(z.y, up.y), x1 = Math.min(z.x + z.w, up.x + up.w), y1 = Math.min(z.y + z.h, up.y + up.h);
+      if (x1 > x0 && y1 > y0) mixer.composite(z, 1, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+    }
   });
   sampleMix();
 }

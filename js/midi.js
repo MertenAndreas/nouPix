@@ -1,5 +1,5 @@
 // nouPix · js/midi.js
-// MIDI in: the faders, knobs, buttons and pads of MIDI controllers drive the master, blackout, the zones' levels,
+// MIDI in: the faders, knobs, buttons and pads of MIDI controllers drive the master, blackout, the crossfader, the zones' levels,
 // their scenes and their playlists, the macros, and the controls of the effects. The mappings are part of the project
 // (project.midi.maps, see newMidiMap); whether MIDI is on and which ports are switched off belong to this computer
 // (ui.midiOn, ui.midiOff). Learn: move a control, then touch what it should move, or the other way round. Only the
@@ -39,13 +39,17 @@ function midiTarget(t) {
   }
   if (t === 'master') return { kind: 'fader', label: 'Master', get: () => project.settings.master, set: midiSetMaster };
   if (t === 'blackout') return { kind: 'toggle', label: 'Blackout', get: () => (ui.blackout ? 1 : 0), set: v => { if (!!v !== ui.blackout) toggleBlackout(); } };
+  // there whether the crossfader is on or off: a fader mapped to it stays mapped
+  if (t === 'xf') return { kind: 'fader', label: 'Crossfader', get: () => project.xfade.x, set: v => { setXfade(v); remoteChanged(); commitSoft(); } };
   if (t.startsWith('gr:')) {   // a group's dimmer
     const g = groupById(t.slice(3));
     return g ? { kind: 'fader', label: groupName(g) + ' dimmer', get: () => groupLevel(g), set: v => { setGroupLevel(g, v); remoteChanged(); commitSoft(); } } : null;
   }
   const [k, zid, id] = t.split(':'), z = zid ? zoneById(zid) : null;
   if (!z) return null;
-  if (k === 'z') return { kind: 'fader', label: z.name + ' level', get: () => z.opacity, set: v => { setZoneOpacity(z, v); remoteChanged(); commitSoft(); } };
+  // while the crossfader drives the zone, a control mapped to its level does nothing
+  if (k === 'z') return { kind: 'fader', label: z.name + ' level' + (xfDriven(z) ? ' (on the crossfader)' : ''), get: () => z.opacity,
+    set: v => { if (xfDriven(z)) return; setZoneOpacity(z, v); remoteChanged(); commitSoft(); } };
   if (k === 'sc') {
     const sc = z.scenes.find(s => s.id === id);
     return sc ? { kind: 'trigger', label: `${z.name} · ${sc.name}`, get: () => (z.scene === sc.id ? 1 : 0), set: () => goScene(z, sc) } : null;

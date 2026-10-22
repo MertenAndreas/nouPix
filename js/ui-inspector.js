@@ -766,7 +766,31 @@ function renderContentTab(body) {
       title: 'Shuts off LED glow for near-black backgrounds below threshold for ink-black contrast'
     }));
 
-    body.append(sec('LED matrix & contrast', mtx));
+    // Performance: Quality / Resolution mode
+    const qualOptions = [
+      ['eco', '🚀 Performance (480p, LED-optimiert)'],
+      ['balanced', '⚖️ Balanced (640p Standard)'],
+      ['high', '💎 High-Res (720p)']
+    ];
+    mtx.push(row('Render quality', selectEl(qualOptions, getP('quality', 'balanced'), v => {
+      setP('quality', v);
+      commit();
+    }, { aria: 'Visualizer Render Quality' })));
+
+    // Performance: FPS Cap / Output Clock Sync
+    const currentFps = (project && project.settings && project.settings.fps) ? project.settings.fps : 40;
+    const fpsOptions = [
+      ['0', `⚡ Synced with Output (${currentFps} FPS)`],
+      ['30', '30 FPS (Power Saver)'],
+      ['25', '25 FPS (Eco / RasPi)'],
+      ['60', '60 FPS (Smooth)']
+    ];
+    mtx.push(row('FPS limit', selectEl(fpsOptions, String(getP('fpsCap', 0)), v => {
+      setP('fpsCap', Number(v));
+      commit();
+    }, { aria: 'Visualizer FPS Limit' })));
+
+    body.append(sec('LED matrix & performance', mtx));
 
     // Preset parameter & color controls (dynamically displayed when preset offers & uses them)
     const pInfo = typeof getMilkPresetParams === 'function' ? getMilkPresetParams(curPreset) : null;

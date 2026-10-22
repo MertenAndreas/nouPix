@@ -600,7 +600,9 @@ let milkActivePreset = '';
 let milkLastW = 0, milkLastH = 0;
 let milkConnectedAudio = false;
 
-function ensureMilkVisualizer(w, h) {
+let milkLastQuality = 'balanced';
+
+function ensureMilkVisualizer(w, h, quality = 'balanced') {
   const bc = getButterchurn();
   if (!bc || typeof bc.createVisualizer !== 'function') return null;
   const ctx = ensureMilkAudio();
@@ -616,8 +618,17 @@ function ensureMilkVisualizer(w, h) {
     milkCanvas.width = compW;
     milkCanvas.height = compH;
   }
-  const rw = Math.max(64, Math.min(1280, Math.round(w) || 400));
-  const rh = Math.max(64, Math.min(720, Math.round(h) || 300));
+
+  const qual = quality || 'balanced';
+  let maxW = 640, maxH = 480, meshW = 32, meshH = 24;
+  if (qual === 'eco' || qual === 'fast') {
+    maxW = 480; maxH = 360; meshW = 24; meshH = 18;
+  } else if (qual === 'high') {
+    maxW = 1280; maxH = 720; meshW = 32; meshH = 24;
+  }
+
+  const rw = Math.max(64, Math.min(maxW, Math.round(w) || 400));
+  const rh = Math.max(64, Math.min(maxH, Math.round(h) || 300));
   if (!milkVisualizer) {
     milkOffscreen.width = rw;
     milkOffscreen.height = rh;
@@ -627,9 +638,10 @@ function ensureMilkVisualizer(w, h) {
         height: rh,
         pixelRatio: 1,
         textureRatio: 1,
-        meshWidth: 32,
-        meshHeight: 24,
+        meshWidth: meshW,
+        meshHeight: meshH,
       });
+      milkLastQuality = qual;
       if (milkGainNode && !milkConnectedAudio) {
         milkVisualizer.connectAudio(milkGainNode);
         milkConnectedAudio = true;
@@ -644,16 +656,17 @@ function ensureMilkVisualizer(w, h) {
       milkVisualizer = null;
       return null;
     }
-  } else if (Math.abs(rw - milkLastW) > 16 || Math.abs(rh - milkLastH) > 16) {
+  } else if (Math.abs(rw - milkLastW) > 16 || Math.abs(rh - milkLastH) > 16 || qual !== milkLastQuality) {
     milkOffscreen.width = rw;
     milkOffscreen.height = rh;
     try {
       milkVisualizer.setRendererSize(rw, rh, {
-        meshWidth: 32,
-        meshHeight: 24,
+        meshWidth: meshW,
+        meshHeight: meshH,
         pixelRatio: 1,
         textureRatio: 1
       });
+      milkLastQuality = qual;
     } catch (e) {
       console.warn('Butterchurn setRendererSize failed:', e);
     }
@@ -776,15 +789,34 @@ function loadMilkPreset(src, presetName, blendTime = 2.0) {
 
 // Draw one frame of Milkdrop for the zone mixer
 function renderMilkdrop(src, L, w, h) {
-  const viz = ensureMilkVisualizer(w, h);
+  // Read layer and source parameter overrides (Scenes & Layer snapshots)
+  const p = (L && L.params && L.params[src.id]) || src.params || {};
+
+  // 1. Frame-Rate Coupling & Tick Sync:
+  // If already rendered in this exact clock tick (e.g. during scene crossfades or live inspector preview),
+  // return the cached canvas immediately to avoid redundant GPU rendering!
+  const curFrame = (typeof frameIndex !== 'undefined') ? frameIndex : 0;
+  const fpsCap = numOr((p && p.fpsCap) ?? src.fpsCap, 0); // 0 = sync with output tick
+  const nowMs = performance.now();
+  const minInterval = fpsCap > 0 ? (1000 / fpsCap) - 1.5 : 0;
+
+  if (src._renderedCanvas) {
+    if (src._lastRenderFrame === curFrame) {
+      return src._renderedCanvas;
+    }
+    if (minInterval > 0 && src._lastRenderTime && (nowMs - src._lastRenderTime) < minInterval) {
+      return src._renderedCanvas;
+    }
+  }
+
+  const qual = (p && p.quality) || src.quality || 'balanced';
+  const viz = ensureMilkVisualizer(w, h, qual);
   if (!viz) return null;
+
   // Make sure audio context is alive on user action
   if (milkAudioCtx && milkAudioCtx.state === 'suspended') {
     milkAudioCtx.resume().catch(() => {});
   }
-
-  // Read layer and source parameter overrides (Scenes & Layer snapshots)
-  const p = (L && L.params && L.params[src.id]) || src.params || {};
 
   // Apply audio filtering, EQ and AGC settings
   const band = p.bandFocus || src.bandFocus || 'all';
@@ -858,15 +890,30 @@ function renderMilkdrop(src, L, w, h) {
   const top = milkCanvas.height - h;
   milkCtx.clearRect(0, top, w, h);
 
-  // Apply color grading filters + LED Matrix Boost (Contrast & Saturation for punchy pixels)
+  // Apply color grading filters + LED Matrix Boost + True-Black Cutoff (100% on GPU)
   const matrixBoost = numOr(p.matrixBoost, 0); // 0% to 150%
+  const trueBlack = numOr(p.trueBlack, 0); // 0% to 15%
   const hue = numOr(p.hue, 0);
-  const sat = numOr(p.sat, 100) * (1 + matrixBoost * 0.005);
-  const contrast = 100 + (matrixBoost * 0.85);
-  const bright = numOr(p.bright, 100);
+  const baseSat = numOr(p.sat, 100);
+  const baseBright = numOr(p.bright, 100);
 
-  if (hue !== 0 || sat !== 100 || bright !== 100 || matrixBoost > 0) {
-    milkCtx.filter = `hue-rotate(${hue}deg) saturate(${Math.round(sat)}%) brightness(${bright}%) contrast(${Math.round(contrast)}%)`;
+  // Matrix Boost adds contrast and saturation for sharp LED rasters
+  const sat = baseSat * (1 + matrixBoost * 0.005);
+  let contrast = 100 + (matrixBoost * 0.85);
+  let bright = baseBright;
+
+  // True-Black LED Floor: Hardware-accelerated photographic shadow-crush curve on GPU.
+  // Steeper shadow contrast and slight brightness offset pulls near-black pixels cleanly to 0 (pure DMX 0,0,0)
+  // without any CPU memory transfer (0ms stall, zero pipeline readback!).
+  if (trueBlack > 0) {
+    const tbShift = trueBlack * 0.75;
+    const tbContrast = trueBlack * 2.2;
+    bright = Math.max(0, bright - tbShift);
+    contrast = contrast + tbContrast;
+  }
+
+  if (hue !== 0 || sat !== 100 || bright !== 100 || contrast !== 100) {
+    milkCtx.filter = `hue-rotate(${hue}deg) saturate(${Math.round(sat)}%) brightness(${Math.round(bright)}%) contrast(${Math.round(contrast)}%)`;
   } else {
     milkCtx.filter = 'none';
   }
@@ -877,29 +924,6 @@ function renderMilkdrop(src, L, w, h) {
     return null;
   }
   milkCtx.filter = 'none';
-
-  // Apply True-Black LED Floor (DMX Cutoff) to prevent background LED glowing
-  const trueBlack = numOr(p.trueBlack, 0); // 0% to 15%
-  if (trueBlack > 0 && w > 0 && h > 0) {
-    try {
-      const imgData = milkCtx.getImageData(0, top, w, h);
-      const d = imgData.data;
-      const cutoff = Math.round((trueBlack / 100) * 255);
-      const knee = Math.max(2, Math.round(cutoff * 0.35));
-      for (let i = 0; i < d.length; i += 4) {
-        const maxC = Math.max(d[i], d[i + 1], d[i + 2]);
-        if (maxC < cutoff - knee) {
-          d[i] = 0; d[i + 1] = 0; d[i + 2] = 0;
-        } else if (maxC < cutoff + knee) {
-          const factor = (maxC - (cutoff - knee)) / (knee * 2);
-          d[i] = Math.round(d[i] * factor);
-          d[i + 1] = Math.round(d[i + 1] * factor);
-          d[i + 2] = Math.round(d[i + 2] * factor);
-        }
-      }
-      milkCtx.putImageData(imgData, 0, top);
-    } catch (e) {}
-  }
 
   // Apply stage color macro tinting if enabled
   let tintRgb = null;
@@ -918,6 +942,11 @@ function renderMilkdrop(src, L, w, h) {
     milkCtx.fillRect(0, top, w, h);
     milkCtx.restore();
   }
+
+  // Cache rendered frame for tick deduplication
+  src._lastRenderTime = nowMs;
+  src._lastRenderFrame = curFrame;
+  src._renderedCanvas = milkCanvas;
 
   return milkCanvas;
 }

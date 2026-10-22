@@ -1,0 +1,147 @@
+<!doctype html>
+<!-- Mockup: a crossfader in the Scenes panel. Not part of the app: open it in a browser to try the idea. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crossfader mockup</title>
+<link rel="stylesheet" href="../../css/fonts.css">
+<style>
+:root {
+  --bg0: #000; --bg1: #0a0a0a; --bg2: #111; --bg3: #191919; --bg4: #232323;
+  --line: #1e1e1e; --line2: #2c2c2c; --line3: #3a3a3a;
+  --text: #f0f0f0; --text2: #bdbdbd; --muted: #8e8e8e;
+  --fader: #dce1e6; --fader-soft: rgba(220, 225, 230, 0.16);
+  --accent: #ff3b3b; --sel: #f0f0f0; --live: #fff; --midi: #ffd23f;
+  --ui: "Saira", system-ui, sans-serif; --label: "Chakra Petch", "Saira", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg0); color: var(--text); font: 300 13px var(--ui); }
+.note { max-width: 1100px; margin: 18px auto 10px; padding: 0 16px; color: var(--muted); }
+.note b { color: var(--text2); font-weight: 400; }
+.dock { max-width: 1100px; margin: 0 auto; background: var(--bg1); border: 1px solid var(--line); }
+.tabs { display: flex; gap: 22px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+.tabs span { font: 500 11px var(--label); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); padding: 10px 0; }
+.tabs span.on { color: var(--text); border-bottom: 2px solid var(--accent); }
+.bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--line); color: var(--text2); }
+.bar .num { width: 36px; background: var(--bg2); border: 1px solid var(--line2); color: var(--text); font: 12px var(--mono); padding: 3px 5px; }
+.bar .hint { color: var(--muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn { font: 500 10px var(--label); text-transform: uppercase; letter-spacing: .1em; background: var(--bg3); color: var(--text); border: 1px solid var(--line2); padding: 5px 9px; cursor: pointer; }
+.btn:hover { border-color: var(--line3); }
+.btn.on { border-color: var(--sel); }
+.btn .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--line3); margin-right: 6px; vertical-align: 1px; }
+.btn.on .dot { background: var(--accent); }
+
+/* the crossfader strip: preview A, its zone, the fader, B's zone, preview B */
+.xf { display: none; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.xf.show { display: flex; }
+.side { display: flex; align-items: center; gap: 10px; }
+.side.b { flex-direction: row-reverse; }
+.pv { width: 96px; height: 54px; border: 1px solid var(--line2); position: relative; overflow: hidden; background: var(--bg0); }
+.pv i { position: absolute; inset: 0; }
+.pv.a i { background: linear-gradient(90deg, #ff0080, #7a00ff, #00b3ff, #ff0080); background-size: 300% 100%; animation: slide 4s linear infinite; }
+.pv.b i { background: radial-gradient(circle at 30% 50%, #ffd000 0 12%, transparent 13%), radial-gradient(circle at 70% 50%, #ff5a00 0 12%, transparent 13%), #120018; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes slide { to { background-position: 300% 0; } }
+@keyframes pulse { 50% { filter: brightness(.35); } }
+.pv b { position: absolute; left: 4px; top: 2px; font: 600 11px var(--label); color: #fff; text-shadow: 0 0 3px #000; }
+.who { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+.side.b .who { align-items: flex-end; }
+.who select { background: var(--bg2); color: var(--text); border: 1px solid var(--line2); font: 13px var(--ui); padding: 3px 4px; }
+.who .lv { font: 12px var(--mono); color: var(--text2); }
+.fader { flex: 1; position: relative; height: 34px; cursor: ew-resize; touch-action: none; }
+.fader .track { position: absolute; left: 0; right: 0; top: 16px; height: 2px; background: var(--bg4); }
+.fader .mid { position: absolute; left: 50%; top: 10px; width: 1px; height: 14px; background: var(--line3); }
+.fader .knob { position: absolute; top: 5px; width: 14px; height: 24px; margin-left: -7px; background: var(--fader); }
+.fader .ends { position: absolute; left: 0; right: 0; top: -6px; display: flex; justify-content: space-between; font: 600 10px var(--label); color: var(--muted); }
+.fader .midi { position: absolute; left: 0; right: 0; bottom: -4px; height: 2px; background: var(--midi); opacity: 0; }
+.fader.learnt .midi { opacity: 1; }
+
+/* the zone rows, as in the app now; a zone on A or B shows it */
+.rows { padding: 8px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+.zr { display: flex; gap: 8px; }
+.zh { width: 176px; border: 1px solid var(--line2); background: var(--bg2); padding: 6px 8px; }
+.zh .top { display: flex; align-items: center; gap: 6px; }
+.zh .nm { font-weight: 500; flex: 1; }
+.zh .pc { font: 11px var(--mono); color: var(--text2); }
+.tag { font: 600 10px var(--label); padding: 0 4px; border: 1px solid var(--line3); color: var(--text2); display: none; }
+.xf-on .tag.set { display: inline-block; }
+.zh .lev { height: 2px; background: var(--bg4); margin-top: 12px; position: relative; }
+.zh .lev i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fader); }
+.zh.auto .lev i { background: var(--muted); }
+.sc { width: 126px; border: 1px solid var(--line2); background: var(--bg3); padding: 6px 8px; }
+.sc.live { border-color: var(--sel); }
+.sc .t { font-weight: 500; }
+.sc .f { font: 11px var(--mono); color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<p class="note">Mockup. <b>Crossfader</b> in the Scenes bar turns it on: Zone A and Zone B are picked under their previews, and the fader sets both levels (A at 100% on the left, B at 100% on the right, both at 50% in the middle). Their own level sliders follow and are greyed while it is on. The fader can be learnt by MIDI like any slider.</p>
+<div class="dock">
+  <div class="tabs"><span class="on">Scenes</span><span>Patch</span><span>Nodes</span><span>DMX monitor</span></div>
+  <div class="bar">
+    New scenes fade <input class="num" value="2"> s
+    <span class="hint">Click: fade · Shift-click: cut · Drag a fade time to change it · Keys 1-9: scenes of the selected zone</span>
+    <button class="btn" id="xfBtn"><span class="dot"></span>Crossfader</button>
+  </div>
+  <div class="xf" id="xf">
+    <div class="side a">
+      <div class="pv a"><i></i><b>A</b></div>
+      <div class="who"><select id="selA"></select><span class="lv" id="lvA"></span></div>
+    </div>
+    <div class="fader" id="fader" title="Drag, or double-click to center"><div class="ends"><span>A</span><span>B</span></div><div class="track"></div><div class="mid"></div><div class="knob" id="knob"></div><div class="midi"></div></div>
+    <div class="side b">
+      <div class="pv b"><i></i><b>B</b></div>
+      <div class="who"><select id="selB"></select><span class="lv" id="lvB"></span></div>
+    </div>
+  </div>
+  <div class="rows" id="rows"></div>
+</div>
+<script>
+const zones = [
+  { name: 'Zone 1', level: 1, scenes: [['Plasma', '2 s'], ['Fire and smoke', '3 s'], ['Rainbow', '1.5 s']] },
+  { name: 'Zone 2', level: 1, scenes: [['Comets', '1.5 s'], ['Color wipe', '1 s'], ['Strobe hit', 'cut']] },
+  { name: 'Zone 3', level: 1, scenes: [['Rain', '2 s'], ['Bars', '2 s']] },
+];
+let on = false, x = 0.5, a = 0, b = 1;
+const $ = s => document.querySelector(s);
+for (const sel of [$('#selA'), $('#selB')]) zones.forEach((z, i) => sel.add(new Option(z.name, i)));
+$('#selA').value = a; $('#selB').value = b;
+
+function draw() {
+  document.body.classList.toggle('xf-on', on);
+  $('#xfBtn').classList.toggle('on', on);
+  $('#xf').classList.toggle('show', on);
+  if (on) { zones[a].level = 1 - x; zones[b].level = x; }
+  $('#knob').style.left = (x * 100) + '%';
+  $('#lvA').textContent = Math.round((1 - x) * 100) + '%';
+  $('#lvB').textContent = Math.round(x * 100) + '%';
+  $('.pv.a').style.opacity = 0.25 + 0.75 * (1 - x);
+  $('.pv.b').style.opacity = 0.25 + 0.75 * x;
+  $('#rows').innerHTML = zones.map((z, i) => {
+    const t = i === a ? 'A' : i === b ? 'B' : '', auto = on && t;
+    return `<div class="zr"><div class="zh${auto ? ' auto' : ''}"><div class="top"><span class="nm">${z.name}</span>`
+      + `<span class="tag${t ? ' set' : ''}">${t}</span><span class="pc">${Math.round(z.level * 100)}%</span></div>`
+      + `<div class="lev"><i style="width:${z.level * 100}%"></i></div></div>`
+      + z.scenes.map(([n, f], k) => `<div class="sc${k === 0 ? ' live' : ''}"><div class="t">${n}</div><div class="f">${f}</div></div>`).join('')
+      + '</div>';
+  }).join('');
+}
+$('#xfBtn').onclick = () => { on = !on; draw(); };
+function pick(which) {
+  return e => {
+    const v = +e.target.value;
+    if (which === 'a') { if (v === b) b = a; a = v; } else { if (v === a) a = b; b = v; }
+    $('#selA').value = a; $('#selB').value = b; draw();
+  };
+}
+$('#selA').onchange = pick('a'); $('#selB').onchange = pick('b');
+const f = $('#fader');
+const move = e => { const r = f.getBoundingClientRect(); x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); draw(); };
+f.onpointerdown = e => { f.setPointerCapture(e.pointerId); move(e); f.onpointermove = move; };
+f.onpointerup = () => { f.onpointermove = null; };
+f.ondblclick = () => { x = 0.5; draw(); };
+draw();
+</script>
+</body>
+</html>

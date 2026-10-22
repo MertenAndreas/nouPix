@@ -75,10 +75,11 @@ try:
     check("undo gives back the upright frame at its first size", f1 == f0, (f0, f1))
 
     # ---------- a zone moved still redraws the dock (its scenes show it)
-    d0 = ev("window._dock"); ev("commit({ lists: true })")
-    check("other changes still redraw the lists and the dock", ev("window._dock") == d0 + 1)
-    ev("(() => { const d = window._dock; commit(); window._d = d; })()")
-    check("and commit() on its own too", ev("window._dock") == ev("window._d") + 1)
+    # counted in the same step as the commit, so nothing else redraws the dock in between
+    n = ev("(() => { const d = window._dock; commit({ lists: true }); return window._dock - d; })()")
+    check("other changes still redraw the lists and the dock", n == 1, n)
+    n = ev("(() => { const d = window._dock; commit(); return window._dock - d; })()")
+    check("and commit() on its own too", n == 1, n)
     check("no errors", not errs, errs[:3])
     br.close()
 finally:

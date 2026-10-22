@@ -515,15 +515,15 @@ function renderContentTab(body) {
 
     // Audio input device selection
     const audioOptions = [
-      ['beat', 'Simulated Beat Generator (125 BPM)'],
-      ['system', '🖥️ System / Tab Audio (Browser Loopback)']
+      ['beat', 'Simulierter Beat-Generator (125 BPM)'],
+      ['system', '🖥️ System- / Tab-Audio (Browser-Loopback)']
     ];
     if (typeof milkAudioDevices !== 'undefined' && milkAudioDevices.length) {
       for (const dev of milkAudioDevices) {
-        audioOptions.push([dev.id, dev.label || 'Audio Input']);
+        audioOptions.push([dev.id, dev.label || 'Audio-Eingang']);
       }
     } else {
-      audioOptions.push(['default', 'Default Line-In / Microphone']);
+      audioOptions.push(['default', 'Standard Line-In / Mikrofon']);
     }
 
     const currentAudio = (typeof milkAudioMode !== 'undefined' && milkAudioMode === 'beat') ? 'beat' : ((typeof milkActiveDeviceId !== 'undefined' && milkActiveDeviceId) || 'default');
@@ -536,7 +536,7 @@ function renderContentTab(body) {
     }, { aria: 'Audio Input Device' });
 
     const scanBtn = h('button', {
-      class: 'btn sm icon', type: 'button', title: 'Rescan audio inputs (Line-In, mixer, mic)',
+      class: 'btn sm icon', type: 'button', title: 'Audio-Eingänge neu scannen (Line-In, Mixer, Mikrofon)',
       onclick: async () => {
         if (typeof startMilkAudio === 'function') {
           if (typeof milkAudioMode !== 'undefined' && milkAudioMode === 'live') {
@@ -545,7 +545,7 @@ function renderContentTab(body) {
             await startMilkAudio();
           }
           renderRight();
-          toast('Found ' + (milkAudioDevices.length || 0) + ' audio input device(s)');
+          toast((milkAudioDevices.length || 0) + ' Audio-Eingangsgerät(e) gefunden');
         }
       }
     }, icon('restart'));
@@ -558,7 +558,7 @@ function renderContentTab(body) {
     );
     audioSelect.style.width = '100%';
     scanBtn.style.flexShrink = '0';
-    k.push(row('Audio input', audioWrap));
+    k.push(row('Audio-Eingang', audioWrap));
 
     // Connect / Disconnect live Line-In or System audio action buttons
     const isLive = typeof milkAudioMode !== 'undefined' && milkAudioMode === 'live';
@@ -566,55 +566,55 @@ function renderContentTab(body) {
     const actionBtns = [];
     if (!isLive) {
       actionBtns.push(h('button', {
-        class: 'btn primary sm', type: 'button', title: 'Request browser audio permission and detect Line-In / Microphones',
+        class: 'btn primary sm', type: 'button', title: 'Mikrofon-Berechtigung anfordern und Audio-Geräte erkennen',
         onclick: async () => {
           if (typeof startMilkAudio === 'function') {
             await startMilkAudio();
             renderRight();
           }
         }
-      }, '🎤 Connect Line-In / Mic'));
+      }, '🎤 Line-In / Mikrofon verbinden'));
 
       actionBtns.push(h('button', {
-        class: 'btn sm', type: 'button', title: 'Capture audio from another app, browser tab, or system output via browser loopback',
+        class: 'btn sm', type: 'button', title: 'Ton von einer anderen App oder einem Browser-Tab aufnehmen',
         onclick: async () => {
           if (typeof startMilkSystemAudio === 'function') {
             await startMilkSystemAudio();
             renderRight();
           }
         }
-      }, '🖥️ System / Tab Audio'));
+      }, '🖥️ System- / Tab-Audio'));
     } else {
       actionBtns.push(h('button', {
-        class: 'btn sm', type: 'button', title: 'Switch back to the built-in simulated beat generator',
+        class: 'btn sm', type: 'button', title: 'Zurück zum integrierten Beat-Generator wechseln',
         onclick: () => {
           if (typeof setMilkAudioMode === 'function') {
             setMilkAudioMode('beat');
             renderRight();
           }
         }
-      }, '⏹ Switch to Beat Generator'));
+      }, '⏹ Beat-Generator verwenden'));
 
       if (!isSystem) {
         actionBtns.push(h('button', {
-          class: 'btn sm', type: 'button', title: 'Switch to System / Tab audio loopback (screen/tab sharing audio)',
+          class: 'btn sm', type: 'button', title: 'Zu System- / Tab-Audio (Browser-Loopback) wechseln',
           onclick: async () => {
             if (typeof startMilkSystemAudio === 'function') {
               await startMilkSystemAudio();
               renderRight();
             }
           }
-        }, '🖥️ System Audio'));
+        }, '🖥️ System-Audio'));
       } else {
         actionBtns.push(h('button', {
-          class: 'btn sm', type: 'button', title: 'Switch to Line-In / Microphone input',
+          class: 'btn sm', type: 'button', title: 'Zu Line-In / Mikrofon wechseln',
           onclick: async () => {
             if (typeof startMilkAudio === 'function') {
               await startMilkAudio();
               renderRight();
             }
           }
-        }, '🎤 Line-In / Mic'));
+        }, '🎤 Line-In / Mikrofon'));
       }
     }
     k.push(h('div', { class: 'actions', style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } }, ...actionBtns));
@@ -668,12 +668,12 @@ function renderContentTab(body) {
     animId = requestAnimationFrame(updateVU);
 
     const activeDevObj = typeof milkAudioDevices !== 'undefined' ? milkAudioDevices.find(d => d.id === milkActiveDeviceId) : null;
-    let devLabel = 'Simulated Beat Generator (125 BPM)';
+    let devLabel = 'Simulierter Beat-Generator (125 BPM)';
     if (isLive) {
       if (milkActiveDeviceId === 'system') {
-        devLabel = '🖥️ System / Tab Audio Loopback';
+        devLabel = '🖥️ System- / Tab-Audio Loopback';
       } else {
-        devLabel = activeDevObj ? activeDevObj.label : 'Line-In / Mic Connected';
+        devLabel = activeDevObj ? activeDevObj.label : 'Line-In / Mikrofon verbunden';
       }
     }
     const statusNote = h('div', {
@@ -687,12 +687,12 @@ function renderContentTab(body) {
     if (typeof makeTextScrollable === 'function') makeTextScrollable(statusNote);
 
     k.push(h('div', { class: 'row' },
-      h('span', { class: 'lbl' }, 'Signal Level'),
+      h('span', { class: 'lbl' }, 'Signalpegel'),
       h('div', { style: { flex: '1', display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0' } }, meterRow, statusNote)
     ));
 
     // Audio sensitivity / gain slider (saved per scene)
-    k.push(sliderRow('Sensitivity', {
+    k.push(sliderRow('Empfindlichkeit', {
       get v() { return numOr(getP('gain', 1), 1); },
       set v(x) { setP('gain', x); }
     }, 'v', {
@@ -701,12 +701,12 @@ function renderContentTab(body) {
 
     // Audio Band Focus (Full Range, Bass & Kick Focus, Vocal / Mids Focus, Treble Focus)
     const focusOptions = [
-      ['all', 'Full Range (Flat)'],
-      ['bass', 'Bass & Kick Focus (+9dB)'],
-      ['mids', 'Vocal / Mids Focus'],
-      ['highs', 'Treble / Snare Focus']
+      ['all', 'Volles Frequenzband (Flat)'],
+      ['bass', 'Bass & Kick Fokus (+9dB)'],
+      ['mids', 'Mitten & Gesang Fokus'],
+      ['highs', 'Höhen & Snare Fokus']
     ];
-    k.push(row('Audio focus', selectEl(focusOptions, getP('bandFocus', 'all'), v => {
+    k.push(row('Audio-Fokus', selectEl(focusOptions, getP('bandFocus', 'all'), v => {
       setP('bandFocus', v);
       if (typeof setMilkBandFocus === 'function') setMilkBandFocus(v);
       commit();
@@ -717,7 +717,7 @@ function renderContentTab(body) {
     const lowCutBtn = h('button', {
       class: 'btn sm' + (lowCutOn ? ' active' : ''),
       type: 'button',
-      title: 'Highpass filter at 65Hz to remove microphone handling noise, desk thumps and sub rumble',
+      title: 'Hochpassfilter bei 65Hz entfernt Rumpel- und Tischgeräusche am Mikrofon',
       style: { flex: '1', fontSize: '11px', background: lowCutOn ? 'var(--bg4)' : 'var(--bg2)', borderColor: lowCutOn ? 'var(--accent)' : 'var(--line2)' },
       onclick: () => {
         setP('lowCut', !lowCutOn);
@@ -730,7 +730,7 @@ function renderContentTab(body) {
     const agcBtn = h('button', {
       class: 'btn sm' + (agcOn ? ' active' : ''),
       type: 'button',
-      title: 'Auto-Gain Control & Limiter: automatically adjusts sensitivity during quiet intros and loud drops',
+      title: 'Auto-Gain Control: passt die Empfindlichkeit bei leisen Intros und lauten Drops automatisch an',
       style: { flex: '1', fontSize: '11px', background: agcOn ? 'var(--bg4)' : 'var(--bg2)', borderColor: agcOn ? 'var(--accent)' : 'var(--line2)' },
       onclick: () => {
         setP('agc', !agcOn);
@@ -739,43 +739,43 @@ function renderContentTab(body) {
       }
     }, (agcOn ? '✓ ' : '') + 'Auto-Gain (AGC)');
 
-    k.push(row('Audio filters', h('div', { style: { display: 'flex', gap: '6px', width: '100%' } }, lowCutBtn, agcBtn)));
+    k.push(row('Audio-Filter', h('div', { style: { display: 'flex', gap: '6px', width: '100%' } }, lowCutBtn, agcBtn)));
 
-    body.append(sec('ButterChurn visualizer', k));
+    body.append(sec('ButterChurn Visualizer', k));
 
     // LED Matrix & DMX Output Controls section
     const mtx = [];
 
     // LED Matrix Boost (Contrast & Saturation)
-    mtx.push(sliderRow('Matrix Boost', {
+    mtx.push(sliderRow('Matrix-Boost', {
       get v() { return numOr(getP('matrixBoost', 0), 0); },
       set v(x) { setP('matrixBoost', x); }
     }, 'v', {
       min: 0, max: 150, step: 5, notch: 0,
-      fmt: v => v ? `+${Math.round(v)}%` : 'Off (Flat)',
+      fmt: v => v ? `+${Math.round(v)}%` : 'Aus (Flat)',
       onCommit: commit,
-      title: 'Boost contrast and saturation so MilkDrop visuals look sharp and punchy on coarse LED pixel grids'
+      title: 'Verstärkt Kontrast und Sättigung für knackige LED-Kanten auf groben Pixelrastern'
     }));
 
     // True-Black LED Floor (DMX Cutoff)
-    mtx.push(sliderRow('True-Black floor', {
+    mtx.push(sliderRow('True-Black Schwellenwert', {
       get v() { return numOr(getP('trueBlack', 0), 0); },
       set v(x) { setP('trueBlack', x); }
     }, 'v', {
       min: 0, max: 15, step: 0.5, notch: 0,
-      fmt: v => v > 0 ? `${v.toFixed(1)}% (Cutoff)` : 'Off',
+      fmt: v => v > 0 ? `${v.toFixed(1)}% (Cutoff)` : 'Aus',
       onCommit: commit,
-      title: 'Shuts off LED glow for near-black backgrounds below threshold for ink-black contrast'
+      title: 'Schaltet Hintergrundpixel unterhalb der Schwelle komplett auf 0, 0, 0 für tiefes LED-Schwarz'
     }));
 
     // Performance: Quality / Resolution mode
     const qualOptions = [
       ['zone', '🎯 Nativ (1:1 Exakte Zonengröße)'],
       ['eco', '🚀 Eco (max. 360p / 480p)'],
-      ['balanced', '⚖️ Balanced (max. 640p)'],
-      ['high', '💎 High-Res (max. 720p)']
+      ['balanced', '⚖️ Ausgewogen (max. 640p)'],
+      ['high', '💎 Hohe Auflösung (max. 720p)']
     ];
-    mtx.push(row('Render quality', selectEl(qualOptions, getP('quality', 'zone'), v => {
+    mtx.push(row('Render-Qualität', selectEl(qualOptions, getP('quality', 'zone'), v => {
       setP('quality', v);
       commit();
     }, { aria: 'Visualizer Render Quality' })));
@@ -783,17 +783,17 @@ function renderContentTab(body) {
     // Performance: FPS Cap / Output Clock Sync
     const currentFps = (project && project.settings && project.settings.fps) ? project.settings.fps : 40;
     const fpsOptions = [
-      ['0', `⚡ Synced with Output (${currentFps} FPS)`],
-      ['30', '30 FPS (Power Saver)'],
-      ['25', '25 FPS (Eco / RasPi)'],
-      ['60', '60 FPS (Smooth)']
+      ['0', `⚡ Synchron mit Output (${currentFps} FPS)`],
+      ['30', '30 FPS (Energiesparmodus)'],
+      ['25', '25 FPS (Eco / Raspberry Pi)'],
+      ['60', '60 FPS (Flüssig)']
     ];
-    mtx.push(row('FPS limit', selectEl(fpsOptions, String(getP('fpsCap', 0)), v => {
+    mtx.push(row('FPS-Limit', selectEl(fpsOptions, String(getP('fpsCap', 0)), v => {
       setP('fpsCap', Number(v));
       commit();
     }, { aria: 'Visualizer FPS Limit' })));
 
-    body.append(sec('LED matrix & performance', mtx));
+    body.append(sec('LED-Matrix & Performance', mtx));
 
     // Preset parameter & color controls (dynamically displayed when preset offers & uses them)
     const pInfo = typeof getMilkPresetParams === 'function' ? getMilkPresetParams(curPreset) : null;

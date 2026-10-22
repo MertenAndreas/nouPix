@@ -89,6 +89,7 @@ button { cursor: pointer; }
 .dim input::-moz-range-progress { height: 3px; background: var(--fader); }
 .dim input::-webkit-slider-thumb { -webkit-appearance: none; width: 6px; height: 30px; margin-top: -13.5px; border: 0; border-radius: 0; background: var(--fader); }
 .dim input::-moz-range-thumb { width: 6px; height: 30px; border: 0; border-radius: 0; background: var(--fader); }
+.dim input:disabled { opacity: .45; }
 /* a scene: the logo's two 45° cuts; its edge and fill are layers clipped to that shape (see .scene in app.css) */
 .scenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
 .scene { position: relative; display: grid; align-content: center; gap: 2px; min-height: 56px; padding: 8px 10px; border: 0; background: none; text-align: left; isolation: isolate; --cut: 9px; }

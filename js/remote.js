@@ -68,7 +68,7 @@ const remoteLive = () => ({ t: 'live', master: project.settings.master, blackout
 function remoteState() {
   const name = id => { const s = srcById(id); return s ? s.name : null; };
   return { t: 'state', name: project.name, master: project.settings.master, blackout: ui.blackout,
-    zones: project.zones.slice().reverse().map(z => ({ id: z.id, name: z.name, tag: z.tag, opacity: z.opacity, scene: z.scene,
+    zones: project.zones.slice().reverse().map(z => ({ id: z.id, name: z.name, tag: z.tag, opacity: z.opacity, xf: xfDriven(z), scene: z.scene,
       scenes: z.scenes.map(sc => ({ id: sc.id, name: sc.name, tag: sc.tag || '', fade: sc.fade })),
       content: z.layers.filter(L => L.on && L.src && name(L.src)).map(L => name(L.src)),
       playlists: z.playlists.map(pl => ({ id: pl.id, name: pl.name, length: playlistLength(pl), steps: pl.steps.length })),
@@ -112,6 +112,9 @@ function remoteFromDevice(cid, role, m) {
   } else if (m.op === 'opacity' && z && isFinite(m.value)) {
     setZoneOpacity(z, clamp(+m.value, 0, 1));
     remoteChanged(); commitSoft();
+  } else if (m.op === 'xfade' && isFinite(m.value)) {   // the crossfader sets zone levels, so every role may move it
+    setXfade(+m.value);
+    remoteChanged(); commitSoft();
   } else if (m.op === 'master' && role !== 'remote' && isFinite(m.value)) {
     project.settings.master = clamp(+m.value, 0, 1);
     $('#master').value = project.settings.master; $('#masterVal').textContent = pct(project.settings.master);
@@ -137,7 +140,7 @@ function keepLocal(data) {
   return JSON.stringify(d);
 }
 // From an operator's project, only the content goes in: each zone's layers, scenes, scene playing, level and
-// playlists, and the shaders. Everything else (fixtures, groups, patch, controllers, zone areas and names, settings,
+// playlists, the crossfader, and the shaders. Everything else (fixtures, groups, patch, controllers, zone areas and names, settings,
 // files) stays.
 function contentOf(data) {
   const d = JSON.parse(data), p = JSON.parse(serialize(false));
@@ -148,6 +151,7 @@ function contentOf(data) {
     if (!o) continue;
     for (const k of ['layers', 'scenes', 'scene', 'opacity', 'playlists']) if (k in o) z[k] = o[k];
   }
+  if (isObj(d.xfade)) p.xfade = d.xfade;
   const shaders = (Array.isArray(d.sources) ? d.sources : []).filter(s => isObj(s) && !s.builtin && s.kind === 'isf');
   p.sources = p.sources.filter(s => s.builtin || s.kind !== 'isf').concat(shaders);
   return JSON.stringify(p);
